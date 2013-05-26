@@ -1,0 +1,143 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="header">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\lib\BulletPhysics.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\CameraController.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\KinematicMotionState.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\MMDFiles_utils.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\MotionController.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\MotionManager.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDBone.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDConstraint.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDFace.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDIK.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDMaterial.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDModel.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDModel_parse.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDModel_render.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDModel_update.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDRigidBody.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDTexture.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PMDTextureLoader.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PTree.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\SystemTexture.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\VMD.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\include\BulletPhysics.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\CameraController.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lib\KinematicMotionState.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\MMDFiles.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\MMDFiles_utils.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\MotionController.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\MotionManager.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDBone.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDConstraint.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDFace.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDFile.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDIK.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDMaterial.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDModel.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDRigidBody.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDTexture.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMDTextureLoader.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PTree.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\SystemTexture.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\VMD.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\VMDFile.h">
+      <Filter>header</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

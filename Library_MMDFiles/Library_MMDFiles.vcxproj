@@ -1,0 +1,172 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{08C504D6-E965-4F03-983D-F89E61F6FDC3}</ProjectGuid>
+    <RootNamespace>Library_MMDFiles</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>11.0.51106.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PreBuildEvent>
+      <Command>copy src\include\*.h include</Command>
+    </PreBuildEvent>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\Library_Bullet_Physics\include;..\Library_GLee\include;..\Library_JPEG\include;..\Library_libpng\include;..\Library_zlib\include;src\include;src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;MMDFILES_DONTUPDATEMATRICESFORIK;MMDFILES_DONTSORTORDERFORALPHARENDERING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>lib\MMDFiles_D.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <PreBuildEvent>
+      <Command>copy src\include\*.h include</Command>
+    </PreBuildEvent>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <AdditionalIncludeDirectories>..\Library_Bullet_Physics\include;..\Library_GLee\include;..\Library_JPEG\include;..\Library_libpng\include;..\Library_zlib\include;src\include;src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;MMDFILES_DONTUPDATEMATRICESFORIK;MMDFILES_DONTSORTORDERFORALPHARENDERING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Lib>
+      <OutputFile>lib\MMDFiles.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\lib\BulletPhysics.cpp" />
+    <ClCompile Include="src\lib\CameraController.cpp" />
+    <ClCompile Include="src\lib\KinematicMotionState.cpp" />
+    <ClCompile Include="src\lib\MMDFiles_utils.cpp" />
+    <ClCompile Include="src\lib\MotionController.cpp" />
+    <ClCompile Include="src\lib\MotionManager.cpp" />
+    <ClCompile Include="src\lib\PMDBone.cpp" />
+    <ClCompile Include="src\lib\PMDConstraint.cpp" />
+    <ClCompile Include="src\lib\PMDFace.cpp" />
+    <ClCompile Include="src\lib\PMDIK.cpp" />
+    <ClCompile Include="src\lib\PMDMaterial.cpp" />
+    <ClCompile Include="src\lib\PMDModel.cpp" />
+    <ClCompile Include="src\lib\PMDModel_parse.cpp" />
+    <ClCompile Include="src\lib\PMDModel_render.cpp" />
+    <ClCompile Include="src\lib\PMDModel_update.cpp" />
+    <ClCompile Include="src\lib\PMDRigidBody.cpp" />
+    <ClCompile Include="src\lib\PMDTexture.cpp" />
+    <ClCompile Include="src\lib\PMDTextureLoader.cpp" />
+    <ClCompile Include="src\lib\PTree.cpp" />
+    <ClCompile Include="src\lib\SystemTexture.cpp" />
+    <ClCompile Include="src\lib\VMD.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\include\BulletPhysics.h" />
+    <ClInclude Include="src\include\CameraController.h" />
+    <ClInclude Include="src\lib\KinematicMotionState.h" />
+    <ClInclude Include="src\include\MMDFiles.h" />
+    <ClInclude Include="src\include\MMDFiles_utils.h" />
+    <ClInclude Include="src\include\MotionController.h" />
+    <ClInclude Include="src\include\MotionManager.h" />
+    <ClInclude Include="src\include\PMDBone.h" />
+    <ClInclude Include="src\include\PMDConstraint.h" />
+    <ClInclude Include="src\include\PMDFace.h" />
+    <ClInclude Include="src\include\PMDFile.h" />
+    <ClInclude Include="src\include\PMDIK.h" />
+    <ClInclude Include="src\include\PMDMaterial.h" />
+    <ClInclude Include="src\include\PMDModel.h" />
+    <ClInclude Include="src\include\PMDRigidBody.h" />
+    <ClInclude Include="src\include\PMDTexture.h" />
+    <ClInclude Include="src\include\PMDTextureLoader.h" />
+    <ClInclude Include="src\include\PTree.h" />
+    <ClInclude Include="src\include\SystemTexture.h" />
+    <ClInclude Include="src\include\VMD.h" />
+    <ClInclude Include="src\include\VMDFile.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Library_Bullet_Physics\Library_Bullet_Physics.vcxproj">
+      <Project>{0446af84-8c4a-4db5-889c-440447944665}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_GLee\Library_GLee.vcxproj">
+      <Project>{18b2a3f8-7c0e-4f66-bdcd-53cff00f897e}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_JPEG\Library_JPEG.vcxproj">
+      <Project>{704b8f90-75e4-48f0-b55a-fd4caad729fd}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_libpng\Library_libpng.vcxproj">
+      <Project>{35de672d-05f0-41c1-bfe9-d6bbb3500666}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_zlib\Library_zlib.vcxproj">
+      <Project>{ddb78ff6-ea31-41fd-8108-8dc0e065a961}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
