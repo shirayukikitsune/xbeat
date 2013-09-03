@@ -124,6 +124,7 @@
   <ItemGroup>
     <ClInclude Include="src\include\BulletPhysics.h" />
     <ClInclude Include="src\include\CameraController.h" />
+    <ClInclude Include="src\include\PMXModel.h" />
     <ClInclude Include="src\lib\KinematicMotionState.h" />
     <ClInclude Include="src\include\MMDFiles.h" />
     <ClInclude Include="src\include\MMDFiles_utils.h" />

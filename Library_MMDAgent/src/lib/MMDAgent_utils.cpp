@@ -47,6 +47,7 @@
 #include <dirent.h>
 #endif /* !_WIN32 */
 #include "MMDAgent.h"
+#include <fstream>
 
 /* MMDAgent_getcharsize: get character size */
 unsigned char MMDAgent_getcharsize(const char *str)
@@ -521,4 +522,31 @@ bool MMDAgent_readdir(DIRECTORY *dir, char *name)
       return true;
    }
 #endif /* _WIN32 */
+}
+
+char* XBeat_readfile(const char* file)
+{
+	std::ifstream fs;
+	fs.open(file, std::ios::binary);
+
+	if (!fs.good()) return NULL;
+
+	fs.seekg(0, std::ios::end);
+
+	std::ifstream::pos_type size = fs.tellg();
+
+	fs.seekg(0, std::ios::beg);
+
+	char *buffer = new char[size];
+
+	fs.read(buffer, size);
+
+	if (!fs) {
+		delete[] buffer;
+		buffer = NULL;
+	}
+
+	fs.close();
+
+	return buffer;
 }

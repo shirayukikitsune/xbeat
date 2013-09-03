@@ -145,3 +145,6 @@ void MMDAgent_closedir(DIRECTORY *dir);
 
 /* MMDAgent_readdir: find files in directory */
 bool MMDAgent_readdir(DIRECTORY *dir, char *name);
+
+/* XBeat_readfile: read all file contents into an array (it must be freed with delete[]!) */
+char* XBeat_readfile(const char *file);

@@ -2572,7 +2572,7 @@ void MMDAgent::procDropFileMessage(const char * file, int x, int y)
    } else if (MMDAgent_strtailmatch(file, ".xpmd") || MMDAgent_strtailmatch(file, ".XPMD")) {
       /* load stage */
       setStage(file);
-   } else if (MMDAgent_strtailmatch(file, ".pmd") || MMDAgent_strtailmatch(file, ".PMD")) {
+   } else if (MMDAgent_strtailmatch(file, ".pmd") || MMDAgent_strtailmatch(file, ".PMD") || MMDAgent_strtailmatch(file, "pmx")) {
       /* drop model */
       if (m_keyCtrl) {
          /* if Ctrl-key, add model */

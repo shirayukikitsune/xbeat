@@ -65,13 +65,13 @@
     <ClCompile Include="src\lib\PMDTextureLoader.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="src\lib\PTree.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="src\lib\SystemTexture.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="src\lib\VMD.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib\PTree.cpp">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -137,6 +137,9 @@
       <Filter>header</Filter>
     </ClInclude>
     <ClInclude Include="src\include\VMDFile.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\include\PMXModel.h">
       <Filter>header</Filter>
     </ClInclude>
   </ItemGroup>
