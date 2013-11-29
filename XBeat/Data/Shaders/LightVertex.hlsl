@@ -6,14 +6,13 @@
 /////////////
 // GLOBALS //
 /////////////
-cbuffer MatrixBuffer : register(cb0)
+cbuffer MatrixBuffer
 {
 	matrix worldMatrix;
-	matrix viewMatrix;
-	matrix projectionMatrix;
+	matrix wvp;
 };
 
-cbuffer CameraBuffer : register (cb1)
+cbuffer CameraBuffer
 {
 	float3 cameraPosition;
 	float padding;
@@ -25,15 +24,19 @@ cbuffer CameraBuffer : register (cb1)
 //////////////
 struct VertexInputType
 {
-    float4 position : POSITION;
-    float2 tex : TEXCOORD0;
-   	float3 normal : NORMAL;
+    float4 position : SV_Position;
+	float3 normal : NORMAL;
+	float2 tex : TEXCOORD0;
+/*	float4 exUV1 : TEXCOORD1;
+	float4 exUV2 : TEXCOORD2;
+	float4 exUV3 : TEXCOORD3;
+	float4 exUV4 : TEXCOORD4;*/
 };
 
 struct PixelInputType
 {
-    float4 position : SV_POSITION;
-    float2 tex : TEXCOORD0;
+	float4 position : SV_POSITION;
+	float2 tex : TEXCOORD0;
 	float3 normal : NORMAL;
 	float3 viewDirection : TEXCOORD1;
 	float depth : TEXCOORD2;
@@ -52,9 +55,7 @@ PixelInputType main(VertexInputType input)
     input.position.w = 1.0f;
 
 	// Calculate the position of the vertex against the world, view, and projection matrices.
-    output.position = mul(input.position, worldMatrix);
-    output.position = mul(output.position, viewMatrix);
-    output.position = mul(output.position, projectionMatrix);
+    output.position = mul(input.position, wvp);
     
 	// Store the texture coordinates for the pixel shader.
 	output.tex = input.tex;
@@ -69,7 +70,7 @@ PixelInputType main(VertexInputType input)
 	// A->B = B - A
 	worldPos = mul(input.position, worldMatrix);
 	output.viewDirection = normalize(worldPos.xyz - cameraPosition.xyz);
-
+	
 	output.depth = output.position.z / output.position.w;
 	
     return output;

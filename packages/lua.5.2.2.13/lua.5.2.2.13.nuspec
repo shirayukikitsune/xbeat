@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>lua</id>
+    <version>5.2.2.13</version>
+    <title>lua</title>
+    <authors>lua contributors,  Benjamin Herila</authors>
+    <owners>lua contributors,  Benjamin Herila</owners>
+    <licenseUrl>http://www.lua.org/</licenseUrl>
+    <projectUrl>http://www.lua.org/</projectUrl>
+    <iconUrl>https://raw.github.com/coapp-packages/lua/f720a1047809d68458b1076e84a58da51f38a31d/COPKG/lua.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Lua is a powerful, fast, lightweight, embeddable scripting language. 
+
+Lua combines simple procedural syntax with powerful data description constructs based on associative arrays and extensible semantics. Lua is dynamically typed, runs by interpreting bytecode for a register-based virtual machine, and has automatic memory management with incremental garbage collection, making it ideal for configuration, scripting, and rapid prototyping.</description>
+    <summary>Lua is a powerful, fast, lightweight, embeddable scripting language.</summary>
+    <releaseNotes />
+    <copyright>Copyright 2013</copyright>
+    <language />
+    <tags>lua native CoApp</tags>
+    <dependencies>
+      <dependency id="lua.redist" version="5.2.2.13" />
+    </dependencies>
+  </metadata>
+</package>

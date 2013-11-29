@@ -48,9 +48,6 @@
     <ClCompile Include="Input\InputManager.cpp">
       <Filter>Source Files\Input</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\Model.cpp">
-      <Filter>Source Files\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="Renderer\CameraClass.cpp">
       <Filter>Source Files\Renderer</Filter>
     </ClCompile>
@@ -72,9 +69,6 @@
     <ClCompile Include="Renderer\ViewFrustum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\PMX\PMXModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Renderer\Shaders\MMDEffect.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -84,21 +78,45 @@
     <ClCompile Include="Renderer\OrthoWindowClass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Physics\Environment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\SkyBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXSoftBody.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\Model.cpp">
+      <Filter>Source Files\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXBone.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXMaterial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Dispatcher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXRigidBody.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SystemClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Input\Manager.h">
-      <Filter>Header Files\Input</Filter>
-    </ClInclude>
     <ClInclude Include="Renderer\Manager.h">
       <Filter>Header Files\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\D3DRenderer.h">
-      <Filter>Header Files\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\Model.h">
       <Filter>Header Files\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\CameraClass.h">
@@ -122,9 +140,6 @@
     <ClInclude Include="Renderer\ViewFrustum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\PMX\PMXModel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Renderer\Shaders\MMDEffect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -137,6 +152,42 @@
     <ClInclude Include="Renderer\OrthoWindowClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Physics\Environment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\SkyBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXSoftBody.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\Model.h">
+      <Filter>Header Files\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXDefinitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXBone.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\InputManager.h">
+      <Filter>Header Files\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXMaterial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Dispatcher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXRigidBody.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Data\Shaders\ColorShader.hlsl">
@@ -145,17 +196,22 @@
     <FxCompile Include="Data\Shaders\DirectionalLight.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
-    <FxCompile Include="Data\Shaders\Texture.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
     <FxCompile Include="Data\Shaders\LightPixel.hlsl" />
     <FxCompile Include="Data\Shaders\LightVertex.hlsl" />
+    <FxCompile Include="Data\Shaders\zxMMD.fx" />
     <FxCompile Include="Data\Shaders\MMD.fx" />
+    <FxCompile Include="Data\Shaders\SkyboxPixel.hlsl" />
+    <FxCompile Include="Data\Shaders\TexturePixel.hlsl" />
+    <FxCompile Include="Data\Shaders\TextureVertex.hlsl" />
+    <FxCompile Include="Data\Shaders\SkyboxVertex.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\Models\cube.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Data\Textures\Sky\miramar.dds" />
   </ItemGroup>
 </Project>

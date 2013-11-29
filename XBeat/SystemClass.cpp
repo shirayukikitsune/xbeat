@@ -1,5 +1,6 @@
 #include "SystemClass.h"
 #include <tchar.h>
+#include <boost/date_time.hpp>
 
 SystemClass::SystemClass(void)
 {
@@ -24,21 +25,35 @@ bool SystemClass::Initialize()
 
 	InitializeWindow(width, height);
 
+	dispatcher.reset(new Dispatcher);
+	if (dispatcher == nullptr)
+		return false;
+	dispatcher->Initialize();
+
 	input.reset(new Input::Manager);
 	if (input == nullptr)
 		return false;
 
-	if (!input->Initialize(instance, wnd, width, height))
+	if (!input->Initialize(instance, wnd, width, height, dispatcher))
 	{
 		MessageBox(wnd, L"Failed to initialize DirectInput8 interface", L"Error", MB_OK);
 		return false;
 	}
 
+	frameMsec();
+
+	physics.reset(new Physics::Environment);
+	if (physics == nullptr)
+		return false;
+
+	if (!physics->Initialize())
+		return false;
+
 	renderer.reset(new Renderer::Manager);
 	if (renderer == nullptr)
 		return false;
 
-	if (!renderer->Initialize(width, height, wnd, input))
+	if (!renderer->Initialize(width, height, wnd, input, physics, dispatcher))
 		return false;
 
 	return true;
@@ -77,19 +92,25 @@ void SystemClass::Shutdown()
 		input.reset();
 	}
 
+	if (dispatcher != nullptr) {
+		dispatcher->Shutdown();
+		dispatcher.reset();
+	}
+
 	ShutdownWindow();
 }
 
 bool SystemClass::Frame()
 {
-	int mouseX, mouseY;
+	float frameTime = frameMsec();
 
 	if (!input->Frame())
 		return false;
 
-	input->GetMouseLocation(mouseX, mouseY);
+	if (!physics->Frame(frameTime))
+		return false;
 
-	if (!renderer->Frame(mouseX, mouseY))
+	if (!renderer->Frame(frameTime))
 		return false;
 
 	return true;
@@ -163,6 +184,17 @@ void SystemClass::ShutdownWindow()
 
 	UnregisterClass(appName, instance);
 	instance = NULL;
+}
+
+float SystemClass::frameMsec()
+{
+	static boost::posix_time::ptime lastTime = boost::posix_time::microsec_clock::universal_time();
+
+	boost::posix_time::ptime nowTime = boost::posix_time::microsec_clock::universal_time();
+	float msec = (nowTime - lastTime).total_microseconds() / 1000.0f;
+	lastTime = nowTime;
+
+	return msec;
 }
 
 LRESULT CALLBACK SystemClass::MessageHandler(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)

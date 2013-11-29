@@ -2,7 +2,6 @@
 
 #include <d3d11.h>
 #include <DirectXMath.h>
-#include <D3DX11async.h>
 #include <string>
 
 namespace Renderer {
@@ -23,10 +22,10 @@ public:
 	void Shutdown();
 	bool Render(ID3D11DeviceContext *context, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture);
 
+	static void OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file);
 private:
 	bool InitializeShader(ID3D11Device *device, HWND wnd, const std::wstring &vsFile, const std::wstring &psFile);
 	void ShutdownShader();
-	void OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file);
 
 	bool SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture);
 	void RenderShader(ID3D11DeviceContext *context, int indexCount);

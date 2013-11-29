@@ -3,6 +3,8 @@
 
 using namespace Renderer::Shaders;
 
+extern char *getFileContents(const std::wstring &file, uint64_t &bufSize);
+
 Texture::Texture(void)
 {
 	vertexShader = nullptr;
@@ -20,7 +22,7 @@ Texture::~Texture(void)
 
 bool Texture::Initialize(ID3D11Device *device, HWND wnd)
 {
-	if (!InitializeShader(device, wnd, L"./Data/Shaders/Texture.hlsl", L"./Data/Shaders/Texture.hlsl"))
+	if (!InitializeShader(device, wnd, L"./Data/Shaders/TextureVertex.cso", L"./Data/Shaders/TexturePixel.cso"))
 		return false;
 
 	return true;
@@ -43,45 +45,24 @@ bool Texture::Render(ID3D11DeviceContext *context, int indexCount, DirectX::CXMM
 bool Texture::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstring &vsFile, const std::wstring &psFile)
 {
 	HRESULT result;
-	ID3D10Blob *errorMessage, *vertexShaderBuffer, *pixelShaderBuffer;
 	D3D11_INPUT_ELEMENT_DESC polygonLayout[2];
 	UINT numElements;
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
+	uint64_t vsbufsize, psbufsize;
 
-	errorMessage = vertexShaderBuffer = pixelShaderBuffer = nullptr;
-
-	result = D3DX11CompileFromFile(vsFile.c_str(), NULL, NULL, "vsmain", "vs_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, NULL, &vertexShaderBuffer, &errorMessage, NULL);
+	char *vsbuffer = getFileContents(vsFile, vsbufsize);
+	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
 	if (FAILED(result)) {
-		if (errorMessage) {
-			OutputShaderErrorMessage(errorMessage, wnd, vsFile);
-		}
-		else {
-			MessageBox(wnd, vsFile.c_str(), L"Missing Shader File", MB_OK);
-		}
-
+		delete[] vsbuffer;
 		return false;
 	}
 
-	result = D3DX11CompileFromFile(psFile.c_str(), NULL, NULL, "psmain", "ps_5_0", D3D10_SHADER_ENABLE_STRICTNESS, 0, NULL, &pixelShaderBuffer, &errorMessage, NULL);
+	char *psbuffer = getFileContents(psFile, psbufsize);
+	result = device->CreatePixelShader(psbuffer, psbufsize, NULL, &pixelShader);
 	if (FAILED(result)) {
-		if (errorMessage) {
-			OutputShaderErrorMessage(errorMessage, wnd, psFile);
-		}
-		else {
-			MessageBox(wnd, psFile.c_str(), L"Missing Shader File", MB_OK);
-		}
-
-		return false;
-	}
-
-	result = device->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), NULL, &vertexShader);
-	if (FAILED(result)) {
-		return false;
-	}
-
-	result = device->CreatePixelShader(pixelShaderBuffer->GetBufferPointer(), pixelShaderBuffer->GetBufferSize(), NULL, &pixelShader);
-	if (FAILED(result)) {
+		delete[] vsbuffer;
+		delete[] psbuffer;
 		return false;
 	}
 
@@ -103,16 +84,12 @@ bool Texture::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstrin
 
 	numElements = sizeof (polygonLayout) / sizeof (polygonLayout[0]);
 
-	result = device->CreateInputLayout(polygonLayout, numElements, vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), &layout);
+	result = device->CreateInputLayout(polygonLayout, numElements, vsbuffer, vsbufsize, &layout);
+	delete[] vsbuffer;
+	delete[] psbuffer; 
 	if (FAILED(result)) {
 		return false;
 	}
-
-	vertexShaderBuffer->Release();
-	vertexShaderBuffer = nullptr;
-
-	pixelShaderBuffer->Release();
-	pixelShaderBuffer = nullptr;
 
 	matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	matrixBufferDesc.ByteWidth = sizeof (MatrixBufferType);

@@ -24,15 +24,18 @@ Model::~Model(void)
 }
 
 
-bool Model::Initialize(ID3D11Device *device, const std::wstring &modelfile)
+bool Model::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d, const std::wstring &modelfile, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher)
 {
+	m_physics = physics;
+	m_dispatcher = dispatcher;
+
 	if (!LoadModel(modelfile))
 		return false;
 
-	if (!InitializeBuffers(device))
+	if (!InitializeBuffers(d3d))
 		return false;
 
-	if (!LoadTexture(device))
+	if (!LoadTexture(d3d->GetDevice()))
 		return false;
 
 	return true;
@@ -65,24 +68,25 @@ ID3D11ShaderResourceView *Model::GetTexture()
 	return texture->GetTexture();
 }
 
-bool Model::InitializeBuffers(ID3D11Device *device)
+bool Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 {
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
 	D3D11_SUBRESOURCE_DATA vertexData, indexData;
 	HRESULT result;
 
-	VertexType *vertices = new VertexType[vertexCount];
+	//VertexType *vertices = new VertexType[vertexCount];
+	DirectX::VertexPositionNormalTexture *vertices = new DirectX::VertexPositionNormalTexture[vertexCount];
 	if (vertices == nullptr)
 		return false;
 
 	for (int i = 0; i < vertexCount; i++) {
 		vertices[i].position = DirectX::XMFLOAT3(geometry[i].x, geometry[i].y, geometry[i].z);
-		vertices[i].texture = DirectX::XMFLOAT2(geometry[i].tu, geometry[i].tv);
+		vertices[i].textureCoordinate = DirectX::XMFLOAT2(geometry[i].tu, geometry[i].tv);
 		vertices[i].normal = DirectX::XMFLOAT3(geometry[i].nx, geometry[i].ny, geometry[i].nz);
 	}
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.ByteWidth = sizeof (VertexType) * vertexCount;
+	vertexBufferDesc.ByteWidth = sizeof (DirectX::VertexPositionNormalTexture) * vertexCount;
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = 0;
 	vertexBufferDesc.MiscFlags = 0;
@@ -92,7 +96,7 @@ bool Model::InitializeBuffers(ID3D11Device *device)
 	vertexData.SysMemPitch = 0;
 	vertexData.SysMemSlicePitch = 0;
 
-	result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer);
+	result = d3d->GetDevice()->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer);
 	if (FAILED(result))
 		return false;
 
@@ -107,7 +111,7 @@ bool Model::InitializeBuffers(ID3D11Device *device)
 	indexData.SysMemPitch = 0;
 	indexData.SysMemSlicePitch = 0;
 
-	result = device->CreateBuffer(&indexBufferDesc, &indexData, &indexBuffer);
+	result = d3d->GetDevice()->CreateBuffer(&indexBufferDesc, &indexData, &indexBuffer);
 	if(FAILED(result))
 		return false;
 
@@ -123,7 +127,7 @@ bool Model::LoadTexture(ID3D11Device *device)
 	if (texture == nullptr)
 		return false;
 
-	if (!texture->Initialize(device, L"./Data/Textures/591807.dds"))
+	if (!texture->Initialize(device, L"./Data/Textures/grass.jpg"))
 		return false;
 
 	return true;
@@ -159,7 +163,7 @@ bool Model::RenderBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d, std::share
 
 
 	// Set vertex buffer stride and offset.
-	stride = sizeof(VertexType); 
+	stride = sizeof(DirectX::VertexPositionNormalTexture); 
 	offset = 0;
 
 	deviceContext->RSSetState(d3d->GetRasterState(1));
@@ -176,17 +180,38 @@ bool Model::RenderBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d, std::share
 	DirectX::XMStoreFloat3(&cameraPosition, camera->GetPosition());
 
 	auto tex = this->GetTexture();
-	static Shaders::Light::MaterialBufferType *matbuf = nullptr;
-	if (!matbuf) {
-		matbuf = new Shaders::Light::MaterialBufferType;
+	static DXType<ID3D11Buffer> matBuffer;
+	if (!matBuffer) {
+		Shaders::Light::MaterialBufferType * matbuf = new Shaders::Light::MaterialBufferType;
 		matbuf->flags = 0;
-		matbuf->ambientColor = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+		matbuf->ambientColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		matbuf->diffuseColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		matbuf->padding = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
+		matbuf->morphWeight = 0.0f;
+		matbuf->padding = DirectX::XMFLOAT2(0, 0);
 		matbuf->specularColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		matbuf->addBaseCoefficient = matbuf->addSphereCoefficient = matbuf->addToonCoefficient = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		matbuf->mulBaseCoefficient = matbuf->mulSphereCoefficient = matbuf->mulToonCoefficient = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+		D3D11_BUFFER_DESC desc;
+		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		desc.ByteWidth = sizeof (Shaders::Light::MaterialBufferType);
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
+		desc.StructureByteStride = 0;
+		desc.Usage = D3D11_USAGE_IMMUTABLE;
+
+		D3D11_SUBRESOURCE_DATA data;
+		data.pSysMem = matbuf;
+		data.SysMemPitch = 0;
+		data.SysMemSlicePitch = 0;
+
+		if (FAILED(d3d->GetDevice()->CreateBuffer(&desc, &data, &matBuffer)))
+			return false;
+
+		delete matbuf;
 	}
 
-	if (!lightShader->Render(deviceContext, this->indexCount, world, view, projection, &tex, 1, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), *matbuf))
+	if (!lightShader->Render(deviceContext, this->indexCount, world, view, projection, &tex, 1, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), matBuffer, -1))
 		return false;
 
 	deviceContext->RSSetState(d3d->GetRasterState(0));

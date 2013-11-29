@@ -16,7 +16,6 @@ Motion::~Motion(void)
 
 bool Motion::Load(const std::wstring &filename)
 {
-	uint32_t i;
 	std::fstream fs;
 
 	fs.open(filename, std::ios::binary);
@@ -46,14 +45,11 @@ bool Motion::Load(const std::wstring &filename)
 	fs.read((char*)&count, sizeof (uint32_t));
 	keyFrames.resize(count);
 	
-	//for (i = 0; i < count; i++) {
-		fs.read((char*)&keyFrames[0], sizeof (KeyFrame) * count);
-	//}
+	fs.read((char*)&keyFrames[0], sizeof (KeyFrame) * count);
 
 	fs.read((char*)&count, sizeof (uint32_t));
 	faceKeyFrames.resize(count);
 	
-	//for (i = 0; i < count; i++) {
 	fs.read((char*)&faceKeyFrames[0], sizeof (FaceKeyFrame) * count);
 
 	fs.close();

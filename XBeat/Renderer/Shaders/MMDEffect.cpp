@@ -1,6 +1,5 @@
 #include "MMDEffect.h"
 
-#include <D3DX11async.h>
 #include <D3Dcompiler.h>
 #include <fstream>
 
@@ -9,6 +8,7 @@ using Renderer::Shaders::MMDEffect;
 
 MMDEffect::MMDEffect(void)
 {
+	m_blurAmmount = 3.8f;
 }
 
 
@@ -37,13 +37,22 @@ bool MMDEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCoun
 
 	//RenderEffect(context, indexCount);
 
-	ID3D11Resource *ptex;
-	D3D11_MAPPED_SUBRESOURCE m;
-	HRESULT r;
 	bufferIndex = 0;
-	renderTexture->CopyIntoTexture(context, &m_originalBackTexture, 0);
-	renderTexture->CopyIntoTexture(context, &m_currentBackTexture, 0);
-	context->CopyResource(m_originalDepthTexture, d3d->GetDepthStencilTexture());
+	renderTexture->CopyIntoTexture(context, &m_originalBackTexture);
+	renderTexture->CopyIntoTexture(context, &m_currentBackTexture);
+
+	renderTexture->SetRenderTarget(context, NULL);
+	d3d->Begin2D();
+
+	context->IASetInputLayout(m_layout);
+
+	m_originalSceneVar->AsShaderResource()->SetResource(m_originalBackView);
+	m_depthSceneVar->AsShaderResource()->SetResource(d3d->GetDepthResourceView());
+	m_currentSceneVar->AsShaderResource()->SetResource(m_currentBackView);
+	m_defaultSamplerVar->AsSampler()->SetSampler(0, m_sampler);
+
+	if (!SetEffectParameters(context, world, view, projection, farZ, nearZ))
+		return false;
 
 	for (uint32_t group = 0; group < m_numGroups; group++) 
 	{
@@ -51,38 +60,25 @@ bool MMDEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCoun
 		{
 			for (uint32_t pass = 0; pass < m_numPasses[group][technique]; pass++)
 			{
-				ID3D11ShaderResourceView *textures[3];
-				textures[0] = m_originalBackView;
-				textures[1] = m_originalDepthView;
-				textures[2] = m_currentBackView;
-
 				//bufferIndex++;
-				renderTexture->SetRenderTarget(context, d3d->GetDepthStencilView(), bufferIndex & 1);
-				//renderTexture->ClearRenderTarget(context, d3d->GetDepthStencilView(), bufferIndex & 1, 0.0f, 0.0f, 0.0f, 1.0f);
-
-				d3d->Begin2D();
 
 				window->Render(context);
 
 				m_effect->GetGroupByIndex(group)->GetTechniqueByIndex(technique)->GetPassByIndex(pass)->Apply(0, context);
 
-				context->IASetInputLayout(m_layout);
-				context->PSSetSamplers(0, 1, &m_sampler);
-
-				if (!SetEffectParameters(context, world, view, projection, textures, 3, farZ, nearZ))
-					return false;
-
 				context->DrawIndexed(indexCount, 0, 0);
 
-				renderTexture->CopyIntoTexture(context, &m_currentBackTexture, bufferIndex & 1);
-
-				d3d->End2D();
-				d3d->SetBackBufferRenderTarget();
+				renderTexture->CopyIntoTexture(context, &m_currentBackTexture);
 			}
 		}
 	}
 
+	ID3D11ShaderResourceView *nulls[3] = { NULL, NULL, NULL };
+	context->PSSetShaderResources(0, 3, nulls);
+
+	d3d->End2D();
 	d3d->ResetViewport();
+	d3d->SetBackBufferRenderTarget();
 
 	return true;
 }
@@ -90,7 +86,7 @@ bool MMDEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCoun
 bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int height, const std::wstring &filename)
 {
 	HRESULT result;
-	ID3D10Blob *bytecode, *errorMsg;
+	ID3D10Blob *errorMsg;
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_INPUT_ELEMENT_DESC layoutDesc[2];
 	D3D11_SAMPLER_DESC samplerDesc;
@@ -112,6 +108,17 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 	if (FAILED(result))
 		return false;
 
+	ZeroMemory(&texDesc, sizeof (D3D11_TEXTURE2D_DESC));
+
+	texDesc.Width = width;
+	texDesc.Height = height;
+	texDesc.MipLevels = 1;
+	texDesc.ArraySize = 1;
+	texDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.Usage = D3D11_USAGE_DEFAULT;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
 	result = device->CreateTexture2D(&texDesc, NULL, &m_currentBackTexture);
 	if (FAILED(result))
 		return false;
@@ -129,17 +136,8 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 	if (FAILED(result))
 		return false;
 
-	shaderResourceViewDesc.Format = texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-	result = device->CreateTexture2D(&texDesc, NULL, &m_originalDepthTexture);
-	if (FAILED(result))
-		return false;
-
-	result = device->CreateShaderResourceView(m_originalDepthTexture, &shaderResourceViewDesc, &m_originalDepthView);
-	if (FAILED(result))
-		return false;
-
-	result = D3DX11CompileFromFile(filename.c_str(), NULL, NULL, NULL, "fx_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, NULL, &bytecode, &errorMsg, NULL);
+	//result = D3DX11CompileFromFile(filename.c_str(), NULL, NULL, NULL, "fx_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, NULL, &bytecode, &errorMsg, NULL);
+	result = D3DX11CompileEffectFromFile(filename.c_str(), NULL, NULL, D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, device, &m_effect, &errorMsg);
 	if (FAILED(result)) {
 		if (errorMsg == NULL) {
 			MessageBox(wnd, (std::wstring(L"Shader file not found: ") + filename).c_str(), L"Error", MB_ICONERROR | MB_OK);
@@ -151,11 +149,11 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 		}
 	}
 
-	result = D3DX11CreateEffectFromMemory(bytecode->GetBufferPointer(), bytecode->GetBufferSize(), 0, device, &m_effect);
+	/*result = D3DX11CreateEffectFromMemory(bytecode->GetBufferPointer(), bytecode->GetBufferSize(), 0, device, &m_effect);
 	bytecode->Release();
 	if (FAILED(result)) {
 		return false;
-	}
+	}*/
 
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -207,13 +205,19 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 	if (FAILED(result))
 		return false;
 
+	matrixBufferDesc.ByteWidth = sizeof (BlurSamplersBuffer);
+
+	result = device->CreateBuffer(&matrixBufferDesc, NULL, &m_blurBuffer);
+	if (FAILED(result))
+		return false;
+
 	matrixBufferDesc.ByteWidth = sizeof (ScreenSizeBuffer);
 	matrixBufferDesc.CPUAccessFlags = 0;
 	matrixBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 
 	ScreenSizeBuffer ssb;
-	ssb.dimentions = DirectX::XMFLOAT2(width, height);
-	ssb.texelSize = DirectX::XMFLOAT2(texDesc.Width / ssb.dimentions.x, texDesc.Height / ssb.dimentions.y);
+	ssb.dimentions = DirectX::XMFLOAT2((float)width, (float)height);
+	ssb.texelSize = DirectX::XMFLOAT2(1.0f / texDesc.Width, 1.0f / texDesc.Height);
 	D3D11_SUBRESOURCE_DATA srd;
 	srd.pSysMem = (LPVOID)&ssb;
 	srd.SysMemPitch = 0;
@@ -236,7 +240,6 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 	m_numTechniques = new uint32_t[m_numGroups];
 	m_numPasses = new uint32_t*[m_numGroups];
 
-	ID3D11ShaderReflection *reflection;
 	ID3DX11EffectGroup *group;
 	ID3DX11EffectTechnique *technique;
 	ID3DX11EffectPass *pass;
@@ -275,6 +278,16 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 		}
 	}
 
+	// Initialize variables pointers
+	m_blurVar = m_effect->GetConstantBufferByName("GaussianBlurBuffer");
+	m_dofVar = m_effect->GetConstantBufferByName("dofbuffer");
+	m_screenSizeVar = m_effect->GetConstantBufferByName("ScreenSize");
+	m_WVPVar = m_effect->GetConstantBufferByName("WVP");
+	m_defaultSamplerVar = m_effect->GetVariableByName("TexSampler");
+	m_currentSceneVar = m_effect->GetVariableByName("CurrentScene");
+	m_depthSceneVar = m_effect->GetVariableByName("DepthScene");
+	m_originalSceneVar = m_effect->GetVariableByName("OriginalScene");
+
 	return true;
 }
 
@@ -305,7 +318,7 @@ void MMDEffect::ShutdownEffect()
 void MMDEffect::OutputErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
 {
 	char *compileError;
-	SIZE_T bufferSize, i;
+	SIZE_T bufferSize;
 	std::ofstream fout;
 
 	compileError = (char*)errorMessage->GetBufferPointer();
@@ -326,8 +339,10 @@ void MMDEffect::OutputErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std
 	MessageBox(wnd, L"Error compiling effect", file.c_str(), MB_OK);
 }
 
-bool MMDEffect::SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView **textures, int textureCount, float farZ, float nearZ)
+bool MMDEffect::SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ)
 {
+	static auto GaussianFunction = [](float sigmaSquared, float offset) { return (1.0f / sqrtf(2.0f * DirectX::XM_PI * sigmaSquared)) * expf(-(offset * offset) / (2 * sigmaSquared)); };
+	BlurSamplersBuffer *blurBuffer;
 	MatrixBuffer *matrixBuffer;
 	DOFBuffer *dofBuffer;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -354,17 +369,48 @@ bool MMDEffect::SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMA
 	dofBuffer = (DOFBuffer*)mappedResource.pData;
 
 	dofBuffer->unused = 0.0f;
-	dofBuffer->range = 0.05f;
+	dofBuffer->range = (farZ - nearZ) / farZ * 0.04f;
 	dofBuffer->nearZ = nearZ;
 	dofBuffer->farZ = farZ;
 
 	context->Unmap(m_dofBuffer, 0);
 
-	context->VSSetConstantBuffers(0, 1, &m_matrixBuffer);
-	context->VSSetConstantBuffers(1, 1, &m_screenSizeBuffer); 
+	result = context->Map(m_blurBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	if (FAILED(result))
+		return false;
 
-	context->PSSetShaderResources(0, textureCount, textures);
-	context->PSSetConstantBuffers(0, 1, &m_dofBuffer);
+	blurBuffer = (BlurSamplersBuffer*)mappedResource.pData;
+
+	float sigmaSquared = m_blurAmmount * m_blurAmmount;
+	float offset = 0.0f;
+	float totalWeights;
+
+	blurBuffer->offsetAndWeight[0].x = 0.0f;
+	totalWeights = blurBuffer->offsetAndWeight[0].y = GaussianFunction(sigmaSquared, offset);
+
+	int count = BLUR_SAMPLE_COUNT / 2;
+
+	for (int i = 0; i < count; i++) {
+		offset = i + 1.0f;
+		float weight = GaussianFunction(sigmaSquared, offset);
+		blurBuffer->offsetAndWeight[i * 2 + 1].y = blurBuffer->offsetAndWeight[i * 2 + 2].y = weight;
+
+		totalWeights += weight;
+
+		float sampleOffset = i * 2.0f + 1.5f;
+
+		blurBuffer->offsetAndWeight[i * 2 + 1].x = sampleOffset;
+		blurBuffer->offsetAndWeight[i * 2 + 2].x = -sampleOffset;
+	}
+	for (int i = 0; i < BLUR_SAMPLE_COUNT; i++)
+		blurBuffer->offsetAndWeight[i].y /= totalWeights;
+
+	context->Unmap(m_blurBuffer, 0);
+
+	m_blurVar->SetConstantBuffer(m_blurBuffer);
+	m_WVPVar->SetConstantBuffer(m_matrixBuffer);
+	m_screenSizeVar->SetConstantBuffer(m_screenSizeBuffer);
+	m_dofVar->SetConstantBuffer(m_dofBuffer);
 
 	return true;
 }

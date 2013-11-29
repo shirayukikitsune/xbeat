@@ -9,26 +9,65 @@ struct PixelInputType
 {
 	float4 position : SV_POSITION;
 	float2 texCoord : TEXCOORD0;
-	float2 texelSize : TEXCOORD1;
 };
 
 // Define our buffers, variables and constants here
-SamplerState TexSampler : register (s0);
-Texture2D Scenes[3];
+SamplerState TexSampler;
+SamplerState DepthSampler {
+	Filter = MIN_MAG_MIP_POINT;
+	AddressU = Clamp;
+	AddressV = Clamp;
+};
+SamplerState BlurSampler {
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Clamp;
+	AddressV = Clamp;
+};
+Texture2D OriginalScene;
+Texture2D DepthScene;
+Texture2D CurrentScene;
 
-cbuffer WVP : register (cb0) {
+cbuffer WVP {
 	matrix world;
 	matrix view;
 	matrix projection;
 };
 
-cbuffer ScreenSize : register (cb1) {
+cbuffer ScreenSize {
 	float2 screenDimentions;
 	float2 texelSize;
 };
 
-float blurDistance = 0.002f;
-float blurWeights[9] = { 0.00f, 0.02f, 0.10f, 0.23f, 0.30f, 0.23f, 0.10f, 0.02f, 0.00f };
+static const float NearBlurDepth = 0.1;
+//The difference between the focal plane and the near plane depths.
+static const float FarBlurDepth = 0.1;
+//The difference between the focal plane and the far plane depths.
+static const float MaxBlurCutoff = 1;
+//The maximum blurriness that an object behind the focal plane can have, where 1 is full blur and 0 is none.
+ 
+static const float dofMinThreshold = 0.1; //0.5;
+//Ensures a smoother transition between near focal plane and focused area.
+ 
+static const float ApertureDiameter = 3;
+
+#define BLUR_SAMPLE_COUNT 15
+cbuffer GaussianBlurBuffer {
+	float2 blurWeightsAndOffsets[BLUR_SAMPLE_COUNT];
+}
+float blurDistance = 0.0015f;
+float blurWeights[9] = { 0.01f, 0.02f, 0.10f, 0.22f, 0.30f, 0.22f, 0.10f, 0.02f, 0.01f };
+
+static const float2 poisson[8] =
+{
+       0.0,    0.0,
+     0.527, -0.085,
+    -0.040,  0.536,
+    -0.670, -0.179,
+    -0.419, -0.616,
+     0.440, -0.639,
+    -0.757,  0.349,
+     0.574,  0.685,
+};
 
 float4 adjustSaturation(float4 color, float saturation)
 {
@@ -45,35 +84,22 @@ PixelInputType mainvs(VertexInputType input)
 	pos = sign(input.position.xy);
 
 	output.position = float4(pos.x, pos.y, 0.0f, 1.0f);
-	/*output.position = mul(output.position, world);
-	output.position = mul(output.position, view);
-	output.position = mul(output.position, projection);*/
 	output.texCoord = input.texCoord;
-	output.texelSize = float2(1.0f / 1024.0f, 1.0f / 1024.0f);
 
 	return output;
-}
-
-float4 mainps(PixelInputType input) : SV_TARGET
-{
-	float4 texColor;
-
-	texColor = Scenes[0].Sample(TexSampler, input.texCoord);
-
-	return texColor;
 }
 
 float4 horblurps(PixelInputType input) : SV_TARGET
 {
 	// Make an average of surrounding pixels
 	float4 sum = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	float2 uv = float2(input.texCoord.x - 4.0f * blurDistance, input.texCoord.y);
-	int i;
 
-	for (i = 0; i < 9; i++) {
-		uv.x += blurDistance;
-		sum += Scenes[2].Sample(TexSampler, uv) * blurWeights[i];
-	}
+	for (int i = 0; i < BLUR_SAMPLE_COUNT; i++)
+		sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x + blurWeightsAndOffsets[i].x * texelSize.x, input.texCoord.y)) * blurWeightsAndOffsets[i].y;
+	//for (int i = 0; i < 9; i++)
+		//sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x + (i - 4.0f) * texelSize.x, input.texCoord.y)) * blurWeights[i];
+
+	sum.w = 1.0f;
 
 	return sum;
 }
@@ -82,53 +108,36 @@ float4 verblurps(PixelInputType input) : SV_TARGET
 {
 	// Make an average of surrounding pixels
 	float4 sum = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y - 4.0f * blurDistance)) * blurWeights[0];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y - 3.0f * blurDistance)) * blurWeights[1];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y - 2.0f * blurDistance)) * blurWeights[2];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y - blurDistance)) * blurWeights[3];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y)) * blurWeights[4];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y + blurDistance)) * blurWeights[5];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y + 2.0f * blurDistance)) * blurWeights[6];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y + 3.0f * blurDistance)) * blurWeights[7];
-	sum += Scenes[2].Sample(TexSampler, float2(input.texCoord.x, input.texCoord.y + 4.0f * blurDistance)) * blurWeights[8];
+
+	for (int i = 0; i < BLUR_SAMPLE_COUNT; i++)
+		sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x, input.texCoord.y + blurWeightsAndOffsets[i].x * texelSize.y)) * blurWeightsAndOffsets[i].y;
+	//for (int i = 0; i < 9; i++)
+		//sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x, input.texCoord.y + (i - 4.0f) * texelSize.y)) * blurWeights[i];
+
+	sum.w = 1.0f;
 
 	return sum;
 }
 
 // Depth of Field
-cbuffer dofbuffer : register (cb0)
+cbuffer dofbuffer
 {
-	float distance;
-	float range;
 	float near;
 	float far;
+	float range;
+	float dofunused;
 };
-
-float4 dofps(PixelInputType input) : SV_TARGET
-{
-	float4 blurColor = Scenes[2].Sample(TexSampler, input.texCoord);
-	float4 originalColor = Scenes[0].Sample(TexSampler, input.texCoord);
-
-	// Get the inverted depth texel, meaning that nearer the object is, darker the scene
-	float depth = 1 - Scenes[1].Sample(TexSampler, input.texCoord);
-
-	float sceneZ = (-near * far) / (depth - far);
-	float factor = saturate(abs(sceneZ - distance) / range);
-
-	return lerp(originalColor, blurColor, factor);
-}
 
 // Bloom pass constants, can be passed via a constant buffer (cbuffer)
 float bloomSaturation = 1.0f;
 float bloomIntensity = 1.1f;
 float originalSaturation = 1.0f;
-float originalIntensity = 0.8f;
+float originalIntensity = 0.9f;
 
 float4 bloomps(PixelInputType input) : SV_TARGET
 {
-	float4 bloomColor = Scenes[2].Sample(TexSampler, input.texCoord);
-	float4 originalColor = Scenes[0].Sample(TexSampler, input.texCoord);
+	float4 bloomColor = CurrentScene.Sample(TexSampler, input.texCoord);
+	float4 originalColor = OriginalScene.Sample(TexSampler, input.texCoord);
 
 	bloomColor = adjustSaturation(bloomColor, bloomSaturation) * bloomIntensity;
 	originalColor = adjustSaturation(originalColor, originalSaturation) * originalIntensity;
@@ -138,30 +147,102 @@ float4 bloomps(PixelInputType input) : SV_TARGET
 	return originalColor + bloomColor;
 }
 
+float GetDepthBluriness(float fDepth, float4 dofParamsFocus) {
+	// 0 - in focus, 1 - completely out of focus
+	float f = abs(fDepth - dofParamsFocus.z);
+ 
+	// point is closer than focus plane.
+	if (fDepth < dofParamsFocus.z) {
+		f /= dofParamsFocus.x;
+	}
+	// point is futher than focus plane.
+	else {
+		f /= dofParamsFocus.y;
+		f = clamp(f, 0, 1 - dofMinThreshold);
+	}
+ 
+	if (fDepth < 0.005)
+		f = 0.0f;
+ 
+	return f;
+}
+ 
+float4 GetDepth(PixelInputType input) : SV_TARGET {
+	float3 color = CurrentScene.Sample(TexSampler, input.texCoord).rgb;
+ 
+	// OBGEv2 Depth (HawkleyFox):
+	float depth = pow(abs(DepthScene.Sample(DepthSampler,input.texCoord).x), 0.05);
+	depth = (2.0f * near) / (near + far - depth * (far - near));
+ 
+	// Focus depth (HawkleyFox):
+	float fdepth = 0.0f;
+#ifndef	DISTANTBLUR
+	fdepth = pow(abs(DepthScene.Sample(DepthSampler, float2(0.5, 0.5)).x), 0.05);
+#endif
+	fdepth = (2.0f * near) / (near + far - fdepth * (far - near));
+ 
+	float4 dofParamsFocus = float4(NearBlurDepth, FarBlurDepth, fdepth, MaxBlurCutoff);
+	depth = saturate(GetDepthBluriness(depth, dofParamsFocus)) * dofParamsFocus.w;
+ 
+	return float4(color, depth);
+}
+ 
+float4 DofPS(PixelInputType input) : SV_TARGET {
+	// fetch center tap from blured low res image
+	float centerDepth = CurrentScene.Sample(TexSampler, input.texCoord).w; 	//Gets relative depth with blur amount.
+	float cdepth = DepthScene.Sample(DepthSampler, input.texCoord).x; 		//Gets absolute depth.
+ 
+	// disc radius is circle of confusion - how much blur an object (or pixel) has.
+	// it is given by c=A*abs(S2-S1)/S2
+	// where A is aperture size, S2 is the distance to an out of focus object,
+	// and S1 is the distance to the focused object.
+ 
+	float discRadius = ApertureDiameter * centerDepth / cdepth;
+	// or is it: discRadius = ApertureDiameter * centerDepth; ?
+ 
+//	float discRadiusLow = discRadius * radiusScale;
+	float4 cOut = 0;
+ 
+	for (int t = 0; t < 8; t++)
+		cOut += CurrentScene.Sample(TexSampler, input.texCoord + poisson[t] * texelSize * discRadius);
+ 
+	cOut = cOut / 8;
+ 
+	return float4(cOut.rgb, 1);
+}
 
 // Define our technique here
 //   The bloom needs to blur the screen first (we blur it twice, once horizontally, another vertically), then applies the effect
 technique11 Bloom
 {
-	pass P0 // Just vertex shader
+	/*pass horizontalgaussianblur
 	{
 		VertexShader = compile vs_5_0 mainvs();
-		PixelShader = compile ps_5_0 mainps();
-	}
-	pass horizontalgaussianblur
-	{
 		PixelShader = compile ps_5_0 horblurps();
 	}
 	pass verticalgaussianblur
 	{
 		PixelShader = compile ps_5_0 verblurps();
 	}
-	/*pass dof
-	{
-		PixelShader = compile ps_5_0 dofps();
-	}*/
-	pass bloom
+	/*pass bloom
 	{
 		PixelShader = compile ps_5_0 bloomps();
+	}*/
+	pass dof
+	{
+		VertexShader = compile vs_5_0 mainvs();
+		PixelShader = compile ps_5_0 GetDepth();
 	}
+	pass p1
+	{
+		PixelShader = compile ps_5_0 DofPS();
+	}
+	/*pass p2
+	{
+		PixelShader = compile ps_5_0 weakhorblurps();
+	}
+	pass p3
+	{
+		PixelShader = compile ps_5_0 weakverblurps();
+	}*/
 }

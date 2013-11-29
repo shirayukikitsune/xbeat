@@ -107,7 +107,7 @@ namespace PMXTest {
 			Assert::AreEqual(0.5f, n.getY(), 0.0001f);
 			Assert::AreEqual(0.5f, n.getZ(), 0.0001f);
 			Assert::AreEqual(0.5f, n.getW(), 0.0001f);
-			Assert::AreEqual(1.0f, n.Length(), 0.0001f);
+			Assert::AreEqual(1.0f, n.LengthSquared(), 0.001f);
 		}
 	};
 }

@@ -2,13 +2,13 @@
 
 #pragma comment (lib, "dxgi.lib")
 #pragma comment (lib, "d3d11.lib")
-#pragma comment (lib, "d3dx11d.lib")
-#pragma comment (lib, "d3dx10d.lib")
+#pragma comment (lib, "d3dcompiler.lib")
 
 #include <dxgi.h>
 #include <d3dcommon.h>
 #include <d3d11.h>
 #include <DirectXMath.h>
+#include "DXUtil.h"
 
 #include <memory>
 
@@ -38,6 +38,8 @@ public:
 
 	void GetVideoCardInfo(char *name, int &memory);
 
+	void SetDepthAlways();
+	void SetDepthLessEqual();
 	void Begin2D();
 	void End2D();
 
@@ -50,6 +52,8 @@ public:
 
 	void ResetViewport();
 
+	DXType<ID3D11ShaderResourceView> GetDepthResourceView();
+
 private:
 	bool FindBestRefreshRate(int width, int height, uint32_t &numerator, uint32_t &denominator);
 
@@ -61,10 +65,11 @@ private:
 	ID3D11DeviceContext *deviceContext;
 	ID3D11RenderTargetView *renderTarget;
 	ID3D11Texture2D *depthStencilBuffer;
-	ID3D11DepthStencilState *depthStencilState[2];
+	ID3D11DepthStencilState *depthStencilState[4];
 	ID3D11DepthStencilView *depthStencilView;
+	DXType<ID3D11ShaderResourceView> depthResourceView;
 	ID3D11BlendState *blendState[2];
-	ID3D11RasterizerState *rasterState[2];
+	ID3D11RasterizerState *rasterState[3];
 	D3D11_VIEWPORT viewport;
 	DirectX::XMMATRIX projection;
 	DirectX::XMMATRIX worldMatrix;

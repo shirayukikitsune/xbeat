@@ -93,7 +93,7 @@ bool D3DRenderer::FindBestRefreshRate(int width, int height, uint32_t &numerator
 bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool fullscreen, float screenDepth, float screenNear)
 {
 	HRESULT result;
-	uint32_t i, numerator, denominator;
+	uint32_t numerator, denominator;
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
 	D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
 	ID3D11Texture2D *backBuffer;
@@ -109,7 +109,7 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	if (!FindBestRefreshRate(width, height, numerator, denominator))
 		return false;
 
-	ZeroMemory(&swapChainDesc, sizeof swapChainDesc);;
+	ZeroMemory(&swapChainDesc, sizeof swapChainDesc);
 	swapChainDesc.BufferCount = 1;
 
 	swapChainDesc.BufferDesc.Width = width;
@@ -145,7 +145,11 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 
 	swapChainDesc.Flags = 0;
 
-	result = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, featureLevels, sizeof (featureLevels) / sizeof (featureLevels[0]), D3D11_SDK_VERSION, &swapChainDesc, &swapChain, &device, NULL, &deviceContext);
+	UINT deviceFlags = 0;
+#ifdef _DEBUG
+	deviceFlags |= D3D11_CREATE_DEVICE_DEBUG | D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS;
+#endif
+	result = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, deviceFlags, featureLevels, sizeof (featureLevels) / sizeof (featureLevels[0]), D3D11_SDK_VERSION, &swapChainDesc, &swapChain, &device, NULL, &deviceContext);
 	if (FAILED(result))
 		return false;
 
@@ -166,11 +170,11 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	depthBufferDesc.Height = height;
 	depthBufferDesc.MipLevels = 1;
 	depthBufferDesc.ArraySize = 1;
-	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
 	depthBufferDesc.SampleDesc.Count = 1;
 	depthBufferDesc.SampleDesc.Quality = 0;
 	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = 0;
 
@@ -182,6 +186,12 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 
 	depthStencilDesc.DepthEnable = true;
 	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	result = device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState[2]);
+	if (FAILED(result))
+		return false;
+
 	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
 
 	depthStencilDesc.StencilEnable = true;
@@ -204,6 +214,12 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 
 	depthStencilDesc.DepthEnable = false;
 
+	result = device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState[3]);
+	if (FAILED(result))
+		return false;
+
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+
 	result = device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState[1]);
 	if (FAILED(result))
 		return false;
@@ -223,6 +239,16 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 		return false;
 
 	deviceContext->OMSetRenderTargets(1, &renderTarget, depthStencilView);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+	srvd.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvd.Texture2D.MipLevels = 1;
+	srvd.Texture2D.MostDetailedMip = 0;
+
+	result = device->CreateShaderResourceView(depthStencilBuffer, &srvd, &depthResourceView);
+	if (FAILED(result))
+		return false;
 
 	// Setup the raster description which will determine how and what polygons will be drawn.
 	rasterDesc.AntialiasedLineEnable = true;
@@ -245,6 +271,12 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	// Create a no-cull state
 	rasterDesc.CullMode = D3D11_CULL_NONE;
 	result = device->CreateRasterizerState(&rasterDesc, &rasterState[1]);
+	if (FAILED(result))
+		return false;
+
+	// Create a no-cull state with wireframe
+	rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
+	result = device->CreateRasterizerState(&rasterDesc, &rasterState[2]);
 	if (FAILED(result))
 		return false;
 
@@ -307,6 +339,9 @@ void D3DRenderer::Shutdown()
 
 		state = nullptr;
 	}
+
+	if (depthResourceView)
+		depthResourceView = nullptr;
 
 	if (depthStencilView) {
 		depthStencilView->Release();
@@ -378,6 +413,16 @@ ID3D11RasterizerState* D3DRenderer::GetRasterState(int idx)
 	return rasterState[idx];
 }
 
+void D3DRenderer::SetDepthAlways()
+{
+	deviceContext->OMSetDepthStencilState(depthStencilState[3], 1);
+}
+
+void D3DRenderer::SetDepthLessEqual()
+{
+	deviceContext->OMSetDepthStencilState(depthStencilState[2], 1);
+}
+
 void D3DRenderer::Begin2D()
 {
 	deviceContext->OMSetDepthStencilState(depthStencilState[1], 1);
@@ -431,6 +476,11 @@ ID3D11DepthStencilView* D3DRenderer::GetDepthStencilView()
 ID3D11Texture2D *D3DRenderer::GetDepthStencilTexture()
 {
 	return depthStencilBuffer;
+}
+
+Renderer::DXType<ID3D11ShaderResourceView> D3DRenderer::GetDepthResourceView()
+{
+	return depthResourceView;
 }
 
 void D3DRenderer::SetBackBufferRenderTarget()

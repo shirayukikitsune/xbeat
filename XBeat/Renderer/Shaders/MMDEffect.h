@@ -11,6 +11,8 @@
 namespace Renderer {
 namespace Shaders {
 
+#define BLUR_SAMPLE_COUNT 15
+
 class MMDEffect
 {
 public:
@@ -32,6 +34,10 @@ public:
 		float unused;
 	};
 
+	__declspec(align(16)) struct BlurSamplersBuffer {
+		DirectX::XMFLOAT2 offsetAndWeight[BLUR_SAMPLE_COUNT];
+	};
+
 	MMDEffect(void);
 	~MMDEffect(void);
 
@@ -47,7 +53,7 @@ private:
 	void ShutdownEffect();
 	void OutputErrorMessage(ID3D10Blob *error, HWND wnd, const std::wstring &filename);
 
-	bool SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView **textures, int textureCount, float farZ, float nearZ);
+	bool SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ);
 	void RenderEffect(ID3D11DeviceContext *context, int indexCount);
 
 	DXType<ID3DX11Effect> m_effect;
@@ -56,16 +62,26 @@ private:
 	DXType<ID3D11Buffer> m_matrixBuffer;
 	DXType<ID3D11Buffer> m_screenSizeBuffer;
 	DXType<ID3D11Buffer> m_dofBuffer;
+	DXType<ID3D11Buffer> m_blurBuffer;
 	DXType<ID3D11Texture2D> m_originalBackTexture;
 	DXType<ID3D11ShaderResourceView> m_originalBackView;
 	DXType<ID3D11Texture2D> m_currentBackTexture;
 	DXType<ID3D11ShaderResourceView> m_currentBackView;
-	DXType<ID3D11Texture2D> m_originalDepthTexture;
-	DXType<ID3D11ShaderResourceView> m_originalDepthView;
+
+	ID3DX11EffectVariable *m_originalSceneVar;
+	ID3DX11EffectVariable *m_depthSceneVar;
+	ID3DX11EffectVariable *m_currentSceneVar;
+	ID3DX11EffectVariable *m_defaultSamplerVar;
+	ID3DX11EffectConstantBuffer *m_WVPVar;
+	ID3DX11EffectConstantBuffer *m_screenSizeVar;
+	ID3DX11EffectConstantBuffer *m_dofVar;
+	ID3DX11EffectConstantBuffer *m_blurVar;
 
 	uint32_t m_numGroups;
 	uint32_t *m_numTechniques;
 	uint32_t **m_numPasses;
+
+	float m_blurAmmount;
 };
 
 }

@@ -5,8 +5,10 @@
 #include <Windows.h>
 #include <memory>
 
-#include "Input/Manager.h"
+#include "Input/InputManager.h"
 #include "Renderer/Manager.h"
+#include "Physics/Environment.h"
+#include "Dispatcher.h"
 
 class SystemClass
 {
@@ -32,6 +34,8 @@ private:
 	bool Frame();
 	void ShutdownWindow();
 
+	float frameMsec();
+
 	SystemClass();
 	SystemClass(const SystemClass &);
 
@@ -42,6 +46,8 @@ private:
 
 	std::shared_ptr<Input::Manager> input;
 	std::shared_ptr<Renderer::Manager> renderer;
+	std::shared_ptr<Physics::Environment> physics;
+	std::shared_ptr<Dispatcher> dispatcher;
 };
 
 

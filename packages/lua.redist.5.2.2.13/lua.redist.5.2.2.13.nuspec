@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>lua.redist</id>
+    <version>5.2.2.13</version>
+    <title>lua Redist</title>
+    <authors>lua contributors,  Benjamin Herila</authors>
+    <owners>lua contributors,  Benjamin Herila</owners>
+    <licenseUrl>http://www.lua.org/</licenseUrl>
+    <projectUrl>http://www.lua.org/</projectUrl>
+    <iconUrl>https://raw.github.com/coapp-packages/lua/f720a1047809d68458b1076e84a58da51f38a31d/COPKG/lua.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Redistributable components for package 'lua'. This package should only be installed as a dependency. 
+(This is not the package you are looking for).</description>
+    <summary>Redistributable components for for package 'lua'</summary>
+    <releaseNotes />
+    <copyright>Copyright 2013</copyright>
+    <tags>lua native CoApp</tags>
+  </metadata>
+</package>

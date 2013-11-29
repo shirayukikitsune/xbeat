@@ -125,12 +125,10 @@ bool OrthoWindowClass::InitializeBuffers(DXType<ID3D11Device> device, int width,
 void OrthoWindowClass::ShutdownBuffers()
 {
 	if (m_indexBuffer) {
-		m_indexBuffer->Release();
 		m_indexBuffer = nullptr;
 	}
 
 	if (m_vertexBuffer) {
-		m_vertexBuffer->Release();
 		m_vertexBuffer = nullptr;
 	}
 }

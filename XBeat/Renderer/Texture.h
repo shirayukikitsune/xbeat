@@ -1,8 +1,8 @@
 #pragma once
 
 #include <d3d11.h>
-#include <D3DX11tex.h>
 #include <string>
+#include <list>
 
 namespace Renderer {
 

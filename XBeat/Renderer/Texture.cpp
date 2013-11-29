@@ -56,7 +56,7 @@ bool Texture::Initialize(ID3D11Device *device, const std::wstring &file)
 			return false;
 	}
 
-	result = DirectX::CreateShaderResourceView(device, image.GetImages(), 1, metaData, &texture);
+	result = DirectX::CreateShaderResourceView(device, image.GetImages(), image.GetImageCount(), metaData, &texture);
 	if (FAILED(result))
 		return false;
 

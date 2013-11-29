@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,14 +19,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
@@ -49,12 +49,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>USE_SSE=3;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;$(SolutionDir)Library_Bullet_Physics\include;$(SolutionDir)Library_DirectXTex;$(SolutionDir)Library_DirectXTK\Inc;$(SolutionDir)Library_FX11\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>USE_SSE=3;WIN32;PMX_TEST;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -65,13 +66,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>USE_SSE=3;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;$(SolutionDir)Library_Bullet_Physics\include;$(SolutionDir)Library_DirectXTex;$(SolutionDir)Library_DirectXTK\Inc;$(SolutionDir)Library_FX11\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>USE_SSE=3;WIN32;PMX_TEST;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -82,23 +84,74 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\XBeat\Input\InputManager.h" />
+    <ClInclude Include="..\XBeat\Physics\Environment.h" />
+    <ClInclude Include="..\XBeat\Renderer\CameraClass.h" />
+    <ClInclude Include="..\XBeat\Renderer\D3DRenderer.h" />
+    <ClInclude Include="..\XBeat\Renderer\D3DTextureRenderer.h" />
+    <ClInclude Include="..\XBeat\Renderer\DXUtil.h" />
+    <ClInclude Include="..\XBeat\Renderer\Light.h" />
+    <ClInclude Include="..\XBeat\Renderer\Manager.h" />
+    <ClInclude Include="..\XBeat\Renderer\Model.h" />
+    <ClInclude Include="..\XBeat\Renderer\OrthoWindowClass.h" />
+    <ClInclude Include="..\XBeat\Renderer\PMX\PMXBone.h" />
+    <ClInclude Include="..\XBeat\Renderer\PMX\PMXDefinitions.h" />
+    <ClInclude Include="..\XBeat\Renderer\PMX\PMXLoader.h" />
+    <ClInclude Include="..\XBeat\Renderer\PMX\PMXModel.h" />
+    <ClInclude Include="..\XBeat\Renderer\PMX\PMXSoftBody.h" />
+    <ClInclude Include="..\XBeat\Renderer\Shaders\LightShader.h" />
+    <ClInclude Include="..\XBeat\Renderer\Shaders\MMDEffect.h" />
+    <ClInclude Include="..\XBeat\Renderer\Shaders\Texture.h" />
+    <ClInclude Include="..\XBeat\Renderer\SkyBox.h" />
+    <ClInclude Include="..\XBeat\Renderer\Texture.h" />
+    <ClInclude Include="..\XBeat\Renderer\ViewFrustum.h" />
     <ClInclude Include="Motion.h" />
-    <ClInclude Include="PMXModel.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Vector.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\XBeat\Input\InputManager.cpp" />
+    <ClCompile Include="..\XBeat\Physics\Environment.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\CameraClass.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\D3DRenderer.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\D3DTextureRenderer.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\Light.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\Manager.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\Model.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\OrthoWindowClass.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\PMX\PMXBone.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\PMX\PMXLoader.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\PMX\PMXModel.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\PMX\PMXSoftBody.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\Shaders\LightShader.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\Shaders\MMDEffect.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\Shaders\TextureShader.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\SkyBox.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\Texture.cpp" />
+    <ClCompile Include="..\XBeat\Renderer\ViewFrustum.cpp" />
+    <ClCompile Include="BoneTest.cpp" />
     <ClCompile Include="Motion.cpp" />
-    <ClCompile Include="PMXModel.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="unittest1.cpp" />
     <ClCompile Include="VectorTest.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Library_Bullet_Physics\Library_Bullet_Physics.vcxproj">
+      <Project>{0446af84-8c4a-4db5-889c-440447944665}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_DirectXTex\DirectXTex_Desktop_2013.vcxproj">
+      <Project>{371b9fa9-4c90-4ac6-a123-aced756d6c77}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_DirectXTK\DirectXTK_Desktop_2013.vcxproj">
+      <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_FX11\Effects11_2013.vcxproj">
+      <Project>{df460eab-570d-4b50-9089-2e2fc801bf38}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

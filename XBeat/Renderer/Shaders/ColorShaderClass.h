@@ -2,7 +2,6 @@
 
 #include <d3d11.h>
 #include <DirectXMath.h>
-#include <D3DX11async.h>
 #include <string>
 
 namespace Renderer {

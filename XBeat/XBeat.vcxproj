@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -18,13 +18,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -39,8 +39,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(DXSDK_DIR)Include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(DXSDK_DIR)Lib\x86;$(LibraryPath)</LibraryPath>
+    <IncludePath>G:\dev\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;C:\Program Files %28x86%29\Windows Kits\8.1\Include\um;C:\Program Files %28x86%29\Windows Kits\8.1\Include\shared;C:\Program Files %28x86%29\Windows Kits\8.1\Include\winrt</IncludePath>
+    <LibraryPath>G:\dev\lib;$(VCInstallDir)lib;$(VCInstallDir)atlmfc\lib;C:\Program Files %28x86%29\Windows Kits\8.1\Lib\winv6.3\um\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(DXSDK_DIR)Include;$(IncludePath)</IncludePath>
@@ -51,15 +51,19 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\sakagushi\Documents\GitHub\xbeat\Library_DirectXTex;C:\Users\sakagushi\Documents\GitHub\xbeat\Library_FX11\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Library_DirectXTex;$(SolutionDir)Library_FX11\inc;$(SolutionDir)Library_Bullet_Physics\include;$(SolutionDir)Library_DirectXTK\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;DEBUG;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StructMemberAlignment>16Bytes</StructMemberAlignment>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>d3dcompiler.lib;Effects11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Users\sakagushi\Documents\GitHub\xbeat\Library_FX11\Bin\Desktop_2012\Win32\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -68,7 +72,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\sakagushi\Documents\GitHub\xbeat\Library_DirectXTex;C:\Users\sakagushi\Documents\GitHub\xbeat\Library_FX11\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Library_DirectXTex;$(SolutionDir)Library_FX11\inc;$(SolutionDir)Library_Bullet_Physics\include;$(SolutionDir)Library_DirectXTK\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -82,20 +86,24 @@
     <ProjectReference Include="..\Library_Bullet_Physics\Library_Bullet_Physics.vcxproj">
       <Project>{0446af84-8c4a-4db5-889c-440447944665}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\Library_DirectXTex\DirectXTex_Desktop_2012.vcxproj">
+    <ProjectReference Include="..\Library_DirectXTex\DirectXTex_Desktop_2013.vcxproj">
       <Project>{371b9fa9-4c90-4ac6-a123-aced756d6c77}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\Library_FX11\Effects11_2012.vcxproj">
+    <ProjectReference Include="..\Library_DirectXTK\DirectXTK_Desktop_2013.vcxproj">
+      <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Library_FX11\Effects11_2013.vcxproj">
       <Project>{df460eab-570d-4b50-9089-2e2fc801bf38}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Library_JPEG\Library_JPEG.vcxproj">
-      <Project>{704b8f90-75e4-48f0-b55a-fd4caad729fd}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Library_libpng\Library_libpng.vcxproj">
-      <Project>{35de672d-05f0-41c1-bfe9-d6bbb3500666}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Dispatcher.cpp" />
+    <ClCompile Include="Physics\Environment.cpp" />
+    <ClCompile Include="Renderer\PMX\PMXRigidBody.cpp" />
+    <ClCompile Include="Renderer\PMX\PMXMaterial.cpp" />
+    <ClCompile Include="Renderer\PMX\PMXBone.cpp" />
+    <ClCompile Include="Renderer\PMX\PMXLoader.cpp" />
+    <ClCompile Include="Renderer\PMX\PMXSoftBody.cpp" />
     <ClCompile Include="Renderer\OrthoWindowClass.cpp" />
     <ClCompile Include="Renderer\D3DTextureRenderer.cpp" />
     <ClCompile Include="Input\InputManager.cpp" />
@@ -111,13 +119,22 @@
     <ClCompile Include="Renderer\Shaders\LightShader.cpp" />
     <ClCompile Include="Renderer\Shaders\TextureShader.cpp" />
     <ClCompile Include="Renderer\Texture.cpp" />
+    <ClCompile Include="Renderer\SkyBox.cpp" />
     <ClCompile Include="SystemClass.cpp" />
     <ClCompile Include="Renderer\ViewFrustum.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Dispatcher.h" />
+    <ClInclude Include="Physics\Environment.h" />
+    <ClInclude Include="Renderer\PMX\PMXRigidBody.h" />
+    <ClInclude Include="Renderer\PMX\PMXMaterial.h" />
+    <ClInclude Include="Renderer\PMX\PMXBone.h" />
+    <ClInclude Include="Renderer\PMX\PMXDefinitions.h" />
+    <ClInclude Include="Renderer\PMX\PMXLoader.h" />
+    <ClInclude Include="Renderer\PMX\PMXSoftBody.h" />
     <ClInclude Include="Renderer\OrthoWindowClass.h" />
     <ClInclude Include="Renderer\D3DTextureRenderer.h" />
-    <ClInclude Include="Input\Manager.h" />
+    <ClInclude Include="Input\InputManager.h" />
     <ClInclude Include="Renderer\DXUtil.h" />
     <ClInclude Include="Renderer\Shaders\MMDEffect.h" />
     <ClInclude Include="Renderer\CameraClass.h" />
@@ -130,6 +147,7 @@
     <ClInclude Include="Renderer\Shaders\LightShader.h" />
     <ClInclude Include="Renderer\Shaders\Texture.h" />
     <ClInclude Include="Renderer\Texture.h" />
+    <ClInclude Include="Renderer\SkyBox.h" />
     <ClInclude Include="SystemClass.h" />
     <ClInclude Include="Renderer\ViewFrustum.h" />
   </ItemGroup>
@@ -162,15 +180,47 @@
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <FxCompile Include="Data\Shaders\SkyboxPixel.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\SkyboxVertex.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\TexturePixel.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\TextureVertex.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Data/Shaders/%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\zxMMD.fx">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Effect</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Effect</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Data\Shaders\MMD.fx">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Effect</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Effect</ShaderType>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Data\Shaders\Texture.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
@@ -183,8 +233,12 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="Data\Textures\Sky\miramar.dds" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\directxtk.2.22.13.23\build\native\directxtk.targets" Condition="Exists('..\packages\directxtk.2.22.13.23\build\native\directxtk.targets')" />
+    <Import Project="..\packages\lua.redist.5.2.2.13\build\native\lua.redist.targets" Condition="Exists('..\packages\lua.redist.5.2.2.13\build\native\lua.redist.targets')" />
+    <Import Project="..\packages\lua.5.2.2.13\build\native\lua.targets" Condition="Exists('..\packages\lua.5.2.2.13\build\native\lua.targets')" />
   </ImportGroup>
 </Project>

@@ -14,18 +14,29 @@ class Vector
 public:
 	Vector() {
 		v = _mm_set1_ps(0.0f);
+		dirty = true;
 	}
 	Vector(float x, float y, float z, float w) {
-		float v[4] = { x, y, z, w };
-		this->v = _mm_loadu_ps(v);
+		fv[0] = x;
+		fv[1] = y;
+		fv[2] = z;
+		fv[3] = w;
+		this->v = _mm_loadu_ps(fv);
+		dirty = false;
 	}
 	Vector(float *v) {
+		memcpy(fv, v, sizeof (float) * 4);
 		this->v = _mm_loadu_ps(v);
+		dirty = false;
 	}
-	Vector(__m128 _v) : v(_v) { }
+	Vector(__m128 _v) : v(_v) { dirty = true; }
 
 	inline float* getV() {
-		_mm_storeu_ps(fv, v);
+		if (dirty) {
+			_mm_storeu_ps(fv, v);
+			dirty = false;
+		}
+
 		return fv;
 	}
 	inline float getX() {
@@ -65,7 +76,7 @@ private:
 
 	__m128 v;
 	float fv[4];
-
+	bool dirty;
 public:
 #pragma region Type Conversion
 	inline operator __m128 () const {
@@ -79,11 +90,14 @@ public:
 #pragma region Assignment
 	inline Vector operator=(const __m128 &other) {
 		this->v = other;
+		dirty = true;
 
 		return *this;
 	}
 	inline Vector operator=(const Vector &other) {
 		this->v = other.v;
+		memcpy(this->fv, other.fv, sizeof (fv));
+		this->dirty = other.dirty;
 
 		return *this;
 	}
