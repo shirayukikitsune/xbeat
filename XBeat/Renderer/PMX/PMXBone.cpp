@@ -23,6 +23,21 @@ void Bone::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (!HasAnyFlag(BoneFlags::IK))
 		m_primitive = DirectX::GeometricPrimitive::CreateCylinder(d3d->GetDeviceContext());
 
+	btVector3 direction = GetOffsetPosition();
+	btVector3 up(0.0f, 1.0f, 0.0f);
+
+	btVector3 axis = up.cross(direction);
+	if (!axis.isZero()) {
+		// if the axis is the null vector, it means that they are linearly dependent (direction = K * up), no rotation.
+		btScalar angleCos = up.dot(direction) / direction.length();
+		btScalar angle = btAcos(angleCos);
+
+		btQuaternion rot;
+		rot.setRotation(axis, angle);
+
+		m_transform.setRotation(rot);
+	}
+
 	m_toOriginTransform = m_transform.inverse();
 }
 
@@ -205,28 +220,26 @@ void Bone::updateChildren()
 	}
 }
 
-float getScaling(Vertex *v, Model *m)
-{
-	if (v->weightMethod == VertexWeightMethod::SDEF) return 0.5f;
-	if (v->weightMethod == VertexWeightMethod::BDEF1) return 1.0f;
-	float scale = 1.0f;
-	for (auto &i : v->boneInfo.BDEF.boneIndexes) {
-		if (i != -1 && m->GetBoneById(i) != nullptr)
-			scale -= 0.25f;
-	}
-	return scale;
-}
-
 void Bone::updateVertices()
 {
 	static btVector3 zero(0, 0, 0);
+	static auto getScaling = [this](Vertex *v) {
+		if (v->weightMethod == VertexWeightMethod::SDEF) return 0.5f;
+		if (v->weightMethod == VertexWeightMethod::BDEF1) return 1.0f;
+		float scale = 1.0f;
+		for (auto &i : v->boneInfo.BDEF.boneIndexes) {
+			if (i != -1 && model->GetBoneById(i) != nullptr)
+				scale -= 0.25f;
+		}
+		return scale;
+	};
+
 	for (auto &vertex : vertices) {
 		btVector3 localPosition = m_toOriginTransform(vertex.first->position);
 		float weight;
 		switch (vertex.first->weightMethod) {
 		case VertexWeightMethod::QDEF:
 			weight = vertex.first->boneInfo.BDEF.weights[vertex.second];
-			//offset = quatRotate(btQuaternion::getIdentity().slerp(m_transform.getRotation(), weight), localPosition + m_transform.getOrigin() * weight);
 			break;
 		case VertexWeightMethod::SDEF:
 			weight = vertex.first->boneInfo.SDEF.weightBias;
@@ -235,8 +248,8 @@ void Bone::updateVertices()
 		default:
 			weight = vertex.first->boneInfo.BDEF.weights[vertex.second];
 		}
-		vertex.first->boneOffset[vertex.second] = m_toOriginTransform((m_transform(localPosition) * weight) - localPosition) * getScaling(vertex.first, model);
-		vertex.first->boneRotation[vertex.second] = btQuaternion::getIdentity().slerp(m_transform.getRotation(), weight * getScaling(vertex.first, model));
+		vertex.first->boneOffset[vertex.second] = m_toOriginTransform((m_transform(localPosition) * weight) - localPosition) * getScaling(vertex.first);
+		vertex.first->boneRotation[vertex.second] = btQuaternion::getIdentity().slerp(m_transform.getRotation(), weight * getScaling(vertex.first));
 
 		for (auto &m : vertex.first->materials)
 			m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
@@ -271,32 +284,15 @@ bool Bone::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, DirectX::CXMMATRIX
 
 	if (m_primitive)
 	{
-		static btVector3 up(0.0f, 1.0f, 0.0f);
-		btVector3 len = this->GetEndPosition() - this->GetPosition();
-		btVector3 scale(len);
+		btVector3 len = GetOffsetPosition();
 		if (len.length2() == 0) {
 			return true;
 		}
-		float angle = up.angle(len);
+		btVector3 scale(0.3f, len.length(), 0.3f);
 
-		if (scale.x() == 0) scale.setX(1.0f);
-		if (scale.y() == 0) scale.setY(1.0f);
-		if (scale.z() == 0) scale.setZ(1.0f);
-
-		scale *= 0.5f;
-
-		//w = DirectX::XMMatrixRotationZ(len.x()) * DirectX::XMMatrixRotationY(len.y()) * DirectX::XMMatrixRotationX(len.z());
-		w = //DirectX::XMMatrixScalingFromVector(scale.get128()) *
-			DirectX::XMMatrixRotationAxis(DirectX::XMVectorSetW(len.get128(), 1.0f), angle) *
+		w = DirectX::XMMatrixScalingFromVector(scale.get128()) *
+			DirectX::XMMatrixRotationQuaternion(m_transform.getRotation().get128()) *
 			DirectX::XMMatrixTranslationFromVector(m_transform.getOrigin().get128());
-		//w = DirectX::XMMatrixRotationAxisNormal(DirectX::XMVector3Normalize(len.get128()), DirectX::g_XMTwoPi.f[0]);
-		//w.r[0] = DirectX::XMVectorScale(w.r[0], len.x());
-		//w.r[1] = DirectX::XMVectorScale(w.r[1], len.y());
-		//w.r[2] = DirectX::XMVectorScale(w.r[2], len.z());
-		w.r[3] = DirectX::XMVectorSetW(m_transform.getOrigin().get128(), 1.0f);
-		/*w = DirectX::XMMatrixTransformation(DirectX::XMVectorZero(), DirectX::XMQuaternionIdentity(), len.get128(),
-			DirectX::XMVectorZero(), m_transform.getRotation().get128(),
-			m_transform.getOrigin().get128());*/
 
 		m_primitive->Draw(w, view, projection);
 	}
