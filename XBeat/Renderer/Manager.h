@@ -26,15 +26,20 @@ const bool VSYNC_ENABLED = true;
 const float SCREEN_DEPTH = 500.0f;
 const float SCREEN_NEAR = 0.25f;
 
-class Manager
+PMX_ALIGN class Manager
 {
 public:
 	Manager();
 	virtual ~Manager();
 
 	bool Initialize(int width, int height, HWND wnd, std::shared_ptr<Input::Manager> input, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher);
+	bool LoadScene();
 	void Shutdown();
 	bool Frame(float frameTime);
+
+	__forceinline std::shared_ptr<D3DRenderer> GetRenderer() { return d3d; }
+
+	PMX_ALIGNMENT_OPERATORS
 
 private:
 	bool Render(float frameTime);

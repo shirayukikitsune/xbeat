@@ -39,8 +39,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>G:\dev\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;C:\Program Files %28x86%29\Windows Kits\8.1\Include\um;C:\Program Files %28x86%29\Windows Kits\8.1\Include\shared;C:\Program Files %28x86%29\Windows Kits\8.1\Include\winrt</IncludePath>
-    <LibraryPath>G:\dev\lib;$(VCInstallDir)lib;$(VCInstallDir)atlmfc\lib;C:\Program Files %28x86%29\Windows Kits\8.1\Lib\winv6.3\um\x86</LibraryPath>
+    <IncludePath>G:\dev\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;C:\Program Files %28x86%29\Windows Kits\8.1\Include\um;C:\Program Files %28x86%29\Windows Kits\8.1\Include\shared;C:\Program Files %28x86%29\Windows Kits\8.1\Include\winrt;$(DXSDK_DIR)Include</IncludePath>
+    <LibraryPath>G:\dev\lib;$(VCInstallDir)lib;$(VCInstallDir)atlmfc\lib;C:\Program Files %28x86%29\Windows Kits\8.1\Lib\winv6.3\um\x86;$(DXSDK_DIR)Lib\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(DXSDK_DIR)Include;$(IncludePath)</IncludePath>

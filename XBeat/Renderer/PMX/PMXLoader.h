@@ -43,7 +43,7 @@ public:
 		}
 	};
 
-	struct RigidBody {
+	PMX_ALIGN struct RigidBody {
 		Name name;
 		uint32_t targetBone;
 		uint8_t group;
@@ -58,6 +58,8 @@ public:
 		float restitution;
 		float friction;
 		PMX::RigidBodyMode::Id mode;
+
+		PMX_ALIGNMENT_OPERATORS
 	};
 
 	bool FromFile(Model* model, const std::wstring &filename);

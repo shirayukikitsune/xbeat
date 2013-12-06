@@ -36,6 +36,7 @@ const int defaultToonTexCount = sizeof (defaultToonTexs) / sizeof (defaultToonTe
 
 PMX::Model::Model(void)
 {
+	m_debugFlags = DebugFlags::None;
 }
 
 
@@ -68,7 +69,7 @@ bool PMX::Model::LoadModel(const wstring &filename)
 
 	for (auto &body : softBodies)
 	{
-		body->Create(m_physics);
+		body->Create(m_physics, this);
 	}
 
 	return true;
@@ -172,7 +173,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 
 		for (uint32_t i = 0; i < (uint32_t)this->materials[k]->indexCount; i++) {
 			Vertex* vertex = vertices[this->verticesIndex[i + lastIndex]];
-			vertex->material = &rendermaterials[k];
+			vertex->materials.push_front(std::pair<RenderMaterial*,UINT>(&rendermaterials[k], i));
 #if 0
 			v.get()[i].position = DirectX::XMFLOAT3(vertex->position.x(), vertex->position.y(), vertex->position.z());
 			v.get()[i].texture = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
@@ -376,91 +377,93 @@ bool PMX::Model::updateMaterialBuffer(DXType<ID3D11DeviceContext> context)
 
 bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr<Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Light> light, std::shared_ptr<CameraClass> camera, std::shared_ptr<ViewFrustum> frustum)
 {
-#if 1
-	unsigned int stride;
-	unsigned int offset;
-	DirectX::XMFLOAT3 cameraPosition;
-	ID3D11DeviceContext *context = d3d->GetDeviceContext();
-	Shaders::Light::MaterialBufferType matBuf;
-	DirectX::XMMATRIX wvp = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection);
+	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
+		unsigned int stride;
+		unsigned int offset;
+		DirectX::XMFLOAT3 cameraPosition;
+		ID3D11DeviceContext *context = d3d->GetDeviceContext();
+		Shaders::Light::MaterialBufferType matBuf;
+		DirectX::XMMATRIX wvp = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection);
 
-	DirectX::XMStoreFloat3(&cameraPosition, camera->GetPosition());
+		DirectX::XMStoreFloat3(&cameraPosition, camera->GetPosition());
 
-	ID3D11ShaderResourceView *textures[3];
+		ID3D11ShaderResourceView *textures[3];
 
-	int renderedMaterials = 0;
+		int renderedMaterials = 0;
 
-	if (!updateMaterialBuffer(context))
-		return false;
-
-	if (!lightShader->SetShaderParameters(context, world, wvp, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), m_materialBuffer))
-		return false;
-
-	bool isTransparent = false;
-	
-	for (uint32_t i = 0; i < rendermaterials.size(); i++) {
-		// If material is marked for update, then update it here
-		if (rendermaterials[i].dirty & RenderMaterial::DirtyFlags::VertexBuffer)
-			updateMaterialVertexBuffer(&rendermaterials[i]);
-
-		// Check if we need to render this material
-		if (!frustum->IsBoxInside(rendermaterials[i].center, rendermaterials[i].radius))
-			continue; // Material is not inside the view frustum, so just skip
-
-		renderedMaterials ++;
-		
-		// Set vertex buffer stride and offset.
-		stride = sizeof(DirectX::VertexPositionNormalTexture); 
-		offset = 0;
-
-		textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
-		textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
-		textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
-
-		if (m_materialBufferData[i].diffuseColor.w <= 0.0f || m_materialBufferData[i].ambientColor.w <= 0.0f)
-			continue;
-
-		if ((materials[i]->flags & MaterialFlags::DoubleSide) == MaterialFlags::DoubleSide ||
-			(m_materialBufferData[i].diffuseColor.w < 1.0f || m_materialBufferData[i].ambientColor.w < 1.0f)) {
-			// Enable no-culling rasterizer if material has transparency or if it is marked to be rendered by both sides
-
-			if (!isTransparent) {
-				context->RSSetState(d3d->GetRasterState(1));
-				isTransparent = true;
-			}
-		}
-		else if (isTransparent) {
-			isTransparent = false;
-			context->RSSetState(d3d->GetRasterState(0));
-		}
-
-		// Set the vertex buffer to active in the input assembler so it can be rendered.
-		context->IASetVertexBuffers(0, 1, &rendermaterials[i].vertexBuffer, &stride, &offset);
-
-		// Set the index buffer to active in the input assembler so it can be rendered.
-		context->IASetIndexBuffer(rendermaterials[i].indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-		// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
-		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		//if (!lightShader->Render(context, rendermaterials[i].indexCount, world, view, projection, textures, 3, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), m_materialBuffer, i))
-			//return false;
-
-		if (!lightShader->SetMaterialInfo(context, i))
+		if (!updateMaterialBuffer(context))
 			return false;
 
-		lightShader->RenderShader(context,
-			rendermaterials[i].indexCount,
-			textures,
-			3);
+		if (!lightShader->SetShaderParameters(context, world, wvp, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), m_materialBuffer))
+			return false;
+
+		bool isTransparent = false;
+
+		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
+			// If material is marked for update, then update it here
+			if (rendermaterials[i].dirty & RenderMaterial::DirtyFlags::VertexBuffer)
+				updateMaterialVertexBuffer(&rendermaterials[i]);
+
+			// Check if we need to render this material
+			if (!frustum->IsBoxInside(rendermaterials[i].center, rendermaterials[i].radius))
+				continue; // Material is not inside the view frustum, so just skip
+
+			renderedMaterials++;
+
+			// Set vertex buffer stride and offset.
+			stride = sizeof(DirectX::VertexPositionNormalTexture);
+			offset = 0;
+
+			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
+			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
+			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
+
+			if (m_materialBufferData[i].diffuseColor.w <= 0.0f || m_materialBufferData[i].ambientColor.w <= 0.0f)
+				continue;
+
+			if ((materials[i]->flags & MaterialFlags::DoubleSide) == MaterialFlags::DoubleSide ||
+				(m_materialBufferData[i].diffuseColor.w < 1.0f || m_materialBufferData[i].ambientColor.w < 1.0f)) {
+				// Enable no-culling rasterizer if material has transparency or if it is marked to be rendered by both sides
+
+				if (!isTransparent) {
+					context->RSSetState(d3d->GetRasterState(1));
+					isTransparent = true;
+				}
+			}
+			else if (isTransparent) {
+				isTransparent = false;
+				context->RSSetState(d3d->GetRasterState(0));
+			}
+
+			// Set the vertex buffer to active in the input assembler so it can be rendered.
+			context->IASetVertexBuffers(0, 1, &rendermaterials[i].vertexBuffer, &stride, &offset);
+
+			// Set the index buffer to active in the input assembler so it can be rendered.
+			context->IASetIndexBuffer(rendermaterials[i].indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+			// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
+			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			//if (!lightShader->Render(context, rendermaterials[i].indexCount, world, view, projection, textures, 3, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), m_materialBuffer, i))
+			//return false;
+
+			if (!lightShader->SetMaterialInfo(context, i))
+				return false;
+
+			lightShader->RenderShader(context,
+				rendermaterials[i].indexCount,
+				textures,
+				3);
+		}
+
+		if (isTransparent)
+			context->RSSetState(d3d->GetRasterState(0));
 	}
 
-	if (isTransparent)
-		context->RSSetState(d3d->GetRasterState(0));
-#else
-	for (auto &bone : bones)
-		bone->Render(d3d, world, view, projection);
-#endif
+	if (m_debugFlags & DebugFlags::RenderBones) {
+		for (auto &bone : bones)
+			bone->Render(d3d, world, view, projection);
+	}
 
 	return true;
 }
@@ -553,10 +556,26 @@ PMX::Bone* PMX::Model::GetBoneById(uint32_t id)
 	if (id == -1)
 		return rootBone;
 
-	if (id > bones.size())
+	if (id >= bones.size())
 		return nullptr;
 
 	return bones[id];
+}
+
+PMX::Material* PMX::Model::GetMaterialById(uint32_t id)
+{
+	if (id == -1 || id >= materials.size())
+		return nullptr;
+
+	return materials[id];
+}
+
+PMX::RenderMaterial* PMX::Model::GetRenderMaterialById(uint32_t id)
+{
+	if (id == -1 || id >= rendermaterials.size())
+		return nullptr;
+
+	return &rendermaterials[id];
 }
 
 void PMX::Model::ApplyMorph(const std::wstring &nameJP, float weight)
@@ -644,7 +663,9 @@ void PMX::Model::applyVertexMorph(Morph *morph, float weight)
 		}
 
 		// Mark the material for update next frame
-		v->material->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
+		for (auto &m : v->materials)
+			m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
+		//v->material->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
 	}
 }
 

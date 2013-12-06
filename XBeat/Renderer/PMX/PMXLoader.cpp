@@ -228,7 +228,6 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 			vertex->bones[i] = nullptr;
 			vertex->boneRotation[i] = btQuaternion::getIdentity();
 		}
-		vertex->material = nullptr;
 		vertex->morphOffset.setZero();
 	}
 }

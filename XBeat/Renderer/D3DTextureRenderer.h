@@ -1,10 +1,11 @@
 #pragma once
 
+#include "PMX/PMXDefinitions.h"
 #include "DXUtil.h"
 
 namespace Renderer {
 
-class D3DTextureRenderer
+PMX_ALIGN class D3DTextureRenderer
 {
 public:
 	D3DTextureRenderer();
@@ -24,6 +25,8 @@ public:
 
 	int GetTextureWidth();
 	int GetTextureHeight();
+
+	PMX_ALIGNMENT_OPERATORS
 
 private:
 	DXType<ID3D11Texture2D> m_renderTargetTexture;

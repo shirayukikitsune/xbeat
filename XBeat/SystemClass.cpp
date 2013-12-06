@@ -42,18 +42,21 @@ bool SystemClass::Initialize()
 
 	frameMsec();
 
-	physics.reset(new Physics::Environment);
-	if (physics == nullptr)
-		return false;
-
-	if (!physics->Initialize())
-		return false;
-
 	renderer.reset(new Renderer::Manager);
 	if (renderer == nullptr)
 		return false;
 
+	physics.reset(new Physics::Environment);
+	if (physics == nullptr)
+		return false;
+
 	if (!renderer->Initialize(width, height, wnd, input, physics, dispatcher))
+		return false;
+
+	if (!physics->Initialize(renderer->GetRenderer()))
+		return false;
+
+	if (!renderer->LoadScene())
 		return false;
 
 	return true;

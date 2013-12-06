@@ -3,14 +3,23 @@
 #include <cstdint>
 #include <vector>
 #include <list>
-#include "../../Physics/Environment.h"
 #include <D3D11.h>
 #include <DirectXMath.h>
+#include "../../Physics/Environment.h"
 
 #ifdef PMX_TEST
 namespace PMXTest {
 	class BoneTest;
 }
+#endif
+
+#define PMX_ALIGNMENT 16
+#define PMX_ALIGN __declspec(align(PMX_ALIGNMENT))
+
+#ifdef _DEBUG
+#define PMX_ALIGNMENT_OPERATORS static void* operator new (size_t size) { return _aligned_malloc_dbg(size, PMX_ALIGNMENT, __FILE__, __LINE__); }; static void operator delete (void *p) { _aligned_free_dbg(p); };
+#else
+#define PMX_ALIGNMENT_OPERATORS static void* operator new (size_t size) { return _aligned_malloc(size, PMX_ALIGNMENT); }; static void operator delete (void *p) { _aligned_free(p); };
 #endif
 
 namespace Renderer {
@@ -170,7 +179,7 @@ struct MaterialToonMode {
 };
 #pragma endregion
 
-struct MaterialMorph {
+PMX_ALIGN struct MaterialMorph {
 	struct Method {
 		enum MethodId : uint8_t {
 			Multiplicative,
@@ -212,6 +221,8 @@ struct MaterialMorph {
 		this->sphereCoefficient *= other.sphereCoefficient;
 		this->toonCoefficient *= other.toonCoefficient;
 	}
+
+	PMX_ALIGNMENT_OPERATORS
 };
 
 union MorphType {
@@ -256,7 +267,7 @@ union MorphType {
 	};
 };
 
-struct Vertex {
+PMX_ALIGN struct Vertex{
 	Position position;
 	Position normal;
 	float uv[2];
@@ -278,7 +289,8 @@ struct Vertex {
 	float edgeWeight;
 
 	Bone *bones[4];
-	RenderMaterial *material;
+	//RenderMaterial *material;
+	std::list<std::pair<RenderMaterial*, UINT>> materials;
 	Position boneOffset[4], morphOffset;
 	btQuaternion boneRotation[4];
 	struct MorphData {
@@ -297,9 +309,11 @@ struct Vertex {
 		t.setRotation(boneRotation[0] * boneRotation[1] * boneRotation[2] * boneRotation[3]);
 		return t(normal);
 	}
+
+	PMX_ALIGNMENT_OPERATORS
 };
 
-struct Material {
+PMX_ALIGN struct Material {
 	Name name;
 	Color4 diffuse;
 	Color specular;
@@ -318,9 +332,11 @@ struct Material {
 	} toonTexture;
 	std::wstring freeField;
 	int indexCount;
+
+	PMX_ALIGNMENT_OPERATORS
 };
 
-struct IK {
+PMX_ALIGN struct IK {
 	struct Node {
 		uint32_t bone;
 		bool limitAngle;
@@ -334,9 +350,11 @@ struct IK {
 	int loopCount;
 	float angleLimit;
 	std::vector<Node> links;
+
+	PMX_ALIGNMENT_OPERATORS
 };
 
-struct Morph {
+PMX_ALIGN struct Morph {
 	Morph() {
 		appliedWeight = 0.0f;
 	};
@@ -347,9 +365,11 @@ struct Morph {
 	std::vector<MorphType> data;
 
 	float appliedWeight;
+
+	PMX_ALIGNMENT_OPERATORS
 };
 
-struct FrameMorphs {
+PMX_ALIGN struct FrameMorphs {
 	struct Target {
 		enum Id : uint8_t {
 			Bone,
@@ -358,15 +378,19 @@ struct FrameMorphs {
 	};
 	Target::Id target;
 	uint32_t id;
+
+	PMX_ALIGNMENT_OPERATORS
 };
 
-struct Frame {
+PMX_ALIGN struct Frame {
 	Name name;
 	uint8_t type;
 	std::vector<FrameMorphs> morphs;
+
+	PMX_ALIGNMENT_OPERATORS
 };
 
-struct Joint {
+PMX_ALIGN struct Joint {
 	Name name;
 	JointType::Id type;
 	struct {
@@ -380,6 +404,8 @@ struct Joint {
 		vec3f movementSpringConstant;
 		vec3f rotationSpringConstant;
 	} data;
+
+	PMX_ALIGNMENT_OPERATORS
 };
 }
 }

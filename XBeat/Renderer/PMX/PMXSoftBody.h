@@ -99,7 +99,7 @@ public:
 	};
 	std::vector<Pin> pins;
 
-	void Create(std::shared_ptr<Physics::Environment> physics);
+	void Create(std::shared_ptr<Physics::Environment> physics, Model* model);
 };
 
 }

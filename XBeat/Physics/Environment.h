@@ -1,9 +1,11 @@
 #pragma once
 
+#include "../Renderer/D3DRenderer.h"
 #include <btBulletDynamicsCommon.h>
 #include <btBulletCollisionCommon.h>
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletSoftBody/btSoftRigidDynamicsWorld.h>
+#include <BulletSoftBody/btSoftBodySolvers.h>
 #include <memory>
 #include <list>
 
@@ -26,7 +28,7 @@ public:
 	Environment(void);
 	~Environment(void);
 
-	bool Initialize();
+	bool Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d);
 	void Shutdown();
 	bool Frame(float frameTimeMsec);
 
@@ -40,6 +42,9 @@ public:
 	__forceinline float GetPauseTime() { return m_pauseTime; }
 	__forceinline btSoftBodyWorldInfo& GetWorldInfo() { return m_dynamicsWorld->getWorldInfo(); }
 
+	void AddSoftBody(std::shared_ptr<btSoftBody> body, int16_t group, int16_t mask);
+	void RemoveSoftBody(std::shared_ptr<btSoftBody> body);
+
 	void AddRigidBody(std::shared_ptr<btRigidBody> body, int16_t group = -1, int16_t mask = -1);
 	void RemoveRigidBody(std::shared_ptr<btRigidBody> body);
 
@@ -50,6 +55,7 @@ private:
 	PauseState::PauseState_e m_pauseState;
 	float m_pauseTime;
 
+	std::list<std::shared_ptr<btSoftBody>> m_softBodies;
 	std::list<std::shared_ptr<btRigidBody>> m_rigidBodies;
 	std::list<std::shared_ptr<btActionInterface>> m_characters;
 	std::unique_ptr<btBroadphaseInterface> m_broadphase;
@@ -58,6 +64,7 @@ private:
 	std::unique_ptr<btConstraintSolver> m_constraintSolver;
 	std::unique_ptr<btSoftRigidDynamicsWorld> m_dynamicsWorld;
 	std::unique_ptr<btSoftBodySolver> m_softBodySolver;
+	std::unique_ptr<btSoftBodySolverOutput> m_softBodySolverOutput;
 };
 
 }

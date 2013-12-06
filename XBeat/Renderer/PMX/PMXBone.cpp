@@ -95,25 +95,25 @@ void Bone::Update()
 	btVector3 position = startPosition;
 	btQuaternion rotation(0,0,0,1);
 	
-	Bone *parent = HasAnyFlag((BoneFlags::Flags)(BoneFlags::InheritRotation | BoneFlags::InheritTranslation)) ? model->GetBoneById(this->inherit.from) : GetParentBone();
+	// Work on translation
+	Bone *parent = HasAnyFlag(BoneFlags::InheritTranslation) ? model->GetBoneById(this->inherit.from) : (this->parent != -1 ? GetParentBone() : nullptr);
+	if (parent)
+	{
+		if (HasAnyFlag(BoneFlags::LocalInheritance))
+			position += parent->getLocalTransform().getOrigin();
+		else if (HasAnyFlag(BoneFlags::InheritTranslation)) 
+			position += parent->m_inheritTransform.getOrigin() * this->inherit.rate;
+		else position += parent->m_userTransform.getOrigin() + parent->m_morphTransform.getOrigin();
+	}
+
+	parent = HasAnyFlag(BoneFlags::InheritRotation) ? model->GetBoneById(this->inherit.from) : (this->parent != -1 ? GetParentBone() : nullptr);
 
 	if (parent) {
-		if (HasAnyFlag(BoneFlags::LocalInheritance)) {
-			// Local inherited position and rotation
+		if (HasAnyFlag(BoneFlags::LocalInheritance))
 			rotation = parent->getLocalTransform().getRotation();
-			position += parent->getLocalTransform().getOrigin();
-		}
-		else {
-			if (HasAnyFlag(BoneFlags::InheritRotation))
-				rotation = parent->m_inheritTransform.getRotation() / this->inherit.rate;
-			else rotation = parent->m_userTransform.getRotation() * parent->m_morphTransform.getRotation();
-
-			if (HasAnyFlag(BoneFlags::InheritTranslation))
-				position += parent->m_inheritTransform.getOrigin() * this->inherit.rate;
-			else position += parent->m_userTransform.getOrigin() + parent->m_morphTransform.getOrigin();
-		}
-
-		position = parent->m_toOriginTransform(position);
+		else if (HasAnyFlag(BoneFlags::InheritRotation))
+			rotation = parent->m_inheritTransform.getRotation() / this->inherit.rate;
+		else rotation = parent->m_userTransform.getRotation() * parent->m_morphTransform.getRotation();
 	}
 
 	m_inheritTransform.setOrigin(position);
@@ -134,6 +134,9 @@ void Bone::Transform(const btVector3& angles, const btVector3& offset, Deformati
 
 void Bone::Rotate(const btVector3& angles, DeformationOrigin::Id origin)
 {
+	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags::Flags)(BoneFlags::Manipulable | BoneFlags::Rotatable)))
+		return;
+
 	btQuaternion q;
 	q.setEulerZYX(angles.x(), angles.y(), angles.z());
 
@@ -149,6 +152,9 @@ void Bone::Rotate(const btVector3& angles, DeformationOrigin::Id origin)
 
 void Bone::Translate(const btVector3& offset, DeformationOrigin::Id origin)
 {
+	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags::Flags)(BoneFlags::Manipulable | BoneFlags::Movable)))
+		return;
+
 	if (origin == DeformationOrigin::User)
 		m_userTransform.setOrigin(m_userTransform.getOrigin() + offset);
 
@@ -229,11 +235,11 @@ void Bone::updateVertices()
 		default:
 			weight = vertex.first->boneInfo.BDEF.weights[vertex.second];
 		}
-		vertex.first->boneOffset[vertex.second] = (m_transform(localPosition) * weight);// *getScaling(vertex.first, model);
-		vertex.first->boneRotation[vertex.second] = btQuaternion::getIdentity().slerp(m_transform.getRotation(), weight);
+		vertex.first->boneOffset[vertex.second] = m_toOriginTransform((m_transform(localPosition) * weight) - localPosition) * getScaling(vertex.first, model);
+		vertex.first->boneRotation[vertex.second] = btQuaternion::getIdentity().slerp(m_transform.getRotation(), weight * getScaling(vertex.first, model));
 
-		if (vertex.first->material)
-			vertex.first->material->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
+		for (auto &m : vertex.first->materials)
+			m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
 	}
 }
 
@@ -265,18 +271,23 @@ bool Bone::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, DirectX::CXMMATRIX
 
 	if (m_primitive)
 	{
+		static btVector3 up(0.0f, 1.0f, 0.0f);
 		btVector3 len = this->GetEndPosition() - this->GetPosition();
+		btVector3 scale(len);
 		if (len.length2() == 0) {
 			return true;
 		}
+		float angle = up.angle(len);
 
-		if (len.x() == 0) len.setX(1.0f);
-		if (len.y() == 0) len.setY(1.0f);
-		if (len.z() == 0) len.setZ(1.0f);
+		if (scale.x() == 0) scale.setX(1.0f);
+		if (scale.y() == 0) scale.setY(1.0f);
+		if (scale.z() == 0) scale.setZ(1.0f);
+
+		scale *= 0.5f;
 
 		//w = DirectX::XMMatrixRotationZ(len.x()) * DirectX::XMMatrixRotationY(len.y()) * DirectX::XMMatrixRotationX(len.z());
-		w = DirectX::XMMatrixScalingFromVector(len.get128()) *
-			DirectX::XMMatrixRotationRollPitchYawFromVector(len.normalized().get128()) *
+		w = //DirectX::XMMatrixScalingFromVector(scale.get128()) *
+			DirectX::XMMatrixRotationAxis(DirectX::XMVectorSetW(len.get128(), 1.0f), angle) *
 			DirectX::XMMatrixTranslationFromVector(m_transform.getOrigin().get128());
 		//w = DirectX::XMMatrixRotationAxisNormal(DirectX::XMVector3Normalize(len.get128()), DirectX::g_XMTwoPi.f[0]);
 		//w.r[0] = DirectX::XMVectorScale(w.r[0], len.x());

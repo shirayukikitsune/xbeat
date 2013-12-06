@@ -39,6 +39,25 @@ public:
 	void ApplyMorph(const std::wstring &JPname, float weight);
 	void ApplyMorph(Morph *morph, float weight);
 
+	struct DebugFlags {
+		enum Flags : uint32_t {
+			None,
+			RenderBones = 0x1,
+			RenderJoints = 0x2,
+			RenderSoftBodies = 0x4,
+			RenderRigidBodies = 0x8,
+			DontRenderModel = 0x10
+		};
+	};
+
+	__forceinline DebugFlags::Flags GetDebugFlags() { return (DebugFlags::Flags)m_debugFlags; }
+	__forceinline void SetDebugFlags(DebugFlags::Flags value) { m_debugFlags |= value; }
+	__forceinline void ToggleDebugFlags(DebugFlags::Flags value) { m_debugFlags ^= value; }
+	__forceinline void UnsetDebugFlags(DebugFlags::Flags value) { m_debugFlags &= ~value; }
+
+	Material* GetMaterialById(uint32_t id);
+	RenderMaterial* GetRenderMaterialById(uint32_t id);
+
 private:
 	std::vector<Vertex*> vertices;
 	std::vector<uint32_t> verticesIndex;
@@ -69,6 +88,8 @@ private:
 	bool m_dirtyBuffer;
 	DXType<ID3D11Buffer> m_materialBuffer;
 	std::vector<Shaders::Light::MaterialBufferType> m_materialBufferData;
+
+	uint32_t m_debugFlags;
 
 protected:
 	virtual bool InitializeBuffers(std::shared_ptr<D3DRenderer> d3d);

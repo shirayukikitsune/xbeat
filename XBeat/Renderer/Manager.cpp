@@ -36,32 +36,6 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 		return false;
 	}
 
-	camera.reset(new CameraClass);
-	if (camera == nullptr)
-		return false;
-	camera->SetPosition(0.0f, 9.0f, -30.0f);
-
-	stage.reset(new Model);
-	if (!stage->Initialize(d3d, L"./Data/Models/flatground.txt", physics, dispatcher)) {
-		MessageBox(wnd, L"Failed to initialize the stage object", L"Error", MB_OK);
-		return false;
-	}
-
-	model.reset(new PMX::Model);
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 フェリシア風 Ver106.pmx", physics)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics)) {
-	if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, dispatcher)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics)) {
-		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
-		return false;
-	}
-
-	auto pos = model->GetBoneByName(L"頭")->GetPosition();
-	//camera->SetPosition(pos.x(), pos.y(), pos.z());
-	camera->SetPosition(0.0f, 10.0f, -30.f);
-
 	lightShader.reset(new Shaders::Light);
 	if (lightShader == nullptr)
 		return false;
@@ -133,9 +107,14 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 		model.get()->ApplyMorph(L"眼帯off", 1.0f);
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { model->ApplyMorph(L"翼羽ばたき", 0.9f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { model->GetBoneByName(L"全ての親")->Translate(btVector3(0.0f, 15.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { model->GetBoneByName(L"全ての親")->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyDown, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 0.0f, 1.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 0.0f, -1.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_1), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_2), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_3), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_4), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderSoftBodies); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_0), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
 	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
 		static float rotation[2] = { 0.0f, 0.0f };
 		rotation[0] += data->x / 20.0f;
@@ -147,6 +126,36 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 	screenHeight = height;
 
 	this->wnd = wnd;
+
+	return true;
+}
+
+bool Manager::LoadScene() {
+	camera.reset(new CameraClass);
+	if (camera == nullptr)
+		return false;
+	camera->SetPosition(0.0f, 9.0f, -30.0f);
+
+	stage.reset(new Model);
+	if (!stage->Initialize(d3d, L"./Data/Models/flatground.txt", physics, m_dispatcher)) {
+		MessageBox(wnd, L"Failed to initialize the stage object", L"Error", MB_OK);
+		return false;
+	}
+
+	model.reset(new PMX::Model);
+	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 フェリシア風 Ver106.pmx", physics)) {
+	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics)) {
+	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics)) {
+	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics)) {
+	if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics)) {
+		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
+		return false;
+	}
+
+	auto pos = model->GetBoneByName(L"頭")->GetPosition();
+	//camera->SetPosition(pos.x(), pos.y(), pos.z());
+	camera->SetPosition(0.0f, 10.0f, -30.f);
 
 	return true;
 }

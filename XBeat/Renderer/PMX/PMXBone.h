@@ -11,7 +11,7 @@ namespace PMX {
 class Loader;
 class Model;
 
-class Bone
+PMX_ALIGN class Bone
 {
 public:
 	Bone(Model *model, uint32_t id);
@@ -50,6 +50,8 @@ public:
 	__forceinline const btTransform& getLocalTransform() const { return m_transform; }
 
 	bool Render(std::shared_ptr<D3DRenderer> d3d, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
+
+	PMX_ALIGNMENT_OPERATORS
 
 private:
 	float getVertexWeight(Vertex *vertex);

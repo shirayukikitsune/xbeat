@@ -1,10 +1,11 @@
 #pragma once
 
+#include "PMX/PMXDefinitions.h"
 #include <DirectXMath.h>
 
 namespace Renderer {
 
-class CameraClass
+PMX_ALIGN class CameraClass
 {
 public:
 	CameraClass(void);
@@ -18,6 +19,8 @@ public:
 
 	void Render();
 	void GetViewMatrix(DirectX::XMMATRIX &matrix);
+
+	PMX_ALIGNMENT_OPERATORS
 
 private:
 	DirectX::XMVECTOR position, rotation;

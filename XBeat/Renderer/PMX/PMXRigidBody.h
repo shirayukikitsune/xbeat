@@ -7,7 +7,7 @@ namespace Renderer {
 namespace PMX {
 class Model;
 
-class KinematicMotionState : public btMotionState
+PMX_ALIGN class KinematicMotionState : public btMotionState
 {
 public:
 	KinematicMotionState(const btTransform &startTrans, const btTransform &boneTrans, Bone *bone);
@@ -18,12 +18,14 @@ public:
 
 	virtual void setWorldTransform(const btTransform &worldTrans);
 
+	PMX_ALIGNMENT_OPERATORS
+
 private:
 	Bone *m_bone;
 	btTransform m_transform;
 };
 
-class RigidBody
+PMX_ALIGN class RigidBody
 {
 public:
 	RigidBody();
@@ -33,6 +35,8 @@ public:
 	void Shutdown();
 
 	__forceinline Bone* getAssociatedBone() { return m_bone; }
+
+	PMX_ALIGNMENT_OPERATORS
 
 private:
 	Bone* m_bone;
