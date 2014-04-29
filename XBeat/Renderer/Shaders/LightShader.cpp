@@ -33,21 +33,18 @@ void Light::Shutdown()
 	ShutdownShader();
 }
 
-bool Light::Render(ID3D11DeviceContext *context, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView **textures, int textureCount, DirectX::XMFLOAT3 lightDirection, DirectX::XMFLOAT4 diffuseColor, DirectX::XMFLOAT4 ambientColor, DirectX::XMFLOAT3 cameraPosition, DirectX::XMFLOAT4 specularColor, float specularPower, Renderer::DXType<ID3D11Buffer> materialBuffer, uint32_t materialIndex)
+bool Light::Render(ID3D11DeviceContext *context, int indexCount, unsigned int offset, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView **textures, int textureCount, DirectX::XMFLOAT3 lightDirection, DirectX::XMFLOAT4 diffuseColor, DirectX::XMFLOAT4 ambientColor, DirectX::XMFLOAT3 cameraPosition, DirectX::XMFLOAT4 specularColor, float specularPower, Renderer::DXType<ID3D11Buffer> materialBuffer)
 {
 	DirectX::XMMATRIX wvp = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection);
-
-	if (!SetMaterialInfo(context, materialIndex))
-		return false;
 
 	if (!SetShaderParameters(context, world, wvp, lightDirection, diffuseColor, ambientColor, cameraPosition, specularColor, specularPower, materialBuffer))
 		return false;
 
-	RenderShader(context, indexCount, textures, textureCount);
+	RenderShader(context, indexCount, offset, textures, textureCount);
 	return true;
 }
 
-char *getFileContents(const std::wstring &file, uint64_t &bufSize)
+char *getFileContents(const std::wstring &file, SIZE_T &bufSize)
 {
 	std::ifstream ifs;
 	ifs.open(file, std::ios::binary);
@@ -56,7 +53,7 @@ char *getFileContents(const std::wstring &file, uint64_t &bufSize)
 		return nullptr;
 
 	ifs.seekg(0, std::ios::end);
-	bufSize = ifs.tellg();
+	bufSize = (SIZE_T)ifs.tellg();
 	ifs.seekg(0, std::ios::beg);
 
 	char* buffer = new char[bufSize];
@@ -87,8 +84,7 @@ bool Light::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstring 
 	D3D11_SAMPLER_DESC samplerDesc;
 	D3D11_BUFFER_DESC cameraBufferDesc;
 	D3D11_BUFFER_DESC lightBufferDesc;
-	D3D11_BUFFER_DESC materialInfoBufferDesc;
-	uint64_t vsbufsize, psbufsize;
+	SIZE_T vsbufsize, psbufsize;
 
 	char *vsbuffer = getFileContents(vsFile, vsbufsize);
 	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
@@ -168,17 +164,6 @@ bool Light::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstring 
 	if (FAILED(result))
 		return false;
 
-	materialInfoBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	materialInfoBufferDesc.ByteWidth = sizeof (MaterialInfoType);
-	materialInfoBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	materialInfoBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	materialInfoBufferDesc.MiscFlags = 0;
-	materialInfoBufferDesc.StructureByteStride = 0;
-
-	result = device->CreateBuffer(&materialInfoBufferDesc, NULL, &materialInfoBuffer);
-	if (FAILED(result))
-		return false;
-
 	return true;
 }
 
@@ -244,27 +229,6 @@ void Light::OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const s
 	MessageBox(wnd, L"Error compiling shader", file.c_str(), MB_OK);
 }
 
-bool Light::SetMaterialInfo(ID3D11DeviceContext *context, uint32_t materialIndex)
-{
-	HRESULT result;
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	MaterialInfoType *data;
-
-	result = context->Map(materialInfoBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
-
-	data = (MaterialInfoType*)mappedResource.pData;
-
-	data->materialIndex = materialIndex;
-
-	context->Unmap(materialInfoBuffer, 0);
-
-	context->PSSetConstantBuffers(2, 1, &materialInfoBuffer);
-
-	return true;
-}
-
 bool Light::SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX wvp, DirectX::XMFLOAT3 lightDirection, DirectX::XMFLOAT4 diffuseColor, DirectX::XMFLOAT4 ambientColor, DirectX::XMFLOAT3 cameraPosition, DirectX::XMFLOAT4 specularColor, float specularPower, Renderer::DXType<ID3D11Buffer> materialBuffer)
 {
 	HRESULT result;
@@ -328,8 +292,8 @@ bool Light::SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX
 	return true;
 }
 
-void Light::RenderShader(ID3D11DeviceContext *context, int indexCount, ID3D11ShaderResourceView **textures, int textureCount)
+void Light::RenderShader(ID3D11DeviceContext *context, int indexCount, unsigned int offset, ID3D11ShaderResourceView **textures, int textureCount)
 {
 	context->PSSetShaderResources(0, textureCount, textures);
-	context->DrawIndexed(indexCount, 0, 0);
+	context->DrawIndexed(indexCount, offset, offset);
 }

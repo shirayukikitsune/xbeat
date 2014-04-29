@@ -20,9 +20,9 @@ bool Loader::FromFile(Model* model, const std::wstring &filename)
 
 bool Loader::FromStream(Model* model, std::istream &in)
 {
-	size_t pos = in.tellg();
+	std::istream::pos_type pos = in.tellg();
 	in.seekg(0, in.end);
-	size_t len = in.tellg();
+	std::istream::pos_type len = in.tellg();
 	len -= pos;
 	in.seekg(pos, in.beg);
 
@@ -31,7 +31,7 @@ bool Loader::FromStream(Model* model, std::istream &in)
 
 	in.read(data, len);
 	bool ret = FromMemory(model, cursor);
-	in.seekg(pos + (size_t)(cursor - data), in.beg);
+	in.seekg(pos + (std::istream::pos_type)(cursor - data), in.beg);
 
 	delete[] data;
 
@@ -183,7 +183,7 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 		vertex->uv[0] = readInfo<float>(data);
 		vertex->uv[1] = readInfo<float>(data);
 		readVector<vec4f>(vertex->uvEx, m_sizeInfo->cbUVVectorSize, data);
-		vertex->weightMethod = readInfo<VertexWeightMethod::MethodId>(data);
+		vertex->weightMethod = readInfo<VertexWeightMethod>(data);
 		for (i = 0; i < 4; i++) {
 			vertex->boneInfo.BDEF.boneIndexes[i] = -1;
 			vertex->boneInfo.BDEF.weights[i] = 0.0f;
@@ -273,8 +273,8 @@ void Loader::loadMaterials(Model *model, const char *&data)
 
 		material->baseTexture = readAsU32(m_sizeInfo->cbMaterialIndexSize, data);
 		material->sphereTexture = readAsU32(m_sizeInfo->cbMaterialIndexSize, data);
-		material->sphereMode = readInfo<uint8_t>(data);
-		material->toonFlag = readInfo<MaterialToonMode::Id>(data);
+		material->sphereMode = readInfo<MaterialSphereMode>(data);
+		material->toonFlag = readInfo<MaterialToonMode>(data);
 
 		switch (material->toonFlag) {
 		case MaterialToonMode::DefaultTexture:
@@ -306,13 +306,13 @@ void Loader::loadBones(Model *model, const char *&data)
 		bone->parent = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 		bone->deformationOrder = readInfo<int>(data);
 
-		bone->flags = readInfo<BoneFlags::Flags>(data);
+		bone->flags = readInfo<uint16_t>(data);
 
-		if (bone->flags & BoneFlags::Attached)
+		if (bone->flags & (uint16_t)BoneFlags::Attached)
 			bone->size.attachTo = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 		else readVector<btScalar>(bone->size.length, 3, data);
 
-		if (bone->flags & (BoneFlags::InheritRotation | BoneFlags::InheritTranslation)) {
+		if (bone->flags & ((uint16_t)BoneFlags::InheritRotation | (uint16_t)BoneFlags::InheritTranslation)) {
 			bone->inherit.from = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 			bone->inherit.rate = readInfo<float>(data);
 		}
@@ -321,20 +321,20 @@ void Loader::loadBones(Model *model, const char *&data)
 			bone->inherit.rate = 1.0f;
 		}
 
-		if (bone->flags & BoneFlags::TranslateAxis) {
+		if (bone->flags & (uint16_t)BoneFlags::TranslateAxis) {
 			readVector<btScalar>(bone->axisTranslation.m_floats, 3, data);
 		}
 
-		if (bone->flags & BoneFlags::LocalAxis) {
+		if (bone->flags & (uint16_t)BoneFlags::LocalAxis) {
 			readVector<btScalar>(bone->localAxes.xDirection.m_floats, 3, data);
 			readVector<btScalar>(bone->localAxes.zDirection.m_floats, 3, data);
 		}
 
-		if (bone->flags & BoneFlags::ExternalParentDeformation) {
+		if (bone->flags & (uint16_t)BoneFlags::ExternalParentDeformation) {
 			bone->externalDeformationKey = readInfo<int>(data);
 		}
 
-		if (bone->flags & BoneFlags::IK) {
+		if (bone->flags & (uint16_t)BoneFlags::IK) {
 			bone->ik.begin = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 			bone->ik.loopCount = readInfo<int>(data);
 			bone->ik.angleLimit = readInfo<float>(data);
@@ -395,7 +395,7 @@ void Loader::loadMorphs(Model *model, const char *&data)
 				break;
 			case MorphType::Material:
 				mdata.material.index = readAsU32(m_sizeInfo->cbMaterialIndexSize, data);
-				mdata.material.method = readInfo<MaterialMorph::Method::MethodId>(data);
+				mdata.material.method = readInfo<MaterialMorphMethod>(data);
 				readInfo<Color4>(mdata.material.diffuse, data);
 				readInfo<Color>(mdata.material.specular, data);
 				mdata.material.specularCoefficient = readInfo<float>(data);
@@ -435,12 +435,12 @@ void Loader::loadFrames(Model *model, const char *&data)
 
 		for (auto &morph : frame->morphs)
 		{
-			morph.target = readInfo<FrameMorphs::Target::Id>(data);
+			morph.target = readInfo<FrameMorphTarget>(data);
 			switch (morph.target) {
-			case FrameMorphs::Target::Bone:
+			case FrameMorphTarget::Bone:
 				morph.id = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 				break;
-			case FrameMorphs::Target::Morph:
+			case FrameMorphTarget::Morph:
 				morph.id = readAsU32(m_sizeInfo->cbMorphIndexSize, data);
 				break;
 			}
@@ -462,7 +462,7 @@ void Loader::loadRigidBodies(Model *model, const char *&data)
 		body->group = readInfo<uint8_t>(data);
 		body->groupMask = readInfo<uint16_t>(data);
 
-		body->shape = readInfo<PMX::RigidBodyShape::Id>(data);
+		body->shape = readInfo<PMX::RigidBodyShape>(data);
 		readVector<btScalar>(body->size.m_floats, 3, data);
 
 		readVector<btScalar>(body->position.m_floats, 3, data);
@@ -475,7 +475,7 @@ void Loader::loadRigidBodies(Model *model, const char *&data)
 		body->restitution = readInfo<float>(data);
 		body->friction = readInfo<float>(data);
 
-		body->mode = readInfo<PMX::RigidBodyMode::Id>(data);
+		body->mode = readInfo<PMX::RigidBodyMode>(data);
 	}
 }
 
@@ -488,7 +488,7 @@ void Loader::loadJoints(Model *model, const char *&data)
 		joint = new Joint;
 		readName(joint->name, data);
 
-		joint->type = readInfo<JointType::Id>(data);
+		joint->type = readInfo<JointType>(data);
 
 		if (m_header->fVersion < 2.1f && joint->type != JointType::Spring6DoF)
 			throw Exception("Invalid joint type for PMX version < 2.1");

@@ -4,7 +4,7 @@
 
 using namespace Renderer;
 
-extern char *getFileContents(const std::wstring &file, uint64_t &bufSize);
+extern char *getFileContents(const std::wstring &file, SIZE_T &bufSize);
 
 ColorShaderClass::ColorShaderClass(void)
 {
@@ -48,7 +48,7 @@ bool ColorShaderClass::InitializeShader(ID3D11Device *device, HWND wnd, const st
 	D3D11_INPUT_ELEMENT_DESC polygonLayout[2];
 	UINT numElements;
 	D3D11_BUFFER_DESC matrixBufferDesc;
-	uint64_t vsbufsize, psbufsize;
+	SIZE_T vsbufsize, psbufsize;
 
 	char *vsbuffer = getFileContents(vsFile, vsbufsize);
 	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
@@ -130,7 +130,7 @@ void ColorShaderClass::ShutdownShader()
 void ColorShaderClass::OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
 {
 	char *compileError;
-	SIZE_T bufferSize, i;
+	SIZE_T bufferSize;
 	std::ofstream fout;
 
 	compileError = (char*)errorMessage->GetBufferPointer();

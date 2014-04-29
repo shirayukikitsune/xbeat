@@ -3,7 +3,7 @@
 
 using namespace Renderer;
 
-extern char *getFileContents(const std::wstring &file, uint64_t &bufSize);
+extern char *getFileContents(const std::wstring &file, SIZE_T &bufSize);
 
 SkyBox::SkyBox(void)
 {
@@ -52,6 +52,7 @@ bool SkyBox::Render(std::shared_ptr<D3DRenderer> d3d, DirectX::CXMMATRIX world, 
 	context->IASetInputLayout(m_layout);
 	context->IASetIndexBuffer(sphereIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	context->IASetVertexBuffers(0, 1, &sphereVertBuffer, &strides, &offset);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	context->PSSetShader(pixelShader, NULL, 0);
 	context->VSSetShader(vertexShader, NULL, 0);
@@ -101,7 +102,7 @@ bool SkyBox::InitializeBuffers(ID3D11Device* device, std::shared_ptr<Light> ligh
 	HRESULT result;
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
-	uint64_t vsbufsize, psbufsize;
+	SIZE_T vsbufsize, psbufsize;
 
 	char *vsbuffer = getFileContents(vsFile, vsbufsize);
 	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
@@ -198,13 +199,13 @@ bool SkyBox::LoadModel(std::shared_ptr<D3DRenderer> d3d, int latLines, int longL
 	vertices[0].position.y = 0.0f;
 	vertices[0].position.z = 1.0f;
 
-	for(DWORD i = 0; i < latLines-2; ++i)
+	for(int i = 0; i < latLines-2; ++i)
 	{
-		spherePitch = (i+1) * (3.14/(latLines-1));
+		spherePitch = (i+1) * (DirectX::XM_PI/(latLines-1));
 		Rotationx = DirectX::XMMatrixRotationX(spherePitch);
-		for(DWORD j = 0; j < longLines; ++j)
+		for(int j = 0; j < longLines; ++j)
 		{
-			sphereYaw = j * (6.28/(longLines));
+			sphereYaw = j * (DirectX::XM_2PI/(longLines));
 			Rotationy = DirectX::XMMatrixRotationZ(sphereYaw);
 			currVertPos = DirectX::XMVector3TransformNormal( DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), (Rotationx * Rotationy) );	
 			currVertPos = DirectX::XMVector3Normalize( currVertPos );
@@ -238,7 +239,7 @@ bool SkyBox::LoadModel(std::shared_ptr<D3DRenderer> d3d, int latLines, int longL
 	std::vector<DWORD> indices(NumSphereFaces * 3);
 
 	int k = 0;
-	for(DWORD l = 0; l < longLines-1; ++l)
+	for(int l = 0; l < longLines-1; ++l)
 	{
 		indices[k] = 0;
 		indices[k+1] = l+1;
@@ -251,9 +252,9 @@ bool SkyBox::LoadModel(std::shared_ptr<D3DRenderer> d3d, int latLines, int longL
 	indices[k+2] = 1;
 	k += 3;
 
-	for(DWORD i = 0; i < latLines-3; ++i)
+	for(int i = 0; i < latLines-3; ++i)
 	{
-		for(DWORD j = 0; j < longLines-1; ++j)
+		for(int j = 0; j < longLines-1; ++j)
 		{
 			indices[k]   = i*longLines+j+1;
 			indices[k+1] = i*longLines+j+2;
@@ -277,7 +278,7 @@ bool SkyBox::LoadModel(std::shared_ptr<D3DRenderer> d3d, int latLines, int longL
 		k += 6;
 	}
 
-	for(DWORD l = 0; l < longLines-1; ++l)
+	for(int l = 0; l < longLines-1; ++l)
 	{
 		indices[k] = NumSphereVertices-1;
 		indices[k+1] = (NumSphereVertices-1)-(l+1);

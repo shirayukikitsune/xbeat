@@ -158,11 +158,11 @@ void SystemClass::InitializeWindow(int &width, int &height)
 		ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
 	}
 	else {
-		posx = (width - 1024) / 2;
-		posy = (height - 768) / 2;
+		posx = (width - 800) / 2;
+		posy = (height - 600) / 2;
 
-		width = 1024;
-		height = 768;
+		width = 800;
+		height = 600;
 	}
 
 	wnd = CreateWindowEx(WS_EX_APPWINDOW, appName, appName, WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP,

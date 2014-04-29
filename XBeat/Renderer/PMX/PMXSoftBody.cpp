@@ -16,7 +16,7 @@ SoftBody::~SoftBody(void)
 
 void SoftBody::Create(std::shared_ptr<Physics::Environment> physics, Model* model)
 {
-	btSoftBody *body;
+	//btSoftBody *body;
 	btScalar *vertices;
 	int *triangles;
 	

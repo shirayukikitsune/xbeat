@@ -5,7 +5,7 @@
 
 namespace Renderer {
 
-PMX_ALIGN class D3DTextureRenderer
+ATTRIBUTE_ALIGNED16(class) D3DTextureRenderer
 {
 public:
 	D3DTextureRenderer();
@@ -26,7 +26,7 @@ public:
 	int GetTextureWidth();
 	int GetTextureHeight();
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
 	DXType<ID3D11Texture2D> m_renderTargetTexture;

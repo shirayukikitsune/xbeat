@@ -81,7 +81,7 @@ void RigidBody::Initialize(std::shared_ptr<Physics::Environment> physics, Model 
 	if (body->mode == RigidBodyMode::Static)
 		m_body->setCollisionFlags(m_body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 
-	m_body->setActivationState(DISABLE_DEACTIVATION);
+	//m_body->setActivationState(DISABLE_DEACTIVATION);
 
 	m_groupId = 1 << body->group;
 	m_groupMask = body->groupMask;

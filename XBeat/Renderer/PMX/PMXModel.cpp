@@ -143,32 +143,28 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	ID3D11Device *device = d3d->GetDevice();
 
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc, materialBufferDesc;
-	D3D11_SUBRESOURCE_DATA vertexData, indexData, materialData;
+	D3D11_SUBRESOURCE_DATA vertexData, indexData;
 	HRESULT result;
-	// Used to generate the view box
-	DirectX::XMFLOAT3 minPos(FLT_MAX, FLT_MAX, FLT_MAX), maxPos(FLT_MIN, FLT_MIN, FLT_MIN);
 
 	materialBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	materialBufferDesc.ByteWidth = sizeof (Shaders::Light::MaterialBufferType) * this->materials.size();
+	materialBufferDesc.ByteWidth = sizeof (Shaders::Light::MaterialBufferType);
 	materialBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	materialBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	materialBufferDesc.MiscFlags = 0;
 	materialBufferDesc.StructureByteStride = 0;
 
+	result = device->CreateBuffer(&materialBufferDesc, NULL, &m_materialBuffer);
+	if (FAILED(result))
+		return false;
+
 	this->rendermaterials.resize(this->materials.size());
-	m_materialBufferData.resize(this->materials.size());
 
 	uint32_t lastIndex = 0;
 
+	std::vector<UINT> idx;
+	std::vector<DirectX::VertexPositionNormalTexture> v;
+
 	for (uint32_t k = 0; k < this->rendermaterials.size(); k++) {
-		std::shared_ptr<DirectX::VertexPositionNormalTexture> v(new DirectX::VertexPositionNormalTexture[this->materials[k]->indexCount]);
-		if (v == nullptr)
-			return false;
-
-		std::shared_ptr<UINT> idx(new UINT[this->materials[k]->indexCount]);
-		if (idx == nullptr)
-			return false;
-
 		rendermaterials[k].startIndex = lastIndex;
 
 		for (uint32_t i = 0; i < (uint32_t)this->materials[k]->indexCount; i++) {
@@ -183,46 +179,11 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 			v.get()[i].UV3 = DirectX::XMFLOAT4(vertex->uvEx[2].x(), vertex->uvEx[2].y(), vertex->uvEx[2].z(), vertex->uvEx[2].w());
 			v.get()[i].UV4 = DirectX::XMFLOAT4(vertex->uvEx[3].x(), vertex->uvEx[3].y(), vertex->uvEx[3].z(), vertex->uvEx[3].w());*/
 #else
-			v.get()[i].position = DirectX::XMFLOAT3(vertex->position.x(), vertex->position.y(), vertex->position.z());
-			v.get()[i].normal = DirectX::XMFLOAT3(vertex->normal.x(), vertex->normal.y(), vertex->normal.z());
-			v.get()[i].textureCoordinate = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
+			v.emplace_back(DirectX::VertexPositionNormalTexture(vertex->position.get128(), vertex->normal.get128(), btVector4(vertex->uv[0], vertex->uv[1], 0.0f, 0.0f).get128()));
 #endif
 
-			if (vertex->position.x() < minPos.x) minPos.x = vertex->position.x();
-			if (vertex->position.x() > maxPos.x) maxPos.x = vertex->position.x();
-			if (vertex->position.y() < minPos.y) minPos.y = vertex->position.y();
-			if (vertex->position.y() > maxPos.y) maxPos.y = vertex->position.y();
-			if (vertex->position.z() < minPos.z) minPos.z = vertex->position.z();
-			if (vertex->position.z() > maxPos.z) maxPos.z = vertex->position.z();
-
-			idx.get()[i] =  i;
+			idx.emplace_back(i);
 		}
-
-		vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		vertexBufferDesc.ByteWidth = sizeof (DirectX::VertexPositionNormalTexture) * this->materials[k]->indexCount;
-		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		vertexBufferDesc.MiscFlags = 0;
-		vertexBufferDesc.StructureByteStride = 0;
-
-		vertexData.pSysMem = v.get();
-		vertexData.SysMemPitch = 0;
-		vertexData.SysMemSlicePitch = 0;
-
-		result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &this->rendermaterials[k].vertexBuffer);
-		if (FAILED(result))
-			return false;
-
-		indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-		indexBufferDesc.ByteWidth = sizeof (UINT) * this->materials[k]->indexCount;
-		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		indexBufferDesc.CPUAccessFlags = 0;
-		indexBufferDesc.MiscFlags = 0;
-		indexBufferDesc.StructureByteStride = 0;
-
-		indexData.pSysMem = idx.get();
-		indexData.SysMemPitch = 0;
-		indexData.SysMemSlicePitch = 0;
 
 		lastIndex += this->materials[k]->indexCount;
 
@@ -230,43 +191,42 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		rendermaterials[k].materialIndex = k;
 		rendermaterials[k].indexCount = this->materials[k]->indexCount;
 		rendermaterials[k].avgColor = DirectX::XMFLOAT4(this->materials[k]->ambient.red+this->materials[k]->diffuse.red, this->materials[k]->ambient.green + this->materials[k]->diffuse.green, this->materials[k]->ambient.blue + this->materials[k]->diffuse.blue, this->materials[k]->diffuse.alpha);
-		rendermaterials[k].center.x = (maxPos.x - minPos.x) / 2.0f;
-		rendermaterials[k].center.y = (maxPos.y - minPos.y) / 2.0f;
-		rendermaterials[k].center.z = (maxPos.z - maxPos.z) / 2.0f;
-		rendermaterials[k].radius.x = abs(maxPos.x - rendermaterials[k].center.x);
-		rendermaterials[k].radius.y = abs(maxPos.y - rendermaterials[k].center.y);
-		rendermaterials[k].radius.z = abs(maxPos.z - rendermaterials[k].center.z);
-
-		m_materialBufferData[k].ambientColor = rendermaterials[k].getAmbient(materials[k]);
-		m_materialBufferData[k].diffuseColor = rendermaterials[k].getDiffuse(materials[k]);
-		m_materialBufferData[k].flags = 0;
-		m_materialBufferData[k].specularColor = rendermaterials[k].getSpecular(materials[k]);
-		m_materialBufferData[k].addBaseCoefficient = color4ToFloat4(rendermaterials[k].getAdditiveMorph()->baseCoefficient);
-		m_materialBufferData[k].addSphereCoefficient = color4ToFloat4(rendermaterials[k].getAdditiveMorph()->sphereCoefficient);
-		m_materialBufferData[k].addToonCoefficient = color4ToFloat4(rendermaterials[k].getAdditiveMorph()->toonCoefficient);
-		m_materialBufferData[k].mulBaseCoefficient = color4ToFloat4(rendermaterials[k].getMultiplicativeMorph()->baseCoefficient);
-		m_materialBufferData[k].mulSphereCoefficient = color4ToFloat4(rendermaterials[k].getMultiplicativeMorph()->sphereCoefficient);
-		m_materialBufferData[k].mulToonCoefficient = color4ToFloat4(rendermaterials[k].getMultiplicativeMorph()->toonCoefficient);
-
-		result = device->CreateBuffer(&indexBufferDesc, &indexData, &this->rendermaterials[k].indexBuffer);
-		if(FAILED(result))
-			return false;
 	}
-
-	materialData.pSysMem = m_materialBufferData.data();
-	materialData.SysMemPitch = 0;
-	materialData.SysMemSlicePitch = 0;
-
-	result = device->CreateBuffer(&materialBufferDesc, &materialData, &m_materialBuffer);
-	if (FAILED(result))
-		return false;
-
-	m_dirtyBuffer = true;
 
 	// Initialize bone buffers
 	for (auto &bone : bones) {
 		bone->Initialize(d3d);
 	}
+
+	vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	vertexBufferDesc.ByteWidth = sizeof(DirectX::VertexPositionNormalTexture) * v.size();
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	vertexBufferDesc.MiscFlags = 0;
+	vertexBufferDesc.StructureByteStride = 0;
+
+	vertexData.pSysMem = v.data();
+	vertexData.SysMemPitch = 0;
+	vertexData.SysMemSlicePitch = 0;
+
+	result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_vertexBuffer);
+	if (FAILED(result))
+		return false;
+
+	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	indexBufferDesc.ByteWidth = sizeof(UINT) * idx.size();
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags = 0;
+	indexBufferDesc.MiscFlags = 0;
+	indexBufferDesc.StructureByteStride = 0;
+
+	indexData.pSysMem = idx.data();
+	indexData.SysMemPitch = 0;
+	indexData.SysMemSlicePitch = 0;
+
+	result = device->CreateBuffer(&indexBufferDesc, &indexData, &m_indexBuffer);
+	if (FAILED(result))
+		return false;
 
 	return true;
 }
@@ -315,17 +275,12 @@ bool PMX::Model::loadModel(istream &ifs)
 	return true;
 }
 
-bool PMX::Model::updateMaterialBuffer(DXType<ID3D11DeviceContext> context)
+bool PMX::Model::updateMaterialBuffer(uint32_t material, DXType<ID3D11DeviceContext> context)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT hr;
 	ID3D11ShaderResourceView *textures[3];
 	Shaders::Light::MaterialBufferType *matBuffer;
-
-	if (!m_dirtyBuffer)
-		return true;
-
-	m_dirtyBuffer = false;
 
 	hr = context->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(hr))
@@ -333,42 +288,39 @@ bool PMX::Model::updateMaterialBuffer(DXType<ID3D11DeviceContext> context)
 
 	matBuffer = (Shaders::Light::MaterialBufferType*)mappedResource.pData;
 
-	for (uint32_t i = 0; i < rendermaterials.size(); i++) {
-		if (rendermaterials[i].dirty & RenderMaterial::DirtyFlags::Textures) {
-			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
-			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
-			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
+	if (material < rendermaterials.size()) {
+		textures[0] = rendermaterials[material].baseTexture ? rendermaterials[material].baseTexture->GetTexture() : nullptr;
+		textures[1] = rendermaterials[material].sphereTexture ? rendermaterials[material].sphereTexture->GetTexture() : nullptr;
+		textures[2] = rendermaterials[material].toonTexture ? rendermaterials[material].toonTexture->GetTexture() : nullptr;
 
-			matBuffer[i].flags = 0;
+		matBuffer->flags = 0;
 
-			matBuffer[i].flags |= (textures[1] == nullptr || materials[i]->sphereMode == MaterialSphereMode::Disabled) ? 0x01 : 0;
-			matBuffer[i].flags |= materials[i]->sphereMode == MaterialSphereMode::Add ? 0x02 : 0;
-			matBuffer[i].flags |= textures[2] == nullptr ? 0x04 : 0;
-			matBuffer[i].flags |= textures[0] == nullptr ? 0x08 : 0;
+		matBuffer->flags |= (textures[1] == nullptr || materials[material]->sphereMode == MaterialSphereMode::Disabled) ? 0x01 : 0;
+		matBuffer->flags |= materials[material]->sphereMode == MaterialSphereMode::Add ? 0x02 : 0;
+		matBuffer->flags |= textures[2] == nullptr ? 0x04 : 0;
+		matBuffer->flags |= textures[0] == nullptr ? 0x08 : 0;
 
-			matBuffer[i].morphWeight = rendermaterials[i].getWeight();
+		matBuffer->morphWeight = rendermaterials[material].getWeight();
 
-			matBuffer[i].addBaseCoefficient = color4ToFloat4(rendermaterials[i].getAdditiveMorph()->baseCoefficient);
-			matBuffer[i].addSphereCoefficient = color4ToFloat4(rendermaterials[i].getAdditiveMorph()->sphereCoefficient);
-			matBuffer[i].addToonCoefficient = color4ToFloat4(rendermaterials[i].getAdditiveMorph()->toonCoefficient);
-			matBuffer[i].mulBaseCoefficient = color4ToFloat4(rendermaterials[i].getMultiplicativeMorph()->baseCoefficient);
-			matBuffer[i].mulSphereCoefficient = color4ToFloat4(rendermaterials[i].getMultiplicativeMorph()->sphereCoefficient);
-			matBuffer[i].mulToonCoefficient = color4ToFloat4(rendermaterials[i].getMultiplicativeMorph()->toonCoefficient);
+		matBuffer->addBaseCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->baseCoefficient);
+		matBuffer->addSphereCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->sphereCoefficient);
+		matBuffer->addToonCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->toonCoefficient);
+		matBuffer->mulBaseCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->baseCoefficient);
+		matBuffer->mulSphereCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->sphereCoefficient);
+		matBuffer->mulToonCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->toonCoefficient);
 
-			matBuffer[i].specularColor = rendermaterials[i].getSpecular(materials[i]);
+		matBuffer->specularColor = rendermaterials[material].getSpecular(materials[material]);
 
-			if ((matBuffer[i].flags & 0x04) == 0) {
-				matBuffer[i].diffuseColor = rendermaterials[i].getDiffuse(materials[i]);
-				matBuffer[i].ambientColor = rendermaterials[i].getAmbient(materials[i]);
-			}
-			else {
-				matBuffer[i].diffuseColor = matBuffer[i].ambientColor = rendermaterials[i].getAverage(materials[i]);
-			}
-
-			rendermaterials[i].dirty &= ~RenderMaterial::DirtyFlags::Textures;
-			m_materialBufferData[i] = matBuffer[i];
+		if ((matBuffer->flags & 0x04) == 0) {
+			matBuffer->diffuseColor = rendermaterials[material].getDiffuse(materials[material]);
+			matBuffer->ambientColor = rendermaterials[material].getAmbient(materials[material]);
 		}
+		else {
+			matBuffer->diffuseColor = matBuffer->ambientColor = rendermaterials[material].getAverage(materials[material]);
+		}
+		matBuffer->index = (int)material;
 	}
+	else matBuffer->index = -1;
 
 	context->Unmap(m_materialBuffer, 0);
 
@@ -377,9 +329,16 @@ bool PMX::Model::updateMaterialBuffer(DXType<ID3D11DeviceContext> context)
 
 bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr<Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Light> light, std::shared_ptr<CameraClass> camera, std::shared_ptr<ViewFrustum> frustum)
 {
+	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
+		for (auto &bone : bones) {
+			if (bone->Update()) {
+				bone->updateChildren();
+			}
+		}
+	}
+
 	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
-		unsigned int stride;
-		unsigned int offset;
+		unsigned int stride = sizeof(DirectX::VertexPositionNormalTexture);
 		DirectX::XMFLOAT3 cameraPosition;
 		ID3D11DeviceContext *context = d3d->GetDeviceContext();
 		Shaders::Light::MaterialBufferType matBuf;
@@ -389,40 +348,34 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 
 		ID3D11ShaderResourceView *textures[3];
 
-		int renderedMaterials = 0;
-
-		if (!updateMaterialBuffer(context))
-			return false;
-
 		if (!lightShader->SetShaderParameters(context, world, wvp, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), m_materialBuffer))
 			return false;
 
+		unsigned int vsOffset = 0;
+		// Set the vertex buffer to active in the input assembler so it can be rendered.
+		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
+
+		// Set the index buffer to active in the input assembler so it can be rendered.
+		context->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+		// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 		bool isTransparent = false;
 
+		// Check if our model was changed and perform the updates
+		updateVertexBuffer();
+
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
-			// If material is marked for update, then update it here
-			if (rendermaterials[i].dirty & RenderMaterial::DirtyFlags::VertexBuffer)
-				updateMaterialVertexBuffer(&rendermaterials[i]);
-
-			// Check if we need to render this material
-			if (!frustum->IsBoxInside(rendermaterials[i].center, rendermaterials[i].radius))
-				continue; // Material is not inside the view frustum, so just skip
-
-			renderedMaterials++;
-
-			// Set vertex buffer stride and offset.
-			stride = sizeof(DirectX::VertexPositionNormalTexture);
-			offset = 0;
+			if (!updateMaterialBuffer(i, context))
+				return false;
 
 			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
 			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
 			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
 
-			if (m_materialBufferData[i].diffuseColor.w <= 0.0f || m_materialBufferData[i].ambientColor.w <= 0.0f)
-				continue;
-
-			if ((materials[i]->flags & MaterialFlags::DoubleSide) == MaterialFlags::DoubleSide ||
-				(m_materialBufferData[i].diffuseColor.w < 1.0f || m_materialBufferData[i].ambientColor.w < 1.0f)) {
+			if ((materials[i]->flags & (uint8_t)MaterialFlags::DoubleSide) == (uint8_t)MaterialFlags::DoubleSide ||
+				(rendermaterials[i].getDiffuse(materials[i]).w < 1.0f || rendermaterials[i].getAmbient(materials[i]).w < 1.0f)) {
 				// Enable no-culling rasterizer if material has transparency or if it is marked to be rendered by both sides
 
 				if (!isTransparent) {
@@ -435,23 +388,9 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 				context->RSSetState(d3d->GetRasterState(0));
 			}
 
-			// Set the vertex buffer to active in the input assembler so it can be rendered.
-			context->IASetVertexBuffers(0, 1, &rendermaterials[i].vertexBuffer, &stride, &offset);
-
-			// Set the index buffer to active in the input assembler so it can be rendered.
-			context->IASetIndexBuffer(rendermaterials[i].indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-			// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
-			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-			//if (!lightShader->Render(context, rendermaterials[i].indexCount, world, view, projection, textures, 3, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), m_materialBuffer, i))
-			//return false;
-
-			if (!lightShader->SetMaterialInfo(context, i))
-				return false;
-
 			lightShader->RenderShader(context,
 				rendermaterials[i].indexCount,
+				rendermaterials[i].startIndex,
 				textures,
 				3);
 		}
@@ -462,7 +401,7 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
 		for (auto &bone : bones)
-			bone->Render(d3d, world, view, projection);
+			bone->Render(world, view, projection);
 	}
 
 	return true;
@@ -508,10 +447,10 @@ bool PMX::Model::LoadTexture(ID3D11Device *device)
 			rendermaterials[i].sphereTexture = renderTextures[materials[i]->sphereTexture];
 		}
 
-		if (materials[i]->toonFlag == 0 && materials[i]->toonTexture.custom < textures.size()) {
+		if (materials[i]->toonFlag == MaterialToonMode::CustomTexture && materials[i]->toonTexture.custom < textures.size()) {
 			rendermaterials[i].toonTexture = renderTextures[materials[i]->toonTexture.custom];
 		}
-		else if (materials[i]->toonFlag == 1 && materials[i]->toonTexture.default < defaultToonTexCount) {
+		else if (materials[i]->toonFlag == MaterialToonMode::DefaultTexture && materials[i]->toonTexture.default < defaultToonTexCount) {
 			rendermaterials[i].toonTexture = sharedToonTextures[materials[i]->toonTexture.default];			
 		}
 	}
@@ -673,7 +612,8 @@ void PMX::Model::applyBoneMorph(Morph *morph, float weight)
 {
 	for (auto i : morph->data) {
 		Bone *bone = bones[i.bone.index];
-		m_dispatcher->AddTask([bone, morph, weight]() { bone->ApplyMorph(morph, weight); });
+		bone->ApplyMorph(morph, weight);
+		//m_dispatcher->AddTask([bone, morph, weight]() { bone->ApplyMorph(morph, weight); });
 	}
 }
 
@@ -711,7 +651,7 @@ void PMX::Model::applyFlipMorph(Morph* morph, float weight)
 	}
 }
 
-void PMX::Model::updateMaterialVertexBuffer(PMX::RenderMaterial *material)
+void PMX::Model::updateVertexBuffer()
 {
 	ID3D11Device *device;
 	ID3D11DeviceContext *context;
@@ -720,32 +660,45 @@ void PMX::Model::updateMaterialVertexBuffer(PMX::RenderMaterial *material)
 	Vertex *vertex;
 	HRESULT result;
 
-	if ((material->dirty & RenderMaterial::DirtyFlags::VertexBuffer) == 0)
-		return;
+	// This is to prevent a read from the GPU
+	bool update = false;
+	for (auto &material : rendermaterials) {
+		if ((material.dirty & RenderMaterial::DirtyFlags::VertexBuffer) != 0) {
+			update = true;
+			break;
+		}
+	}
 
-	material->dirty &= ~RenderMaterial::DirtyFlags::VertexBuffer;
+	if (!update) return;
 
 	// get the d3d11 device and context from the vertex buffer
-	material->vertexBuffer->GetDevice(&device);
+	m_vertexBuffer->GetDevice(&device);
 	device->GetImmediateContext(&context);
 
 	// get access to the buffer
-	result = context->Map(material->vertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	result = context->Map(m_vertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result))
 		return;
 
 	vertices = (DirectX::VertexPositionNormalTexture*)mappedResource.pData;
-	// Update vertex data
-	for (int i = 0; i < material->indexCount; i++) {
-		vertex = this->vertices[this->verticesIndex[i + material->startIndex]];
-		DirectX::XMStoreFloat3(&vertices[i].position, vertex->GetFinalPosition().mVec128);
-		btVector3 n = vertex->GetNormal();
-		vertices[i].normal = DirectX::XMFLOAT3(n.x(), n.y(), n.z());
-		vertices[i].textureCoordinate = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
+
+	for (auto &material : rendermaterials) {
+		if ((material.dirty & RenderMaterial::DirtyFlags::VertexBuffer) == 0) continue;
+
+		material.dirty &= ~RenderMaterial::DirtyFlags::VertexBuffer;
+
+		// Update vertex data
+		for (uint32_t i = material.startIndex; i < material.indexCount + material.startIndex; i++) {
+			vertex = this->vertices[this->verticesIndex[i]];
+			DirectX::XMStoreFloat3(&vertices[i].position, vertex->GetFinalPosition().get128());
+			btVector3 n = vertex->GetNormal();
+			vertices[i].normal = DirectX::XMFLOAT3(n.x(), n.y(), n.z());
+			vertices[i].textureCoordinate = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
+		}
 	}
 
 	// release the access to the buffer
-	context->Unmap(material->vertexBuffer, 0);
+	context->Unmap(m_vertexBuffer, 0);
 }
 
 

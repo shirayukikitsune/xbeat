@@ -46,7 +46,8 @@ public:
 			RenderJoints = 0x2,
 			RenderSoftBodies = 0x4,
 			RenderRigidBodies = 0x8,
-			DontRenderModel = 0x10
+			DontRenderModel = 0x10,
+			DontUpdatePhysics = 0x20,
 		};
 	};
 
@@ -84,10 +85,11 @@ private:
 
 	std::vector<std::shared_ptr<RigidBody>> m_rigidBodies;
 
-	bool updateMaterialBuffer(DXType<ID3D11DeviceContext> context);
+	bool updateMaterialBuffer(uint32_t material, DXType<ID3D11DeviceContext> context);
 	bool m_dirtyBuffer;
 	DXType<ID3D11Buffer> m_materialBuffer;
-	std::vector<Shaders::Light::MaterialBufferType> m_materialBufferData;
+	DXType<ID3D11Buffer> m_vertexBuffer;
+	DXType<ID3D11Buffer> m_indexBuffer;
 
 	uint32_t m_debugFlags;
 
@@ -106,7 +108,7 @@ private:
 	void applyVertexMorph(Morph* morph, float weight);
 	void applyMaterialMorph(Morph* morph, float weight);
 	void applyMaterialMorph(MorphType* morph, RenderMaterial* material, float weight);
-	void updateMaterialVertexBuffer(RenderMaterial* material);
+	void updateVertexBuffer();
 	void applyBoneMorph(Morph* morph, float weight);
 	void applyFlipMorph(Morph* morph, float weight);
 	void applyImpulseMorph(Morph* morph, float weight);

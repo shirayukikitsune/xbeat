@@ -1,25 +1,22 @@
 #pragma once
 
-#include "../Renderer/D3DRenderer.h"
 #include <btBulletDynamicsCommon.h>
 #include <btBulletCollisionCommon.h>
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletSoftBody/btSoftRigidDynamicsWorld.h>
 #include <BulletSoftBody/btSoftBodySolvers.h>
 #include <memory>
-#include <list>
+#include <set>
 
 namespace Renderer {
 	class D3DRenderer;
 }
 
 namespace Physics {
-struct PauseState {
-	enum PauseState_e {
-		Running,
-		Paused,
-		Holding
-	};
+enum struct PauseState {
+	Running,
+	Paused,
+	Holding
 };
 
 class Environment
@@ -34,8 +31,8 @@ public:
 
 	__forceinline void Pause() { m_pauseState = PauseState::Paused; }
 	__forceinline void Hold() { m_pauseState = PauseState::Holding; }
-	void Unpause();
-	__forceinline PauseState::PauseState_e GetPauseState() { return m_pauseState; }
+	__forceinline void Unpause() { m_pauseState = PauseState::Running; }
+	__forceinline PauseState GetPauseState() { return m_pauseState; }
 	__forceinline bool IsRunning() { return m_pauseState == PauseState::Running; }
 	__forceinline bool IsPaused() { return m_pauseState == PauseState::Paused; }
 	__forceinline bool IsHolding() { return m_pauseState == PauseState::Holding; }
@@ -52,12 +49,12 @@ public:
 	void RemoveCharacter(std::shared_ptr<btActionInterface> character);
 
 private:
-	PauseState::PauseState_e m_pauseState;
+	PauseState m_pauseState;
 	float m_pauseTime;
 
-	std::list<std::shared_ptr<btSoftBody>> m_softBodies;
-	std::list<std::shared_ptr<btRigidBody>> m_rigidBodies;
-	std::list<std::shared_ptr<btActionInterface>> m_characters;
+	std::set<std::shared_ptr<btSoftBody>> m_softBodies;
+	std::set<std::shared_ptr<btRigidBody>> m_rigidBodies;
+	std::set<std::shared_ptr<btActionInterface>> m_characters;
 	std::unique_ptr<btBroadphaseInterface> m_broadphase;
 	std::unique_ptr<btCollisionConfiguration> m_collisionConfiguration;
 	std::unique_ptr<btCollisionDispatcher> m_collisionDispatcher;

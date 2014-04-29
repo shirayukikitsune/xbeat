@@ -34,12 +34,9 @@ public:
 	std::shared_ptr<Texture> toonTexture;
 
 	uint32_t materialIndex, startIndex;
-	ID3D11Buffer *vertexBuffer;
-	ID3D11Buffer *indexBuffer;
 	int indexCount;
 	uint32_t dirty;
 	DirectX::XMFLOAT4 avgColor;
-	DirectX::XMFLOAT3 center, radius;
 
 	MaterialMorph* getAdditiveMorph();
 	MaterialMorph* getMultiplicativeMorph();

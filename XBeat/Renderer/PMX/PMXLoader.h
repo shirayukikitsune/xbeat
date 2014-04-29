@@ -43,12 +43,12 @@ public:
 		}
 	};
 
-	PMX_ALIGN struct RigidBody {
+	ATTRIBUTE_ALIGNED16(struct) RigidBody{
 		Name name;
 		uint32_t targetBone;
 		uint8_t group;
 		uint16_t groupMask;
-		PMX::RigidBodyShape::Id shape;
+		PMX::RigidBodyShape shape;
 		vec3f size;
 		vec3f position;
 		vec3f rotation;
@@ -57,9 +57,9 @@ public:
 		float angularDamping;
 		float restitution;
 		float friction;
-		PMX::RigidBodyMode::Id mode;
+		PMX::RigidBodyMode mode;
 
-		PMX_ALIGNMENT_OPERATORS
+		BT_DECLARE_ALIGNED_ALLOCATOR();
 	};
 
 	bool FromFile(Model* model, const std::wstring &filename);

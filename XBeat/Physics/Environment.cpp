@@ -2,6 +2,7 @@
 #include "Environment.h"
 
 #include <BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h>
+#include <BulletSoftBody/btDefaultSoftBodySolver.h>
 #include <BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11.h>
 
 #include <algorithm>
@@ -41,8 +42,10 @@ bool Environment::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (!m_constraintSolver)
 		return false;
 
-	//m_softBodySolver.reset(new btDefaultSoftBodySolver);
-	m_softBodySolver.reset(new btDX11SoftBodySolver(d3d->GetDevice(), d3d->GetDeviceContext()));
+	if (!d3d)
+		m_softBodySolver.reset(new btDefaultSoftBodySolver);
+	else
+		m_softBodySolver.reset(new btDX11SoftBodySolver(d3d->GetDevice(), d3d->GetDeviceContext()));
 	if (!m_softBodySolver)
 		return false;
 
@@ -62,9 +65,9 @@ bool Environment::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d)
 
 void Environment::Shutdown()
 {
-	while (!m_rigidBodies.empty()) {
-		m_dynamicsWorld->removeRigidBody(m_rigidBodies.front().get());
-		m_rigidBodies.pop_front();
+	for (auto i = m_rigidBodies.begin(); !m_rigidBodies.empty(); i = m_rigidBodies.begin()) {
+		m_dynamicsWorld->removeRigidBody(i->get());
+		m_rigidBodies.erase(i);
 	}
 	if (m_dynamicsWorld != nullptr)
 		m_dynamicsWorld.reset();
@@ -105,20 +108,15 @@ bool Environment::Frame(float frameTimeMsec)
 	return true;
 }
 
-void Environment::Unpause()
-{
-	m_pauseState = PauseState::Running;
-}
-
 void Environment::AddSoftBody(std::shared_ptr<btSoftBody> body, int16_t group, int16_t mask)
 {
-	m_softBodies.push_front(body);
+	m_softBodies.insert(body);
 	m_dynamicsWorld->addSoftBody(body.get(), group, mask);
 }
 
 void Environment::RemoveSoftBody(std::shared_ptr<btSoftBody> body)
 {
-	auto i = std::find_if(m_softBodies.begin(), m_softBodies.end(), [body](std::shared_ptr<btSoftBody> &i) { return i.get() == body.get(); });
+	auto i = m_softBodies.find(body);
 
 	if (i != m_softBodies.end()) {
 		m_softBodies.erase(i);
@@ -128,13 +126,13 @@ void Environment::RemoveSoftBody(std::shared_ptr<btSoftBody> body)
 
 void Environment::AddRigidBody(std::shared_ptr<btRigidBody> body, int16_t group, int16_t mask)
 {
-	m_rigidBodies.push_front(body);
+	m_rigidBodies.insert(body);
 	m_dynamicsWorld->addRigidBody(body.get(), group, mask);
 }
 
 void Environment::RemoveRigidBody(std::shared_ptr<btRigidBody> body)
 {
-	auto i = std::find_if(m_rigidBodies.begin(), m_rigidBodies.end(), [body](std::shared_ptr<btRigidBody> &i) { return i.get() == body.get(); });
+	auto i = m_rigidBodies.find(body);
 
 	if (i != m_rigidBodies.end()) {
 		m_rigidBodies.erase(i);
@@ -144,13 +142,13 @@ void Environment::RemoveRigidBody(std::shared_ptr<btRigidBody> body)
 
 void Environment::AddCharacter(std::shared_ptr<btActionInterface> character)
 {
-	m_characters.push_front(character);
+	m_characters.insert(character);
 	m_dynamicsWorld->addCharacter(character.get());
 }
 
 void Environment::RemoveCharacter(std::shared_ptr<btActionInterface> character)
 {
-	auto i = std::find_if(m_characters.begin(), m_characters.end(), [character](std::shared_ptr<btActionInterface> &i) { return i.get() == character.get(); });
+	auto i = m_characters.find(character);
 
 	if (i == m_characters.end()) {
 		m_characters.erase(i);

@@ -15,7 +15,7 @@ namespace PMXTest
 		{
 			std::wstring file = L"../XBeat/Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx";
 			Model *model = new Model();
-			if (!model->Initialize(nullptr, file, physics))
+			if (!model->Initialize(nullptr, file, physics, nullptr))
 				throw std::exception("Failed to load the model");
 
 			return model;
@@ -23,7 +23,7 @@ namespace PMXTest
 		static std::shared_ptr<Physics::Environment> createPhysics()
 		{
 			std::shared_ptr<Physics::Environment> physics(new Physics::Environment);
-			physics->Initialize();
+			physics->Initialize(nullptr);
 			return physics;
 		}
 	public:

@@ -11,7 +11,7 @@ namespace PMX {
 class Loader;
 class Model;
 
-PMX_ALIGN class Bone
+ATTRIBUTE_ALIGNED16(class) Bone
 {
 public:
 	Bone(Model *model, uint32_t id);
@@ -24,9 +24,9 @@ public:
 	__forceinline int32_t GetDeformationOrder() const { return deformationOrder; }
 	__forceinline const Position& GetAxisTranslation() const { return axisTranslation; }
 
-	__forceinline BoneFlags::Flags GetFlags() const { return flags; }
-	__forceinline bool HasAllFlags(BoneFlags::Flags flag) const { return (flags & flag) == flag; }
-	__forceinline bool HasAnyFlag(BoneFlags::Flags flag) const { return (flags & flag) != 0; }
+	__forceinline BoneFlags GetFlags() const { return (BoneFlags)flags; }
+	__forceinline bool HasAllFlags(BoneFlags flag) const { return (flags & (uint16_t)flag) == (uint16_t)flag; }
+	__forceinline bool HasAnyFlag(BoneFlags flag) const { return (flags & (uint16_t)flag) != 0; }
 
 	void Initialize(std::shared_ptr<D3DRenderer> d3d);
 	void Reset();
@@ -38,27 +38,30 @@ public:
 	Position GetPosition();
 	Position GetOffsetPosition();
 	Position GetEndPosition();
+	btQuaternion GetRotation();
 
-	void Update();
+	bool Update(bool force = false);
 
-	void Transform(const btVector3& angles, const btVector3& offset, DeformationOrigin::Id origin = DeformationOrigin::User);
-	void Rotate(const btVector3& angles, DeformationOrigin::Id origin = DeformationOrigin::User);
-	void Translate(const btVector3& offset, DeformationOrigin::Id origin = DeformationOrigin::User);
+	void Transform(const btVector3& angles, const btVector3& offset, DeformationOrigin origin = DeformationOrigin::User);
+	void Rotate(const btVector3& angles, DeformationOrigin origin = DeformationOrigin::User);
+	void Translate(const btVector3& offset, DeformationOrigin origin = DeformationOrigin::User);
 
 	void ApplyMorph(Morph *morph, float weight);
 
 	__forceinline const btTransform& getLocalTransform() const { return m_transform; }
 
-	bool Render(std::shared_ptr<D3DRenderer> d3d, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
+	bool Render(DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
 
-	PMX_ALIGNMENT_OPERATORS
+	void updateVertices();
+	void updateChildren();
+
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
 	float getVertexWeight(Vertex *vertex);
+	btQuaternion slerp(btScalar fT, const btQuaternion &rkP, const btQuaternion &rkQ, bool shortestPath = true);
 
-
-	void updateChildren();
-	void updateVertices();
+	bool m_dirty;
 
 	Model *model;
 	std::list<std::pair<Vertex*, int>> vertices;
@@ -73,13 +76,15 @@ private:
 	btTransform m_userTransform;
 	btTransform m_morphTransform;
 
+	btQuaternion m_initialRotation;
+
 	uint32_t id;
 
 	Name name;
 	Position startPosition;
 	uint32_t parent;
 	int32_t deformationOrder;
-	BoneFlags::Flags flags;
+	uint16_t flags;
 	union {
 		btScalar length[3];
 		uint32_t attachTo;

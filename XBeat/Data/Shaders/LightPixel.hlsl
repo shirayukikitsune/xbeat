@@ -35,18 +35,13 @@ struct MaterialBufferType
 
 	unsigned int flags;
 	float weight;
-	float2 padding;
+	int index;
+	int padding;
 };
 
 cbuffer MaterialBuffer : register (cb1)
 {
-	MaterialBufferType materials[200];
-};
-
-cbuffer MaterialInfoBuffer : register (cb2)
-{
-	uint matIdx;
-	float3 matinfopadding;
+	MaterialBufferType material;
 };
 
 
@@ -80,16 +75,16 @@ float4 main(PixelInputType input) : SV_TARGET
 	float4 tmp;
 	float p;
 
-	//if (matMulBaseCoefficient.w == 0.0f) discard;
+	//if (material.mulBaseCoefficient.w == 0.0f) discard;
 
 	// Sample the texture pixel at this location.
 	textureColor = baseTexture.Sample(SampleType, input.tex);
 	color = ambientColor;
 
-	if (matIdx != -1) {
-		tmp = textureColor * materials[matIdx].mulBaseCoefficient + materials[matIdx].addBaseCoefficient;
-		textureColor = lerp(textureColor, tmp, materials[matIdx].weight);
-		color *= materials[matIdx].ambient;
+	if (material.index != -1) {
+		tmp = textureColor * material.mulBaseCoefficient + material.addBaseCoefficient;
+		textureColor = lerp(textureColor, tmp, material.weight);
+		color *= material.ambient;
 	}
 
 	specular = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -102,43 +97,43 @@ float4 main(PixelInputType input) : SV_TARGET
 	
 	if (lightIntensity > 0.0f) {
 		float4 append = diffuseColor * lightIntensity;
-		if (matIdx != -1)
-			append *= materials[matIdx].diffuse;
+		if (material.index != -1)
+			append *= material.diffuse;
 		lightColor = saturate(color + append);
 
 		reflection = reflect(lightDir, input.normal);
 
 		if (specularPower > 0.0f) {
 			specular = pow(saturate(dot(reflection, input.viewDirection)), specularPower) * specularColor;
-			if (matIdx != -1) {
-				specular *= materials[matIdx].specular;
+			if (material.index != -1) {
+				specular *= material.specular;
 			}
 		}
 	}
 	else lightColor = color;
 
 	// Multiply the texture pixel and the input color to get the final result.
-	if ((materials[matIdx].flags & 0x08) == 0)
+	if ((material.flags & 0x08) == 0)
 		color = textureColor * lightColor;
 	else
 		color = lightColor;
 
-	if (matIdx == -1) {
+	if (material.index == -1) {
 		color.xyz = saturate(color.xyz + specular.xyz);
 		return color;
 	}
 
-	if ((materials[matIdx].flags & 0x01) == 0) {
+	if ((material.flags & 0x01) == 0) {
 		reflection = normalize(reflect(input.viewDirection, input.normal));
 		p = 1.0f / (2.0f * sqrt(reflection.x * reflection.x + reflection.y * reflection.y + pow(reflection.z + 1, 2.0f)));
 
 		sphereUV = reflection.xy * p + 0.5f;
 
 		sphereColor = saturate(sphereTexture.Sample(SampleType, sphereUV));
-		tmp = sphereColor*materials[matIdx].mulSphereCoefficient + materials[matIdx].addSphereCoefficient;
-		sphereColor = lerp(sphereColor, tmp, materials[matIdx].weight);
+		tmp = sphereColor*material.mulSphereCoefficient + material.addSphereCoefficient;
+		sphereColor = lerp(sphereColor, tmp, material.weight);
 
-		if ((materials[matIdx].flags & 0x02) == 0)
+		if ((material.flags & 0x02) == 0)
 			color.xyz += color.xyz * sphereColor.xyz;
 		else
 			color.xyz += sphereColor.xyz;
@@ -148,10 +143,10 @@ float4 main(PixelInputType input) : SV_TARGET
 
 	color.xyz = saturate(color.xyz + specular.xyz);
 	
-	if ((materials[matIdx].flags & 0x04) == 0) {
+	if ((material.flags & 0x04) == 0) {
 		float4 toonColor = toonTexture.Sample(SampleType, float2(input.depth, dot(lightDir, input.normal) * 0.5f + 0.5f));
-		tmp = toonColor*materials[matIdx].mulToonCoefficient + materials[matIdx].addToonCoefficient;
-		toonColor = lerp(toonColor, tmp, materials[matIdx].weight);
+		tmp = toonColor*material.mulToonCoefficient + material.addToonCoefficient;
+		toonColor = lerp(toonColor, tmp, material.weight);
 		color.xyz *= toonColor.xyz;
 	}
 

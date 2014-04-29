@@ -178,7 +178,7 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = 0;
 
-	result = device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer); // using backbuffer variable for this
+	result = device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer);
 	if (FAILED(result))
 		return false;
 

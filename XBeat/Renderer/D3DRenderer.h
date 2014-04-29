@@ -12,9 +12,12 @@
 
 #include <memory>
 
+#include <LinearMath/btScalar.h>
+#include <LinearMath/btAlignedAllocator.h>
+
 namespace Renderer {
 
-class D3DRenderer
+ATTRIBUTE_ALIGNED16(class) D3DRenderer
 {
 public:
 	D3DRenderer();
@@ -53,6 +56,8 @@ public:
 	void ResetViewport();
 
 	DXType<ID3D11ShaderResourceView> GetDepthResourceView();
+
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
 	bool FindBestRefreshRate(int width, int height, uint32_t &numerator, uint32_t &denominator);

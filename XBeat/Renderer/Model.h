@@ -18,27 +18,6 @@ class D3DRenderer;
 
 class Model
 {
-protected:
-#if 0
-	struct VertexType {
-		VertexType() : position(0,0,0), texture(0,0), normal(0,0,0)/*, UV1(0,0,0,0), UV2(0,0,0,0), UV3(0,0,0,0), UV4(0,0,0,0)*/ {
-		}
-		DirectX::XMFLOAT3 position; 
-		DirectX::XMFLOAT2 texture; 
-		DirectX::XMFLOAT3 normal;
-		DirectX::XMFLOAT4 UV1; // Extra UV coordinates from PMX
-		DirectX::XMFLOAT4 UV2;
-		DirectX::XMFLOAT4 UV3;
-		DirectX::XMFLOAT4 UV4;
-	};
-#endif
-
-	struct ModelType {
-		float x, y, z;
-		float tu, tv;
-		float nx, ny, nz;
-	};
-
 public:
 	Model(void);
 	virtual ~Model(void);
@@ -46,10 +25,6 @@ public:
 	bool Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d, const std::wstring &modelfile, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher);
 	void Shutdown();
 	bool Render(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr<Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Light> light, std::shared_ptr<CameraClass> camera, std::shared_ptr<ViewFrustum> frustum);
-
-	int GetIndexCount();
-
-	ID3D11ShaderResourceView *GetTexture();
 
 protected:
 	virtual bool InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d);
@@ -64,13 +39,6 @@ protected:
 
 	std::shared_ptr<Physics::Environment> m_physics;
 	std::shared_ptr<Dispatcher> m_dispatcher;
-private:
-	std::vector<ModelType> geometry;
-	std::vector<UINT> indices;
-	int vertexCount, indexCount;
-	ID3D11Buffer *vertexBuffer, *indexBuffer;
-
-	std::shared_ptr<Texture> texture;
 };
 
 }

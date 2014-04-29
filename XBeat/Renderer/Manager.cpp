@@ -1,6 +1,7 @@
 ﻿#include "Manager.h"
 #include "PMX/PMXModel.h"
 #include "PMX/PMXBone.h"
+#include "OBJ/OBJModel.h"
 
 using Renderer::Manager;
 
@@ -67,7 +68,8 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 	if (light == nullptr)
 		return false;
 
-	light->SetAmbientColor(0.9f, 0.5f, 0.0f, 1.0f);
+	//light->SetAmbientColor(0.9f, 0.5f, 0.0f, 1.0f);
+	light->SetAmbientColor(1.0f, 1.0f, 1.0f, 1.0f);
 	light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
 	light->SetSpecularColor(1.0f, 1.0f, 1.0f, 1.0f);
 	light->SetDirection(1.0f, 0.0f, 1.0f);
@@ -108,8 +110,9 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { model->ApplyMorph(L"翼羽ばたき", 0.9f); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { model->GetBoneByName(L"全ての親")->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyDown, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 0.0f, 1.0f)); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 0.0f, -1.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
+	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(-1.0f, 0.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { model->ApplyMorph(L"purple", 1.0f); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_1), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_2), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_3), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
@@ -117,9 +120,15 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_0), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
 	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
 		static float rotation[2] = { 0.0f, 0.0f };
-		rotation[0] += data->x / 20.0f;
-		rotation[1] += data->y / 20.0f;
-		camera->SetRotation(rotation[1], rotation[0], 0.0f);
+		if (data->x != 0 || data->y != 0) {
+			rotation[0] += data->x / 20.0f;
+			rotation[1] += data->y / 20.0f;
+			//camera->SetRotation(rotation[1], rotation[0], 0.0f);
+			auto bone = model->GetBoneByName(L"首");
+			bone->Rotate(btVector3(0.0f, rotation[0], -rotation[1]));
+			//btVector3 v = camera->GetRotation();
+			//camera->SetRotation(v.getX() + rotation[1], v.getY() + rotation[0], 0.0f);
+		}
 	});
 
 	screenWidth = width;
@@ -134,26 +143,26 @@ bool Manager::LoadScene() {
 	camera.reset(new CameraClass);
 	if (camera == nullptr)
 		return false;
-	camera->SetPosition(0.0f, 9.0f, -30.0f);
 
-	stage.reset(new Model);
+	stage.reset(new OBJModel);
 	if (!stage->Initialize(d3d, L"./Data/Models/flatground.txt", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Failed to initialize the stage object", L"Error", MB_OK);
 		return false;
 	}
 
 	model.reset(new PMX::Model);
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 フェリシア風 Ver106.pmx", physics)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics)) {
-	if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d->GetDevice(), L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 リリス風 Ver106.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
+	if (!model->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
 		return false;
 	}
 
-	auto pos = model->GetBoneByName(L"頭")->GetPosition();
+	//auto pos = model->GetBoneByName(L"頭")->GetPosition();
 	//camera->SetPosition(pos.x(), pos.y(), pos.z());
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
@@ -285,9 +294,9 @@ bool Manager::Frame(float frameTime)
 		model->ApplyMorph(L"翼羽ばたき", value);
 	}
 	else if (animating) {
-		value = 0.0f;
+		//value = 0.0f;
 		animating = false;
-		model->ApplyMorph(L"翼羽ばたき", value);
+		//model->ApplyMorph(L"翼羽ばたき", value);
 	}
 
 	camera->SetPosition(campos.x, campos.y, campos.z);

@@ -26,7 +26,7 @@ const bool VSYNC_ENABLED = true;
 const float SCREEN_DEPTH = 500.0f;
 const float SCREEN_NEAR = 0.25f;
 
-PMX_ALIGN class Manager
+ATTRIBUTE_ALIGNED16(class) Manager
 {
 public:
 	Manager();
@@ -39,7 +39,7 @@ public:
 
 	__forceinline std::shared_ptr<D3DRenderer> GetRenderer() { return d3d; }
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
 	bool Render(float frameTime);

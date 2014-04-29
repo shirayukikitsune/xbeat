@@ -39,8 +39,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>G:\dev\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;C:\Program Files %28x86%29\Windows Kits\8.1\Include\um;C:\Program Files %28x86%29\Windows Kits\8.1\Include\shared;C:\Program Files %28x86%29\Windows Kits\8.1\Include\winrt;$(DXSDK_DIR)Include</IncludePath>
-    <LibraryPath>G:\dev\lib;$(VCInstallDir)lib;$(VCInstallDir)atlmfc\lib;C:\Program Files %28x86%29\Windows Kits\8.1\Lib\winv6.3\um\x86;$(DXSDK_DIR)Lib\x86</LibraryPath>
+    <IncludePath>G:\dev\include;$(IncludePath);$(DXSDK_DIR)Include</IncludePath>
+    <LibraryPath>G:\dev\lib;$(LibraryPath);$(DXSDK_DIR)Lib\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(DXSDK_DIR)Include;$(IncludePath)</IncludePath>
@@ -98,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Dispatcher.cpp" />
+    <ClCompile Include="Renderer\OBJ\OBJModel.cpp" />
     <ClCompile Include="Physics\Environment.cpp" />
     <ClCompile Include="Renderer\PMX\PMXRigidBody.cpp" />
     <ClCompile Include="Renderer\PMX\PMXMaterial.cpp" />
@@ -114,7 +115,6 @@
     <ClCompile Include="Renderer\Light.cpp" />
     <ClCompile Include="Renderer\Manager.cpp" />
     <ClCompile Include="Renderer\Model.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXModel.cpp" />
     <ClCompile Include="Renderer\Shaders\ColorShaderClass.cpp" />
     <ClCompile Include="Renderer\Shaders\LightShader.cpp" />
     <ClCompile Include="Renderer\Shaders\TextureShader.cpp" />
@@ -125,6 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Dispatcher.h" />
+    <ClInclude Include="Renderer\OBJ\OBJModel.h" />
     <ClInclude Include="Physics\Environment.h" />
     <ClInclude Include="Renderer\PMX\PMXRigidBody.h" />
     <ClInclude Include="Renderer\PMX\PMXMaterial.h" />

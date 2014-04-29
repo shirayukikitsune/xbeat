@@ -3,7 +3,7 @@
 
 using namespace Renderer::Shaders;
 
-extern char *getFileContents(const std::wstring &file, uint64_t &bufSize);
+extern char *getFileContents(const std::wstring &file, SIZE_T &bufSize);
 
 Texture::Texture(void)
 {
@@ -49,7 +49,7 @@ bool Texture::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstrin
 	UINT numElements;
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
-	uint64_t vsbufsize, psbufsize;
+	SIZE_T vsbufsize, psbufsize;
 
 	char *vsbuffer = getFileContents(vsFile, vsbufsize);
 	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
@@ -154,7 +154,7 @@ void Texture::ShutdownShader()
 void Texture::OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
 {
 	char *compileError;
-	SIZE_T bufferSize, i;
+	SIZE_T bufferSize;
 	std::ofstream fout;
 
 	compileError = (char*)errorMessage->GetBufferPointer();

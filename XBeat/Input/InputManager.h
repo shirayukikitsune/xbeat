@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <unordered_map>
 
 #define DIRECTINPUT_VERSION 0x0800
 
@@ -26,9 +27,11 @@ struct CallbackInfo
 	enum Event {
 		OnKeyUp,
 		OnKeyDown,
+		OnKeyPressed,
 		OnMouseMove,
-		OnMouseClick,
-		OnMouseDoubleClick
+		OnMouseDown,
+		OnMouseUp,
+		OnMousePress,
 	};
 	Event eventType;
 	uint8_t button;
@@ -46,6 +49,7 @@ typedef std::function<void(std::shared_ptr<MouseMovement>)> MouseMoveCallback;
 class Manager
 {
 public:
+	enum { keyboardBufferSize = 32 }; // How many keys are processed per frame
 	Manager();
 	~Manager();
 
@@ -76,7 +80,8 @@ private:
 	int screenWidth, screenHeight;
 	int mouseX, mouseY;
 
-	uint8_t currentKeyState[256], lastKeysState[256];
+	uint8_t keyState[256];
+	std::unordered_map<uint8_t, CallbackInfo::Event> pressedKeys;
 	DIMOUSESTATE2 currentMouseState, lastMouseState;
 
 	MouseMoveCallback mouseCallback;

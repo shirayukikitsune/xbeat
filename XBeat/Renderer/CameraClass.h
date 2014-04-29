@@ -5,7 +5,7 @@
 
 namespace Renderer {
 
-PMX_ALIGN class CameraClass
+ATTRIBUTE_ALIGNED16(class) CameraClass
 {
 public:
 	CameraClass(void);
@@ -13,6 +13,8 @@ public:
 
 	void SetPosition(float x, float y, float z);
 	void SetRotation(float x, float y, float z);
+	void SetRotation(btVector3& axis, float angle);
+	void SetRotation(btQuaternion& quaternion);
 
 	DirectX::XMVECTOR GetPosition();
 	DirectX::XMVECTOR GetRotation();
@@ -20,7 +22,7 @@ public:
 	void Render();
 	void GetViewMatrix(DirectX::XMMATRIX &matrix);
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
 	DirectX::XMVECTOR position, rotation;

@@ -135,14 +135,6 @@
       <Project>{0446af84-8c4a-4db5-889c-440447944665}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\Library_GLee\Library_GLee.vcxproj">
-      <Project>{18b2a3f8-7c0e-4f66-bdcd-53cff00f897e}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-    <ProjectReference Include="..\Library_GLFW\Library_GLFW.vcxproj">
-      <Project>{4b60990d-dbae-47a7-8779-b49a581b06b3}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
     <ProjectReference Include="..\Library_JPEG\Library_JPEG.vcxproj">
       <Project>{704b8f90-75e4-48f0-b55a-fd4caad729fd}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

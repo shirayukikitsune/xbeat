@@ -13,15 +13,6 @@ namespace PMXTest {
 }
 #endif
 
-#define PMX_ALIGNMENT 16
-#define PMX_ALIGN __declspec(align(PMX_ALIGNMENT))
-
-#ifdef _DEBUG
-#define PMX_ALIGNMENT_OPERATORS static void* operator new (size_t size) { return _aligned_malloc_dbg(size, PMX_ALIGNMENT, __FILE__, __LINE__); }; static void operator delete (void *p) { _aligned_free_dbg(p); };
-#else
-#define PMX_ALIGNMENT_OPERATORS static void* operator new (size_t size) { return _aligned_malloc(size, PMX_ALIGNMENT); }; static void operator delete (void *p) { _aligned_free(p); };
-#endif
-
 namespace Renderer {
 class Texture;
 
@@ -89,106 +80,91 @@ struct Name {
 #pragma endregion
 
 #pragma region Enums
-struct MaterialFlags {
-	enum Flags : uint8_t {
-		DoubleSide = 0x01,
-		GroundShadow = 0x02,
-		DrawSelfShadowMap = 0x04,
-		DrawSelfShadow = 0x08,
-		DrawEdge = 0x10
-	};
+enum struct MaterialFlags : uint8_t {
+	DoubleSide = 0x01,
+	GroundShadow = 0x02,
+	DrawSelfShadowMap = 0x04,
+	DrawSelfShadow = 0x08,
+	DrawEdge = 0x10
 };
 
-struct MaterialSphereMode {
-	enum ModeId : uint8_t {
-		Disabled,
-		Multiply,
-		Add
-	};
+enum struct MaterialSphereMode : uint8_t {
+	Disabled,
+	Multiply,
+	Add
 };
 
-struct VertexWeightMethod {
-	enum MethodId : uint8_t {
-		BDEF1,
-		BDEF2,
-		BDEF4,
-		SDEF,
-		QDEF
-	};
+enum struct VertexWeightMethod : uint8_t {
+	BDEF1,
+	BDEF2,
+	BDEF4,
+	SDEF,
+	QDEF
 };
 
-struct BoneFlags {
-	enum Flags : uint16_t {
-		Attached = 0x0001,
-		Rotatable = 0x0002,
-		Movable = 0x0004,
-		View = 0x0008,
-		Manipulable = 0x0010,
-		IK = 0x0020,
-		LocalInheritance = 0x0080,
-		InheritRotation = 0x0100,
-		InheritTranslation = 0x0200,
-		TranslateAxis = 0x0400,
-		LocalAxis = 0x0800,
-		AfterPhysicalDeformation = 0x1000,
-		ExternalParentDeformation = 0x2000
-	};
+enum struct BoneFlags : uint16_t {
+	Attached = 0x0001,
+	Rotatable = 0x0002,
+	Movable = 0x0004,
+	View = 0x0008,
+	Manipulable = 0x0010,
+	IK = 0x0020,
+	LocalInheritance = 0x0080,
+	InheritRotation = 0x0100,
+	InheritTranslation = 0x0200,
+	TranslateAxis = 0x0400,
+	LocalAxis = 0x0800,
+	AfterPhysicalDeformation = 0x1000,
+	ExternalParentDeformation = 0x2000
 };
 
-struct DeformationOrigin {
-	enum Id {
-		User,
-		Morph,
-		Inheritance,
-		Internal
-	};
+enum struct DeformationOrigin {
+	User,
+	Morph,
+	Inheritance,
+	Internal
 };
 
-struct RigidBodyShape {
-	enum Id : uint8_t {
-		Sphere,
-		Box,
-		Capsule
-	};
+enum struct RigidBodyShape : uint8_t {
+	Sphere,
+	Box,
+	Capsule
 };
 
-struct RigidBodyMode {
-	enum Id : uint8_t {
-		Static,
-		Dynamic,
-		AlignedDynamic
-	};
+enum struct RigidBodyMode : uint8_t {
+	Static,
+	Dynamic,
+	AlignedDynamic
 };
 
-struct JointType {
-	enum Id : uint8_t {
-		Spring6DoF,
-		SixDoF,
-		PointToPoint,
-		ConeTwist,
-		Slider,
-		Hinge
-	};
+enum struct JointType : uint8_t {
+	Spring6DoF,
+	SixDoF,
+	PointToPoint,
+	ConeTwist,
+	Slider,
+	Hinge
 };
 
-struct MaterialToonMode {
-	enum Id : uint8_t {
-		CustomTexture,
-		DefaultTexture,
-	};
+enum struct MaterialToonMode : uint8_t {
+	CustomTexture,
+	DefaultTexture,
+};
+
+enum struct MaterialMorphMethod : uint8_t {
+	Multiplicative,
+	Additive
+};
+
+enum struct FrameMorphTarget : uint8_t {
+	Bone,
+	Morph
 };
 #pragma endregion
 
-PMX_ALIGN struct MaterialMorph {
-	struct Method {
-		enum MethodId : uint8_t {
-			Multiplicative,
-			Additive
-		};
-	};
-
+ATTRIBUTE_ALIGNED16(struct) MaterialMorph{
 	uint32_t index;
-	Method::MethodId method;
+	MaterialMorphMethod method;
 	Color4 diffuse;
 	Color specular;
 	float specularCoefficient;
@@ -222,7 +198,7 @@ PMX_ALIGN struct MaterialMorph {
 		this->toonCoefficient *= other.toonCoefficient;
 	}
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
 union MorphType {
@@ -267,12 +243,12 @@ union MorphType {
 	};
 };
 
-PMX_ALIGN struct Vertex{
+ATTRIBUTE_ALIGNED16(struct) Vertex{
 	Position position;
 	Position normal;
 	float uv[2];
 	vec4f uvEx[4];
-	VertexWeightMethod::MethodId weightMethod;
+	VertexWeightMethod weightMethod;
 	union {
 		struct {
 			uint32_t boneIndexes[4];
@@ -301,19 +277,24 @@ PMX_ALIGN struct Vertex{
 	std::list<MorphData*> morphs;
 
 	inline Position GetFinalPosition() {
-		return this->position + morphOffset + boneOffset[0] + boneOffset[1] + boneOffset[2] + boneOffset[3];
+		/*Position p = morphOffset + boneOffset[0] + boneOffset[1] + boneOffset[2] + boneOffset[3];
+		btTransform t;
+		t.setOrigin(this->position);
+		t.setRotation(boneRotation[0] * boneRotation[1] * boneRotation[2] * boneRotation[3]);
+		return t(p);*/
+		return position + morphOffset + boneOffset[0] + boneOffset[1] + boneOffset[2] + boneOffset[3];
 	}
 	inline Position GetNormal() {
 		btTransform t;
 		t.setIdentity();
 		t.setRotation(boneRotation[0] * boneRotation[1] * boneRotation[2] * boneRotation[3]);
-		return t(normal);
+		return t(normal).normalized();
 	}
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-PMX_ALIGN struct Material {
+ATTRIBUTE_ALIGNED16(struct) Material{
 	Name name;
 	Color4 diffuse;
 	Color specular;
@@ -324,8 +305,8 @@ PMX_ALIGN struct Material {
 	float edgeSize;
 	uint32_t baseTexture;
 	uint32_t sphereTexture;
-	uint8_t sphereMode;
-	MaterialToonMode::Id toonFlag;
+	MaterialSphereMode sphereMode;
+	MaterialToonMode toonFlag;
 	union {
 		uint32_t custom;
 		uint8_t default;
@@ -333,10 +314,10 @@ PMX_ALIGN struct Material {
 	std::wstring freeField;
 	int indexCount;
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-PMX_ALIGN struct IK {
+ATTRIBUTE_ALIGNED16(struct) IK{
 	struct Node {
 		uint32_t bone;
 		bool limitAngle;
@@ -351,10 +332,10 @@ PMX_ALIGN struct IK {
 	float angleLimit;
 	std::vector<Node> links;
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-PMX_ALIGN struct Morph {
+ATTRIBUTE_ALIGNED16(struct) Morph{
 	Morph() {
 		appliedWeight = 0.0f;
 	};
@@ -366,33 +347,27 @@ PMX_ALIGN struct Morph {
 
 	float appliedWeight;
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-PMX_ALIGN struct FrameMorphs {
-	struct Target {
-		enum Id : uint8_t {
-			Bone,
-			Morph
-		};
-	};
-	Target::Id target;
+ATTRIBUTE_ALIGNED16(struct) FrameMorphs{
+	FrameMorphTarget target;
 	uint32_t id;
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-PMX_ALIGN struct Frame {
+ATTRIBUTE_ALIGNED16(struct) Frame{
 	Name name;
 	uint8_t type;
 	std::vector<FrameMorphs> morphs;
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-PMX_ALIGN struct Joint {
+ATTRIBUTE_ALIGNED16(struct) Joint{
 	Name name;
-	JointType::Id type;
+	JointType type;
 	struct {
 		uint32_t bodyA, bodyB;
 		vec3f position;
@@ -405,7 +380,7 @@ PMX_ALIGN struct Joint {
 		vec3f rotationSpringConstant;
 	} data;
 
-	PMX_ALIGNMENT_OPERATORS
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 }
 }

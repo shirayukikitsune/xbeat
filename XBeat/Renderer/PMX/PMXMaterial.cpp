@@ -10,8 +10,6 @@ RenderMaterial::RenderMaterial()
 
 	dirty = DirtyFlags::Clean;
 
-	vertexBuffer = nullptr;
-	indexBuffer = nullptr;
 	indexCount = 0;
 	materialIndex = 0;
 	startIndex = 0;
@@ -32,15 +30,6 @@ void RenderMaterial::Shutdown()
 	baseTexture.reset();
 	sphereTexture.reset();
 	toonTexture.reset();
-
-	if (vertexBuffer != nullptr) {
-		vertexBuffer->Release();
-		vertexBuffer = nullptr;
-	}
-	if (indexBuffer != nullptr) {
-		indexBuffer->Release();
-		indexBuffer = nullptr;
-	}
 }
 
 DirectX::XMFLOAT4 RenderMaterial::getDiffuse(Material *m)
@@ -87,7 +76,7 @@ MaterialMorph* RenderMaterial::getAdditiveMorph()
 	initializeAdditiveMaterialMorph(additive);
 	for (auto &i : appliedMorphs)
 	{
-		if (i.first.method == MaterialMorph::Method::Additive)
+		if (i.first.method == MaterialMorphMethod::Additive)
 			additive += i.first * i.second;
 	}
 
@@ -109,7 +98,7 @@ MaterialMorph* RenderMaterial::getMultiplicativeMorph()
 	for (auto &i : appliedMorphs)
 	{
 		weight += i.second;
-		if (i.first.method == MaterialMorph::Method::Multiplicative)
+		if (i.first.method == MaterialMorphMethod::Multiplicative)
 			multiplicative *= i.first * i.second;
 	}
 
@@ -135,7 +124,10 @@ void RenderMaterial::ApplyMorph(MaterialMorph *morph, float weight)
 			i->second = weight;
 	}
 
-	if (morph->method == MaterialMorph::Method::Additive)
+	this->weight = 0.0f;
+	for (auto &m : appliedMorphs) this->weight += m.second / appliedMorphs.size();
+
+	if (morph->method == MaterialMorphMethod::Additive)
 		dirty |= DirtyFlags::AdditiveMorph;
 	else dirty |= DirtyFlags::MultiplicativeMorph;
 
@@ -149,7 +141,7 @@ void RenderMaterial::initializeAdditiveMaterialMorph(MaterialMorph &morph)
 	morph.edgeColor.red = morph.edgeColor.green = morph.edgeColor.blue = morph.edgeColor.alpha = 0.0f;
 	morph.edgeSize = 0.0f;
 	morph.index = 0;
-	morph.method = MaterialMorph::Method::Additive;
+	morph.method = MaterialMorphMethod::Additive;
 	morph.specular.red = morph.specular.green = morph.specular.blue = 0.0f;
 	morph.specularCoefficient = 0.0f;
 
@@ -165,7 +157,7 @@ void RenderMaterial::initializeMultiplicativeMaterialMorph(MaterialMorph &morph)
 	morph.edgeColor.red = morph.edgeColor.green = morph.edgeColor.blue = morph.edgeColor.alpha = 1.0f;
 	morph.edgeSize = 1.0f;
 	morph.index = 0;
-	morph.method = MaterialMorph::Method::Multiplicative;
+	morph.method = MaterialMorphMethod::Multiplicative;
 	morph.specular.red = morph.specular.green = morph.specular.blue = 1.0f;
 	morph.specularCoefficient = 1.0f;
 

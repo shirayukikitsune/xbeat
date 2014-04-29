@@ -170,3 +170,5 @@ pip-log.txt
 
 # Data files
 XBeat/Data/Models/*
+*.lib
+*.cso

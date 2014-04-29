@@ -1,4 +1,5 @@
 #include "InputManager.h"
+#include <queue>
 
 using namespace Input;
 
@@ -38,6 +39,8 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 
 	this->dispatcher = dispatcher;
 
+	memset(keyState, 0, sizeof(keyState));
+
 	result = DirectInput8Create(instance, DIRECTINPUT_VERSION, IID_IDirectInput8, (LPVOID*)&dinput, NULL);
 	if (FAILED(result))
 		return false;
@@ -50,7 +53,18 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 	if (FAILED(result))
 		return false;
 
-	result = keyboard->SetCooperativeLevel(wnd, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);
+	result = keyboard->SetCooperativeLevel(wnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
+	if (FAILED(result))
+		return false; 
+
+	DIPROPDWORD prop;
+	prop.diph.dwSize = sizeof(DIPROPDWORD);
+	prop.diph.dwHeaderSize = sizeof(DIPROPHEADER);
+	prop.diph.dwObj = 0;
+	prop.diph.dwHow = DIPH_DEVICE;
+	prop.dwData = keyboardBufferSize; 
+
+	result = keyboard->SetProperty(DIPROP_BUFFERSIZE, &prop.diph);
 	if (FAILED(result))
 		return false;
 
@@ -66,7 +80,7 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 	if (FAILED(result))
 		return false;
 
-	result = mouse->SetCooperativeLevel(wnd, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);
+	result = mouse->SetCooperativeLevel(wnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
 	if (FAILED(result))
 		return false;
 
@@ -113,7 +127,7 @@ bool Manager::ReadKeyboard()
 {
 	HRESULT result;
 
-	result = keyboard->GetDeviceState(sizeof (currentKeyState), (LPVOID)&currentKeyState);
+	result = keyboard->GetDeviceState(sizeof (keyState), (LPVOID)&keyState);
 	if (FAILED(result)) {
 		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED)
 			keyboard->Acquire();
@@ -152,29 +166,57 @@ void Manager::ProcessInput()
 	if(mouseX > screenWidth)  { mouseX = screenWidth; }
 	if(mouseY > screenHeight) { mouseY = screenHeight; }
 
+	DIDEVICEOBJECTDATA keyChanges[keyboardBufferSize];
+	DWORD items = keyboardBufferSize;
+	HRESULT result;
+	result = keyboard->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), keyChanges, &items, 0);
 	auto v = bindings.end();
-	// Check for key strokes
-	for (int i = 0; i < 256; i++) {
-		if (lastKeysState[i] != currentKeyState[i]) {
-			// Key state changed
-			if (IsKeyPressed(i)) // Was released, now is pressed
-				v = bindings.find(CallbackInfo(CallbackInfo::OnKeyDown, i));
-			else v = bindings.find(CallbackInfo(CallbackInfo::OnKeyUp, i)); // was pressed, now is released
+	std::queue<uint8_t> upEvents;
 
-			if (v != bindings.end())
-				this->dispatcher->AddTask(std::bind(v->second, v->first.param));
-
-			lastKeysState[i] = currentKeyState[i];
+	if (!FAILED(result)) {
+		for (DWORD i = 0; i < items; i++) {
+			pressedKeys[keyChanges[i].dwOfs] = (keyChanges[i].dwData & 0x80) != 0 ? CallbackInfo::OnKeyDown : CallbackInfo::OnKeyUp;
 		}
+	}
+
+	for (auto &key : pressedKeys) {
+		auto v = bindings.find(CallbackInfo(key.second, key.first));
+		if (v != bindings.end())
+			dispatcher->AddTask(std::bind(v->second, v->first.param));
+		if (key.second == CallbackInfo::OnKeyDown)
+			key.second = CallbackInfo::OnKeyPressed;
+		else if (key.second == CallbackInfo::OnKeyUp) upEvents.push(key.first);
+	}
+
+	while (!upEvents.empty()) {
+		pressedKeys.erase(upEvents.front());
+		upEvents.pop();
 	}
 
 	// Check for mouse movements
 	if (mouseCallback) {
 		std::shared_ptr<MouseMovement> m(new MouseMovement);
-		m->x = currentMouseState.lX;
-		m->y = currentMouseState.lY;
+		m->x = currentMouseState.lX - lastMouseState.lX;
+		m->y = currentMouseState.lY - lastMouseState.lY;
 		this->dispatcher->AddTask(std::bind(mouseCallback, m));
 	}
+	for (int i = 0; i < 8; i++)
+	{
+		if (lastMouseState.rgbButtons[i] != currentMouseState.rgbButtons[i]) {
+			if (currentMouseState.rgbButtons[i] & 0x80) // Was released, now is pressed
+				v = bindings.find(CallbackInfo(CallbackInfo::OnMouseDown, i));
+			else v = bindings.find(CallbackInfo(CallbackInfo::OnMouseUp, i)); // was pressed, now is released
+
+			lastMouseState.rgbButtons[i] = currentMouseState.rgbButtons[i];
+		}
+		else if (currentMouseState.rgbButtons[i] & 0x80) v = bindings.find(CallbackInfo(CallbackInfo::OnMousePress, i));
+
+		if (v != bindings.end()) {
+			this->dispatcher->AddTask(std::bind(v->second, v->first.param));
+			v = bindings.end();
+		}
+	}
+	lastMouseState = currentMouseState;
 }
 
 bool Manager::IsEscapePressed()
@@ -184,7 +226,7 @@ bool Manager::IsEscapePressed()
 
 bool Manager::IsKeyPressed(int key)
 {
-	return (currentKeyState[key] & 0x80) != 0;
+	return pressedKeys.find(key) != pressedKeys.end();
 }
 
 void Manager::GetMouseLocation(int &x, int &y)
