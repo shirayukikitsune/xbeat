@@ -136,8 +136,11 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 	if (FAILED(result))
 		return false;
 
-	//result = D3DX11CompileFromFile(filename.c_str(), NULL, NULL, NULL, "fx_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, NULL, &bytecode, &errorMsg, NULL);
+#ifdef _DEBUG
 	result = D3DX11CompileEffectFromFile(filename.c_str(), NULL, NULL, D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, device, &m_effect, &errorMsg);
+#else
+	result = D3DX11CompileEffectFromFile(filename.c_str(), NULL, NULL, 0, 0, device, &m_effect, &errorMsg);
+#endif
 	if (FAILED(result)) {
 		if (errorMsg == NULL) {
 			MessageBox(wnd, (std::wstring(L"Shader file not found: ") + filename).c_str(), L"Error", MB_ICONERROR | MB_OK);
@@ -148,12 +151,6 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 			return false;
 		}
 	}
-
-	/*result = D3DX11CreateEffectFromMemory(bytecode->GetBufferPointer(), bytecode->GetBufferSize(), 0, device, &m_effect);
-	bytecode->Release();
-	if (FAILED(result)) {
-		return false;
-	}*/
 
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;

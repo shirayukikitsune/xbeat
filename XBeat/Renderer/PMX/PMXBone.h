@@ -4,6 +4,8 @@
 #include "../D3DRenderer.h"
 #include "GeometricPrimitive.h" // From DirectX Toolkit
 #include <list>
+#include <deque>
+#include <vector>
 
 namespace Renderer {
 namespace PMX {
@@ -64,11 +66,11 @@ private:
 	bool m_dirty;
 
 	Model *model;
-	std::list<std::pair<Vertex*, int>> vertices;
+	std::vector<std::pair<Vertex*, int>> vertices;
 
 	std::list<std::pair<Morph*,float>> appliedMorphs;
 
-	std::list<Bone*> children;
+	std::deque<Bone*> children;
 
 	btTransform m_transform;
 	btTransform m_inheritTransform;

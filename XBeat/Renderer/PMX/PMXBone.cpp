@@ -137,24 +137,24 @@ bool Bone::Update(bool force)
 			position += parent->getLocalTransform().getOrigin();
 		else if (HasAnyFlag(BoneFlags::InheritTranslation)) 
 			position += parent->m_inheritTransform.getOrigin() * this->inherit.rate;
-		else position += parent->getLocalTransform().getOrigin();
+		else position += parent->m_inheritTransform.getOrigin() + parent->m_morphTransform.getOrigin();
 	}
 
 	parent = HasAnyFlag(BoneFlags::InheritRotation) ? model->GetBoneById(this->inherit.from) : (this->parent != -1 ? GetParentBone() : nullptr);
 	if (parent) {
 		parent->Update();
 		if (HasAnyFlag(BoneFlags::LocalInheritance))
-			rotation = parent->m_inheritTransform.getRotation();
+			rotation = parent->getLocalTransform().getRotation();
 		else if (HasAnyFlag(BoneFlags::InheritRotation))
-			rotation = this->slerp(this->inherit.rate, btQuaternion::getIdentity(), parent->m_inheritTransform.getRotation());
-		else rotation = parent->getLocalTransform().getRotation();
+			rotation = this->slerp(this->inherit.rate, parent->m_inheritTransform.getRotation(), btQuaternion::getIdentity());
+		else rotation = parent->m_inheritTransform.getRotation() * parent->m_morphTransform.getRotation();
 	}
 
 	m_inheritTransform.setOrigin(position);
 	m_inheritTransform.setRotation(rotation);
 
 	position += m_userTransform.getOrigin() + m_morphTransform.getOrigin();
-	rotation = m_userTransform.getRotation() * m_morphTransform.getRotation() * rotation;
+	rotation = rotation * m_userTransform.getRotation() * m_morphTransform.getRotation();
 
 	m_transform.setOrigin(position);
 	m_transform.setRotation(rotation);
@@ -214,15 +214,15 @@ void Bone::ApplyMorph(Morph *morph, float weight)
 			i->second = weight;
 	}
 
+	m_dirty = true;
+
 	// Now calculate the transformation matrix
-	btTransform current;
 	m_morphTransform.setIdentity();
 	for (auto &pair : appliedMorphs) {
 		for (auto &data : pair.first->data) {
 			if (data.bone.index == this->id) {
-				current.setOrigin(btVector3(data.bone.movement[0], data.bone.movement[1], data.bone.movement[2]) * pair.second);
-				current.setRotation(this->slerp(pair.second, btQuaternion::getIdentity(), btQuaternion(data.bone.rotation[0], data.bone.rotation[1], data.bone.rotation[2], data.bone.rotation[3])));
-				m_morphTransform = m_morphTransform * current;
+				m_morphTransform.setOrigin(m_morphTransform.getOrigin() + (btVector3(data.bone.movement[0], data.bone.movement[1], data.bone.movement[2]) * pair.second));
+				m_morphTransform.setRotation(this->slerp(pair.second, m_morphTransform.getRotation(), btQuaternion(data.bone.rotation[0], data.bone.rotation[1], data.bone.rotation[2], data.bone.rotation[3])));
 			}
 		}
 	}
@@ -257,7 +257,6 @@ btQuaternion Bone::slerp(btScalar fT, const btQuaternion &rkP, const btQuaternio
 
 void Bone::updateChildren()
 {
-	// This should be done on vertex shader for great justice
 	updateVertices();
 
 	for (auto &child : children) {
@@ -284,14 +283,12 @@ void Bone::updateVertices()
 		btVector3 localPosition = m_toOriginTransform(vertex.first->position);
 		float weight;
 		switch (vertex.first->weightMethod) {
-		case VertexWeightMethod::QDEF:
-			weight = vertex.first->boneInfo.BDEF.weights[vertex.second];
-			break;
 		case VertexWeightMethod::SDEF:
 			weight = vertex.first->boneInfo.SDEF.weightBias;
 			if (vertex.first->boneInfo.SDEF.boneIndexes[1] == this->id) weight = 1.0f - weight;
 			break;
 		default:
+			// QDEF shares the same structure as BDEF, so no need for a special case
 			weight = vertex.first->boneInfo.BDEF.weights[vertex.second];
 		}
 
@@ -338,16 +335,7 @@ bool Bone::Render(DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CX
 			return true;
 		}
 
-		/*w = DirectX::XMMatrixRotationQuaternion((m_transform.getRotation() * m_initialRotation).get128());
-		w.r[0] = DirectX::XMVectorScale(w.r[0], 0.3f);
-		w.r[1] = DirectX::XMVectorScale(w.r[1], len.length());
-		w.r[2] = DirectX::XMVectorScale(w.r[2], 0.3f);
-		w.r[3] = DirectX::XMVectorSetW(GetPosition().get128(), 1.0f);*/
 		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, len.length(), 0.3f, 1.0f), DirectX::XMVectorZero(), GetRotation().get128(), GetPosition().get128());
-		/*w = DirectX::XMMatrixRotationQuaternion((m_transform.getRotation() * m_initialRotation).get128()) *
-			DirectX::XMMatrixScaling(0.3f, len.length(), 0.3f) *
-			DirectX::XMMatrixTranslationFromVector(GetPosition().get128()) *
-			;*/
 
 		m_primitive->Draw(w, view, projection);
 	}

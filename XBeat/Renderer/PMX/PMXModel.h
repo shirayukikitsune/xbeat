@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <cstdint>
+#include <array>
 
 #include <DirectXMath.h>
 
@@ -61,6 +62,9 @@ public:
 
 private:
 	std::vector<Vertex*> vertices;
+	std::vector<Vertex*> m_sortedVertices;
+	std::array<uint32_t, (size_t)VertexWeightMethod::Count> m_vertexCountPerMethod;
+
 	std::vector<uint32_t> verticesIndex;
 	std::vector<std::wstring> textures;
 	std::vector<Material*> materials;
@@ -84,6 +88,8 @@ private:
 	static std::vector<std::shared_ptr<Texture>> sharedToonTextures;
 
 	std::vector<std::shared_ptr<RigidBody>> m_rigidBodies;
+
+	std::vector<DirectX::VertexPositionNormalTexture> m_vertices;
 
 	bool updateMaterialBuffer(uint32_t material, DXType<ID3D11DeviceContext> context);
 	bool m_dirtyBuffer;

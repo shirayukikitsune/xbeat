@@ -53,7 +53,7 @@ bool SystemClass::Initialize()
 	if (!renderer->Initialize(width, height, wnd, input, physics, dispatcher))
 		return false;
 
-	if (!physics->Initialize(renderer->GetRenderer()))
+	if (!physics->Initialize(/*renderer->GetRenderer()*/nullptr))
 		return false;
 
 	if (!renderer->LoadScene())

@@ -99,7 +99,8 @@ enum struct VertexWeightMethod : uint8_t {
 	BDEF2,
 	BDEF4,
 	SDEF,
-	QDEF
+	QDEF,
+	Count
 };
 
 enum struct BoneFlags : uint16_t {
@@ -265,7 +266,6 @@ ATTRIBUTE_ALIGNED16(struct) Vertex{
 	float edgeWeight;
 
 	Bone *bones[4];
-	//RenderMaterial *material;
 	std::list<std::pair<RenderMaterial*, UINT>> materials;
 	Position boneOffset[4], morphOffset;
 	btQuaternion boneRotation[4];
@@ -276,20 +276,17 @@ ATTRIBUTE_ALIGNED16(struct) Vertex{
 	};
 	std::list<MorphData*> morphs;
 
+	uint32_t index;
+
 	inline Position GetFinalPosition() {
-		/*Position p = morphOffset + boneOffset[0] + boneOffset[1] + boneOffset[2] + boneOffset[3];
-		btTransform t;
-		t.setOrigin(this->position);
-		t.setRotation(boneRotation[0] * boneRotation[1] * boneRotation[2] * boneRotation[3]);
-		return t(p);*/
-		return position + morphOffset + boneOffset[0] + boneOffset[1] + boneOffset[2] + boneOffset[3];
+		return position + morphOffset;
 	}
 	inline Position GetNormal() {
-		btTransform t;
-		t.setIdentity();
-		t.setRotation(boneRotation[0] * boneRotation[1] * boneRotation[2] * boneRotation[3]);
-		return t(normal).normalized();
+		return normal;
 	}
+
+	DirectX::XMFLOAT3 dxPos, dxNormal;
+	DirectX::XMFLOAT2 dxUV;
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 };

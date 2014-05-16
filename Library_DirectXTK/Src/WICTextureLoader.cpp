@@ -30,10 +30,7 @@
 
 #include "pch.h"
 
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8) || defined(_WIN7_PLATFORM_UPDATE)
-#include <d2d1.h>
-#endif
-
+// VS 2010's stdint.h conflicts with intsafe.h
 #pragma warning(push)
 #pragma warning(disable : 4005)
 #include <wincodec.h>
@@ -41,8 +38,10 @@
 
 #include "WICTextureLoader.h"
 
+#include "DirectXHelpers.h"
 #include "PlatformHelpers.h"
 
+using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
 //-------------------------------------------------------------------------------------
@@ -68,12 +67,8 @@ static WICTranslate g_WICFormats[] =
     { GUID_WICPixelFormat32bppRGBA1010102XR,    DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM }, // DXGI 1.1
     { GUID_WICPixelFormat32bppRGBA1010102,      DXGI_FORMAT_R10G10B10A2_UNORM },
 
-#ifdef DXGI_1_2_FORMATS
-
     { GUID_WICPixelFormat16bppBGRA5551,         DXGI_FORMAT_B5G5R5A1_UNORM },
     { GUID_WICPixelFormat16bppBGR565,           DXGI_FORMAT_B5G6R5_UNORM },
-
-#endif // DXGI_1_2_FORMATS
 
     { GUID_WICPixelFormat32bppGrayFloat,        DXGI_FORMAT_R32_FLOAT },
     { GUID_WICPixelFormat16bppGrayHalf,         DXGI_FORMAT_R16_FLOAT },
@@ -110,17 +105,7 @@ static WICConvert g_WICConvert[] =
     { GUID_WICPixelFormat16bppGrayFixedPoint,   GUID_WICPixelFormat16bppGrayHalf }, // DXGI_FORMAT_R16_FLOAT 
     { GUID_WICPixelFormat32bppGrayFixedPoint,   GUID_WICPixelFormat32bppGrayFloat }, // DXGI_FORMAT_R32_FLOAT 
 
-#ifdef DXGI_1_2_FORMATS
-
     { GUID_WICPixelFormat16bppBGR555,           GUID_WICPixelFormat16bppBGRA5551 }, // DXGI_FORMAT_B5G5R5A1_UNORM
-
-#else
-
-    { GUID_WICPixelFormat16bppBGR555,           GUID_WICPixelFormat32bppRGBA }, // DXGI_FORMAT_R8G8B8A8_UNORM
-    { GUID_WICPixelFormat16bppBGRA5551,         GUID_WICPixelFormat32bppRGBA }, // DXGI_FORMAT_R8G8B8A8_UNORM
-    { GUID_WICPixelFormat16bppBGR565,           GUID_WICPixelFormat32bppRGBA }, // DXGI_FORMAT_R8G8B8A8_UNORM
-
-#endif // DXGI_1_2_FORMATS
 
     { GUID_WICPixelFormat32bppBGR101010,        GUID_WICPixelFormat32bppRGBA1010102 }, // DXGI_FORMAT_R10G10B10A2_UNORM
 
@@ -260,8 +245,8 @@ static size_t _WICBitsPerPixel( REFGUID targetGuid )
     if ( !pWIC )
         return 0;
  
-    ScopedObject<IWICComponentInfo> cinfo;
-    if ( FAILED( pWIC->CreateComponentInfo( targetGuid, &cinfo ) ) )
+    ComPtr<IWICComponentInfo> cinfo;
+    if ( FAILED( pWIC->CreateComponentInfo( targetGuid, cinfo.GetAddressOf() ) ) )
         return 0;
 
     WICComponentType type;
@@ -271,7 +256,7 @@ static size_t _WICBitsPerPixel( REFGUID targetGuid )
     if ( type != WICPixelFormat )
         return 0;
 
-    ScopedObject<IWICPixelFormatInfo> pfinfo;
+    ComPtr<IWICPixelFormatInfo> pfinfo;
     if ( FAILED( cinfo.As( &pfinfo ) ) )
         return 0;
 
@@ -466,8 +451,8 @@ static HRESULT CreateTextureFromWIC( _In_ ID3D11Device* d3dDevice,
     }
     else
     {
-        ScopedObject<IWICMetadataQueryReader> metareader;
-        if ( SUCCEEDED( frame->GetMetadataQueryReader( &metareader ) ) )
+        ComPtr<IWICMetadataQueryReader> metareader;
+        if ( SUCCEEDED( frame->GetMetadataQueryReader( metareader.GetAddressOf() ) ) )
         {
             GUID containerFormat;
             if ( SUCCEEDED( metareader->GetContainerFormat( &containerFormat ) ) )
@@ -536,8 +521,8 @@ static HRESULT CreateTextureFromWIC( _In_ ID3D11Device* d3dDevice,
         if ( !pWIC )
             return E_NOINTERFACE;
 
-        ScopedObject<IWICBitmapScaler> scaler;
-        hr = pWIC->CreateBitmapScaler( &scaler );
+        ComPtr<IWICBitmapScaler> scaler;
+        hr = pWIC->CreateBitmapScaler( scaler.GetAddressOf() );
         if ( FAILED(hr) )
             return hr;
 
@@ -559,8 +544,8 @@ static HRESULT CreateTextureFromWIC( _In_ ID3D11Device* d3dDevice,
         }
         else
         {
-            ScopedObject<IWICFormatConverter> FC;
-            hr = pWIC->CreateFormatConverter( &FC );
+            ComPtr<IWICFormatConverter> FC;
+            hr = pWIC->CreateFormatConverter( FC.GetAddressOf() );
             if ( FAILED(hr) )
                 return hr;
 
@@ -580,8 +565,8 @@ static HRESULT CreateTextureFromWIC( _In_ ID3D11Device* d3dDevice,
         if ( !pWIC )
             return E_NOINTERFACE;
 
-        ScopedObject<IWICFormatConverter> FC;
-        hr = pWIC->CreateFormatConverter( &FC );
+        ComPtr<IWICFormatConverter> FC;
+        hr = pWIC->CreateFormatConverter( FC.GetAddressOf() );
         if ( FAILED(hr) )
             return hr;
 
@@ -679,6 +664,19 @@ static HRESULT CreateTextureFromWIC( _In_ ID3D11Device* d3dDevice,
 //--------------------------------------------------------------------------------------
 _Use_decl_annotations_
 HRESULT DirectX::CreateWICTextureFromMemory( ID3D11Device* d3dDevice,
+                                             const uint8_t* wicData,
+                                             size_t wicDataSize,
+                                             ID3D11Resource** texture,
+                                             ID3D11ShaderResourceView** textureView,
+                                             size_t maxsize )
+{
+    return CreateWICTextureFromMemoryEx( d3dDevice, nullptr, wicData, wicDataSize, maxsize,
+                                         D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false,
+                                         texture, textureView );
+}
+
+_Use_decl_annotations_
+HRESULT DirectX::CreateWICTextureFromMemory( ID3D11Device* d3dDevice,
                                              ID3D11DeviceContext* d3dContext,
                                              const uint8_t* wicData,
                                              size_t wicDataSize,
@@ -688,6 +686,24 @@ HRESULT DirectX::CreateWICTextureFromMemory( ID3D11Device* d3dDevice,
 {
     return CreateWICTextureFromMemoryEx( d3dDevice, d3dContext, wicData, wicDataSize, maxsize,
                                          D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false,
+                                         texture, textureView );
+}
+
+_Use_decl_annotations_
+HRESULT DirectX::CreateWICTextureFromMemoryEx( ID3D11Device* d3dDevice,
+                                               const uint8_t* wicData,
+                                               size_t wicDataSize,
+                                               size_t maxsize,
+                                               D3D11_USAGE usage,
+                                               unsigned int bindFlags,
+                                               unsigned int cpuAccessFlags,
+                                               unsigned int miscFlags,
+                                               bool forceSRGB,
+                                               ID3D11Resource** texture,
+                                               ID3D11ShaderResourceView** textureView )
+{
+    return CreateWICTextureFromMemoryEx( d3dDevice, nullptr, wicData, wicDataSize, maxsize,
+                                         usage, bindFlags, cpuAccessFlags, miscFlags, forceSRGB,
                                          texture, textureView );
 }
 
@@ -730,8 +746,8 @@ HRESULT DirectX::CreateWICTextureFromMemoryEx( ID3D11Device* d3dDevice,
         return E_NOINTERFACE;
 
     // Create input stream for memory
-    ScopedObject<IWICStream> stream;
-    HRESULT hr = pWIC->CreateStream( &stream );
+    ComPtr<IWICStream> stream;
+    HRESULT hr = pWIC->CreateStream( stream.GetAddressOf() );
     if ( FAILED(hr) )
         return hr;
 
@@ -740,13 +756,13 @@ HRESULT DirectX::CreateWICTextureFromMemoryEx( ID3D11Device* d3dDevice,
         return hr;
 
     // Initialize WIC
-    ScopedObject<IWICBitmapDecoder> decoder;
-    hr = pWIC->CreateDecoderFromStream( stream.Get(), 0, WICDecodeMetadataCacheOnDemand, &decoder );
+    ComPtr<IWICBitmapDecoder> decoder;
+    hr = pWIC->CreateDecoderFromStream( stream.Get(), 0, WICDecodeMetadataCacheOnDemand, decoder.GetAddressOf() );
     if ( FAILED(hr) )
         return hr;
 
-    ScopedObject<IWICBitmapFrameDecode> frame;
-    hr = decoder->GetFrame( 0, &frame );
+    ComPtr<IWICBitmapFrameDecode> frame;
+    hr = decoder->GetFrame( 0, frame.GetAddressOf() );
     if ( FAILED(hr) )
         return hr;
 
@@ -772,6 +788,18 @@ HRESULT DirectX::CreateWICTextureFromMemoryEx( ID3D11Device* d3dDevice,
 //--------------------------------------------------------------------------------------
 _Use_decl_annotations_
 HRESULT DirectX::CreateWICTextureFromFile( ID3D11Device* d3dDevice,
+                                           const wchar_t* fileName,
+                                           ID3D11Resource** texture,
+                                           ID3D11ShaderResourceView** textureView,
+                                           size_t maxsize )
+{
+    return CreateWICTextureFromFileEx( d3dDevice, nullptr, fileName, maxsize,
+                                       D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false,
+                                       texture, textureView );
+}
+
+_Use_decl_annotations_
+HRESULT DirectX::CreateWICTextureFromFile( ID3D11Device* d3dDevice,
                                            ID3D11DeviceContext* d3dContext,
                                            const wchar_t* fileName,
                                            ID3D11Resource** texture,
@@ -780,6 +808,23 @@ HRESULT DirectX::CreateWICTextureFromFile( ID3D11Device* d3dDevice,
 {
     return CreateWICTextureFromFileEx( d3dDevice, d3dContext, fileName, maxsize,
                                        D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, false,
+                                       texture, textureView );
+}
+
+_Use_decl_annotations_
+HRESULT DirectX::CreateWICTextureFromFileEx( ID3D11Device* d3dDevice,
+                                             const wchar_t* fileName,
+                                             size_t maxsize,
+                                             D3D11_USAGE usage,
+                                             unsigned int bindFlags,
+                                             unsigned int cpuAccessFlags,
+                                             unsigned int miscFlags,
+                                             bool forceSRGB,
+                                             ID3D11Resource** texture,
+                                             ID3D11ShaderResourceView** textureView )
+{
+    return CreateWICTextureFromFileEx( d3dDevice, nullptr, fileName, maxsize,
+                                       usage, bindFlags, cpuAccessFlags, miscFlags, forceSRGB,
                                        texture, textureView );
 }
 
@@ -813,13 +858,13 @@ HRESULT DirectX::CreateWICTextureFromFileEx( ID3D11Device* d3dDevice,
         return E_NOINTERFACE;
 
     // Initialize WIC
-    ScopedObject<IWICBitmapDecoder> decoder;
-    HRESULT hr = pWIC->CreateDecoderFromFilename( fileName, 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder );
+    ComPtr<IWICBitmapDecoder> decoder;
+    HRESULT hr = pWIC->CreateDecoderFromFilename( fileName, 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, decoder.GetAddressOf() );
     if ( FAILED(hr) )
         return hr;
 
-    ScopedObject<IWICBitmapFrameDecode> frame;
-    hr = decoder->GetFrame( 0, &frame );
+    ComPtr<IWICBitmapFrameDecode> frame;
+    hr = decoder->GetFrame( 0, frame.GetAddressOf() );
     if ( FAILED(hr) )
         return hr;
 

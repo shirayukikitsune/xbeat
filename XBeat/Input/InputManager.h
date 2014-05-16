@@ -22,6 +22,17 @@ struct MouseMovement
 	long y;
 };
 
+enum struct MouseButton {
+	Left,
+	Right,
+	Middle,
+	Button3,
+	Button4,
+	Button5,
+	Button6,
+	Button7
+};
+
 struct CallbackInfo
 {
 	enum Event {

@@ -15,6 +15,7 @@
 #include "GeometricPrimitive.h"
 #include "Effects.h"
 #include "CommonStates.h"
+#include "DirectXHelpers.h"
 #include "VertexTypes.h"
 #include "SharedResourcePool.h"
 #include "Bezier.h"
@@ -612,13 +613,7 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateGeoSphere(_In_ ID3
             uint16_t iv1 = indices[iTriangle*3+1];
             uint16_t iv2 = indices[iTriangle*3+2];
             
-            // The existing vertices
-            XMFLOAT3 v0 = vertexPositions[iv0];
-            XMFLOAT3 v1 = vertexPositions[iv1];
-            XMFLOAT3 v2 = vertexPositions[iv2];
-
             // Get the new vertices
-
             XMFLOAT3 v01; // vertex on the midpoint of v0 and v1
             XMFLOAT3 v12; // ditto v1 and v2
             XMFLOAT3 v20; // ditto v2 and v0
@@ -1163,7 +1158,7 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateTetrahedron(_In_ I
     // Create the primitive object.
     std::unique_ptr<GeometricPrimitive> primitive(new GeometricPrimitive());
     
-    primitive->pImpl->Initialize(deviceContext, vertices, indices, rhcoords);
+    primitive->pImpl->Initialize(deviceContext, vertices, indices, !rhcoords);
 
     return primitive;
 }
@@ -1232,7 +1227,7 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateOctahedron(_In_ ID
     // Create the primitive object.
     std::unique_ptr<GeometricPrimitive> primitive(new GeometricPrimitive());
     
-    primitive->pImpl->Initialize(deviceContext, vertices, indices, rhcoords);
+    primitive->pImpl->Initialize(deviceContext, vertices, indices, !rhcoords);
 
     return primitive;
 }
@@ -1366,7 +1361,7 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateDodecahedron(_In_ 
     // Create the primitive object.
     std::unique_ptr<GeometricPrimitive> primitive(new GeometricPrimitive());
     
-    primitive->pImpl->Initialize(deviceContext, vertices, indices, rhcoords);
+    primitive->pImpl->Initialize(deviceContext, vertices, indices, !rhcoords);
 
     return primitive;
 }
@@ -1456,7 +1451,7 @@ std::unique_ptr<GeometricPrimitive> GeometricPrimitive::CreateIcosahedron(_In_ I
     // Create the primitive object.
     std::unique_ptr<GeometricPrimitive> primitive(new GeometricPrimitive());
     
-    primitive->pImpl->Initialize(deviceContext, vertices, indices, rhcoords);
+    primitive->pImpl->Initialize(deviceContext, vertices, indices, !rhcoords);
 
     return primitive;
 }

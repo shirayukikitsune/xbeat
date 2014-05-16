@@ -18,6 +18,7 @@
 #include "../Physics/Environment.h"
 #include "SkyBox.h"
 #include "../Dispatcher.h"
+#include "SpriteFont.h"
 
 namespace Renderer {
 
@@ -46,12 +47,14 @@ private:
 	bool RenderToTexture();
 	bool RenderScene();
 	bool RenderEffects();
-	bool Render2DTextureScene();
+	bool Render2DTextureScene(float frameTime);
 
 	int screenWidth, screenHeight;
 
 	HWND wnd;
 
+	std::unique_ptr<DirectX::SpriteFont> m_font;
+	std::unique_ptr<DirectX::SpriteBatch> m_batch;
 	std::shared_ptr<ViewFrustum> frustum;
 	std::shared_ptr<D3DRenderer> d3d;
 	std::shared_ptr<SkyBox> sky;

@@ -69,8 +69,8 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 		return false;
 
 	result = keyboard->Acquire();
-	if (FAILED(result))
-		return false;
+	/*if (FAILED(result))
+		return false;*/
 
 	result = dinput->CreateDevice(GUID_SysMouse, &mouse, NULL);
 	if (FAILED(result))
@@ -85,8 +85,8 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 		return false;
 
 	result = mouse->Acquire();
-	if (FAILED(result))
-		return false;
+	/*if (FAILED(result))
+		return false;*/
 
 	return true;
 }

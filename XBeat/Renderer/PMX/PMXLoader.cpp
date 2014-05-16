@@ -174,20 +174,17 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 	model->vertices.resize(readInfo<int>(data));
 
 	int i;
+	uint32_t id = 0;
 
 	for (auto &vertex : model->vertices)
 	{
 		vertex = new Vertex;
 		readVector<btScalar>(vertex->position.m_floats, 3, data);
 		readVector<btScalar>(vertex->normal.m_floats, 3, data);
-		vertex->uv[0] = readInfo<float>(data);
-		vertex->uv[1] = readInfo<float>(data);
+		readVector<float>(vertex->uv, 2, data);
 		readVector<vec4f>(vertex->uvEx, m_sizeInfo->cbUVVectorSize, data);
 		vertex->weightMethod = readInfo<VertexWeightMethod>(data);
-		for (i = 0; i < 4; i++) {
-			vertex->boneInfo.BDEF.boneIndexes[i] = -1;
-			vertex->boneInfo.BDEF.weights[i] = 0.0f;
-		}
+		std::memset(&vertex->boneInfo, 0, sizeof(vertex->boneInfo));
 		switch (vertex->weightMethod)
 		{
 		case VertexWeightMethod::BDEF1:
@@ -221,6 +218,7 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 			throw Exception("Invalid value for vertex weight method");
 		}
 		vertex->edgeWeight = readInfo<float>(data);
+		vertex->index = id++;
 
 		// Set some defaults
 		for (int i = 0; i < 4; i++) {

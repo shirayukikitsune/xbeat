@@ -18,6 +18,7 @@
 #include "Effects.h"
 #include "VertexTypes.h"
 
+#include "DirectXHelpers.h"
 #include "PlatformHelpers.h"
 #include "BinaryReader.h"
 
@@ -587,7 +588,7 @@ std::unique_ptr<Model> DirectX::Model::CreateFromCMO( ID3D11Device* d3dDevice, c
             }
         }
 #else
-        bSkeleton;
+        UNREFERENCED_PARAMETER(bSkeleton);
 #endif
 
         bool enableSkinning = ( *nSkinVBs ) != 0;
@@ -706,9 +707,7 @@ std::unique_ptr<Model> DirectX::Model::CreateFromCMO( ID3D11Device* d3dDevice, c
                                      || XMVector4NotEqual( uvTransform.r[2], uv2.r[2] )
                                      || XMVector4NotEqual( uvTransform.r[3], uv2.r[3] ) )
                                 {
-                                    wchar_t buff[1024];
-                                    swprintf_s( buff, L"WARNING: %s - mismatched UV transforms for the same vertex; texture coordinates may not be correct\n", mesh->name.c_str() );
-                                    OutputDebugStringW( buff );
+                                    DebugTrace( "WARNING: %S - mismatched UV transforms for the same vertex; texture coordinates may not be correct\n", mesh->name.c_str() );
                                 }
 #endif
                             }
@@ -752,12 +751,12 @@ std::unique_ptr<Model> DirectX::Model::CreateFromCMO( ID3D11Device* d3dDevice, c
                 
                 for( int i = 0; i < 7; ++i )
                 {
-                    info.textures[i] = m.texture[ i+1 ].empty() ? nullptr : m.texture[i].c_str();
+                    info.textures[i] = m.texture[ i+1 ].empty() ? nullptr : m.texture[ i+1 ].c_str();
                 }
 
                 m.effect = fxFactoryDGSL->CreateDGSLEffect( info, nullptr );
 
-                auto dgslEffect = reinterpret_cast<DGSLEffect*>( m.effect.get() );
+                auto dgslEffect = static_cast<DGSLEffect*>( m.effect.get() );
                 dgslEffect->SetUVTransform( XMLoadFloat4x4( &m.pMaterial->UVTransform ) );
             }
             else
@@ -822,9 +821,12 @@ std::unique_ptr<Model> DirectX::Model::CreateFromCMO( ID3D11Device* d3dDevice, c
 {
     size_t dataSize = 0;
     std::unique_ptr<uint8_t[]> data;
-    ThrowIfFailed(
-        BinaryReader::ReadEntireFile( szFileName, data, &dataSize )
-    );
+    HRESULT hr = BinaryReader::ReadEntireFile( szFileName, data, &dataSize );
+    if ( FAILED(hr) )
+    {
+        DebugTrace( "CreateFromCMO failed (%08X) loading '%S'\n", hr, szFileName );
+        throw std::exception( "CreateFromCMO" );
+    }
 
     auto model = CreateFromCMO( d3dDevice, data.get(), dataSize, fxFactory, ccw, pmalpha );
 

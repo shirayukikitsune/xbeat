@@ -3,6 +3,9 @@
 #include "PMX/PMXBone.h"
 #include "OBJ/OBJModel.h"
 
+#include <iomanip>
+#include <sstream>
+
 using Renderer::Manager;
 
 Manager::Manager()
@@ -72,7 +75,7 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 	light->SetAmbientColor(1.0f, 1.0f, 1.0f, 1.0f);
 	light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
 	light->SetSpecularColor(1.0f, 1.0f, 1.0f, 1.0f);
-	light->SetDirection(1.0f, 0.0f, 1.0f);
+	light->SetDirection(0.0f, 0.0f, 1.0f);
 	light->SetSpecularPower(32.0f);
 
 	renderTexture.reset(new D3DTextureRenderer);
@@ -100,6 +103,9 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 	if (!sky->Initialize(d3d, L"./Data/Textures/Sky/violentdays.dds", light, wnd))
 		return false;
 
+	m_batch.reset(new DirectX::SpriteBatch(d3d->GetDeviceContext()));
+	m_font.reset(new DirectX::SpriteFont(d3d->GetDevice(), L"./Data/Fonts/unifont.spritefont"));
+
 	// Setup bindings
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_Z), [this](void* param) {
 		model.get()->ApplyMorph(L"ﾍﾞｰﾙ非表示1", 1.0f);
@@ -123,7 +129,6 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 		if (data->x != 0 || data->y != 0) {
 			rotation[0] += data->x / 20.0f;
 			rotation[1] += data->y / 20.0f;
-			//camera->SetRotation(rotation[1], rotation[0], 0.0f);
 			auto bone = model->GetBoneByName(L"首");
 			bone->Rotate(btVector3(0.0f, rotation[0], -rotation[1]));
 			//btVector3 v = camera->GetRotation();
@@ -153,9 +158,9 @@ bool Manager::LoadScene() {
 	model.reset(new PMX::Model);
 	//if (!model->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 リリス風 Ver106.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
-	if (!model->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
@@ -235,12 +240,12 @@ bool Manager::Frame(float frameTime)
 	SetWindowText(this->wnd, title);
 
 	totalTime += frameTime;
-	lightDirection[0] = sinf(3.1415f * 2.0f * totalTime / 10000.f);
-	lightDirection[1] = cosf(3.1415f * 2.0f * totalTime / 10000.f);
+	//lightDirection[0] = sinf(3.1415f * 2.0f * totalTime / 10000.f);
+	//lightDirection[1] = cosf(3.1415f * 2.0f * totalTime / 10000.f);
 	//lightDirection[0] += msec / 1000.f;
 	//lightDirection[1] += msec / 1000.f;
 
-	light->SetDirection(lightDirection[0], 0.0f, lightDirection[1]);
+	//light->SetDirection(lightDirection[0], 0.0f, lightDirection[1]);
 
 	DirectX::XMFLOAT3 campos;
 	DirectX::XMStoreFloat3(&campos, camera->GetPosition());
@@ -319,7 +324,7 @@ bool Manager::Render(float frameTime)
 	if (!RenderEffects())
 		return false;
 
-	if (!Render2DTextureScene())
+	if (!Render2DTextureScene(frameTime))
 		return false;
 
 	return true;
@@ -375,7 +380,7 @@ bool Manager::RenderEffects()
 	return true;
 }
 
-bool Manager::Render2DTextureScene()
+bool Manager::Render2DTextureScene(float frameTime)
 {
 	DirectX::XMMATRIX view, ortho, world;
 
@@ -394,6 +399,13 @@ bool Manager::Render2DTextureScene()
 		return false;
 
 	d3d->End2D();
+
+	// Render UI artifacts
+	m_batch->Begin();
+	std::wstringstream ss;
+	ss << L"FPS: " << std::setprecision(3) << 1000.0f / frameTime << L" - " << frameTime << L"ms";
+	m_font->DrawString(m_batch.get(), ss.str().c_str(), DirectX::XMFLOAT2(10.0f, 10.0f), DirectX::Colors::Yellow);
+	m_batch->End();
 
 	d3d->EndScene();
 

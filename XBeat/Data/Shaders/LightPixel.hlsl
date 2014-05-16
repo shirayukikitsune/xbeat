@@ -118,6 +118,8 @@ float4 main(PixelInputType input) : SV_TARGET
 	else
 		color = lightColor;
 
+	if (color.w <= 0) discard;
+
 	if (material.index == -1) {
 		color.xyz = saturate(color.xyz + specular.xyz);
 		return color;

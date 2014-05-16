@@ -8,6 +8,7 @@
 
 #include <fstream>
 #include <cstring>
+#include <algorithm>
 #include <cfloat> // FLT_MIN, FLT_MAX
 
 #include "../Model.h"
@@ -37,6 +38,7 @@ const int defaultToonTexCount = sizeof (defaultToonTexs) / sizeof (defaultToonTe
 PMX::Model::Model(void)
 {
 	m_debugFlags = DebugFlags::None;
+	for (auto &i : m_vertexCountPerMethod) i = 0U;
 }
 
 
@@ -52,6 +54,11 @@ bool PMX::Model::LoadModel(const wstring &filename)
 
 	basePath = filename.substr(0, filename.find_last_of(L"\\/") + 1);
 
+	// Build the sorted vertices list
+	m_sortedVertices = vertices;
+	std::sort(m_sortedVertices.begin(), m_sortedVertices.end(), [](Vertex* a, Vertex* b) { return a->weightMethod != VertexWeightMethod::BDEF4 && a->weightMethod < b->weightMethod; });
+	std::for_each(m_sortedVertices.begin(), m_sortedVertices.end(), [this](Vertex* v) { m_vertexCountPerMethod[(size_t)v->weightMethod]++; });
+
 	// Build the physics bodies
 	m_rigidBodies.resize(bodies.size());
 	btVector3 size;
@@ -65,7 +72,8 @@ bool PMX::Model::LoadModel(const wstring &filename)
 	}
 
 	// Clear our vector size;
-	bodies.resize(0);
+	bodies.clear();
+	bodies.shrink_to_fit();
 
 	for (auto &body : softBodies)
 	{
@@ -81,53 +89,57 @@ void PMX::Model::ReleaseModel()
 		delete vertices[i];
 		vertices[i] = nullptr;
 	}
-	vertices.resize(0);
+	vertices.shrink_to_fit();
 
-	verticesIndex.resize(0);
+	verticesIndex.clear();
+	verticesIndex.shrink_to_fit();
 	
-	textures.resize(0);
+	textures.shrink_to_fit();
 
 	for (std::vector<PMX::Material*>::size_type i = 0; i < materials.size(); i++) {
 		delete materials[i];
 		materials[i] = nullptr;
 	}
-	materials.resize(0);
+	materials.shrink_to_fit();
 
 	for (std::vector<PMX::Bone*>::size_type i = 0; i < bones.size(); i++) {
 		delete bones[i];
 		bones[i] = nullptr;
 	}
-	bones.resize(0);
+	bones.shrink_to_fit();
 
 	for (std::vector<PMX::Morph*>::size_type i = 0; i < morphs.size(); i++) {
 		delete morphs[i];
 		morphs[i] = nullptr;
 	}
-	morphs.resize(0);
+	morphs.shrink_to_fit();
 
 	for (std::vector<PMX::Frame*>::size_type i = 0; i < frames.size(); i++) {
 		delete frames[i];
 		frames[i] = nullptr;
 	}
-	frames.resize(0);
+	frames.shrink_to_fit();
 
 	for (std::vector<PMX::RigidBody*>::size_type i = 0; i < bodies.size(); i++) {
 		delete bodies[i];
 		bodies[i] = nullptr;
 	}
-	bodies.resize(0);
+	bodies.shrink_to_fit();
 
 	for (std::vector<PMX::Joint*>::size_type i = 0; i < joints.size(); i++) {
 		delete joints[i];
 		joints[i] = nullptr;
 	}
-	joints.resize(0);
+	joints.shrink_to_fit();
 
 	for (std::vector<PMX::Joint*>::size_type i = 0; i < softBodies.size(); i++) {
 		delete softBodies[i];
 		softBodies[i] = nullptr;
 	}
-	softBodies.resize(0);
+	softBodies.shrink_to_fit();
+
+	m_vertices.clear();
+	m_vertices.shrink_to_fit();
 }
 
 DirectX::XMFLOAT4 color4ToFloat4(const PMX::Color4 &c) 
@@ -162,7 +174,6 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	uint32_t lastIndex = 0;
 
 	std::vector<UINT> idx;
-	std::vector<DirectX::VertexPositionNormalTexture> v;
 
 	for (uint32_t k = 0; k < this->rendermaterials.size(); k++) {
 		rendermaterials[k].startIndex = lastIndex;
@@ -179,7 +190,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 			v.get()[i].UV3 = DirectX::XMFLOAT4(vertex->uvEx[2].x(), vertex->uvEx[2].y(), vertex->uvEx[2].z(), vertex->uvEx[2].w());
 			v.get()[i].UV4 = DirectX::XMFLOAT4(vertex->uvEx[3].x(), vertex->uvEx[3].y(), vertex->uvEx[3].z(), vertex->uvEx[3].w());*/
 #else
-			v.emplace_back(DirectX::VertexPositionNormalTexture(vertex->position.get128(), vertex->normal.get128(), btVector4(vertex->uv[0], vertex->uv[1], 0.0f, 0.0f).get128()));
+			m_vertices.emplace_back(DirectX::VertexPositionNormalTexture(vertex->position.get128(), vertex->normal.get128(), btVector4(vertex->uv[0], vertex->uv[1], 0.0f, 0.0f).get128()));
 #endif
 
 			idx.emplace_back(i);
@@ -199,13 +210,13 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	}
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	vertexBufferDesc.ByteWidth = sizeof(DirectX::VertexPositionNormalTexture) * v.size();
+	vertexBufferDesc.ByteWidth = sizeof(DirectX::VertexPositionNormalTexture) * m_vertices.size();
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	vertexBufferDesc.MiscFlags = 0;
 	vertexBufferDesc.StructureByteStride = 0;
 
-	vertexData.pSysMem = v.data();
+	vertexData.pSysMem = m_vertices.data();
 	vertexData.SysMemPitch = 0;
 	vertexData.SysMemSlicePitch = 0;
 
@@ -381,11 +392,13 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 				if (!isTransparent) {
 					context->RSSetState(d3d->GetRasterState(1));
 					isTransparent = true;
+					d3d->EnableAlphaBlending();
 				}
 			}
 			else if (isTransparent) {
 				isTransparent = false;
 				context->RSSetState(d3d->GetRasterState(0));
+				d3d->DisableAlphaBlending();
 			}
 
 			lightShader->RenderShader(context,
@@ -395,8 +408,10 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 				3);
 		}
 
-		if (isTransparent)
+		if (isTransparent) {
 			context->RSSetState(d3d->GetRasterState(0));
+			d3d->DisableAlphaBlending();
+		}
 	}
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
@@ -612,8 +627,8 @@ void PMX::Model::applyBoneMorph(Morph *morph, float weight)
 {
 	for (auto i : morph->data) {
 		Bone *bone = bones[i.bone.index];
-		bone->ApplyMorph(morph, weight);
-		//m_dispatcher->AddTask([bone, morph, weight]() { bone->ApplyMorph(morph, weight); });
+		//bone->ApplyMorph(morph, weight);
+		m_dispatcher->AddTask([bone, morph, weight]() { bone->ApplyMorph(morph, weight); });
 	}
 }
 
@@ -655,12 +670,11 @@ void PMX::Model::updateVertexBuffer()
 {
 	ID3D11Device *device;
 	ID3D11DeviceContext *context;
-	DirectX::VertexPositionNormalTexture *vertices;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	Vertex *vertex;
 	HRESULT result;
 
-	// This is to prevent a read from the GPU
+	// Prevent vertex update if there are no updates to be done
 	bool update = false;
 	for (auto &material : rendermaterials) {
 		if ((material.dirty & RenderMaterial::DirtyFlags::VertexBuffer) != 0) {
@@ -680,7 +694,34 @@ void PMX::Model::updateVertexBuffer()
 	if (FAILED(result))
 		return;
 
-	vertices = (DirectX::VertexPositionNormalTexture*)mappedResource.pData;
+	uint32_t i = 0, c = 0;
+	for (; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::BDEF1]; ++i) {
+		vertex = m_sortedVertices[i];
+		
+		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0]).get128());
+		btTransform t;
+		t.setRotation(vertex->boneRotation[0]);
+		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());
+		vertex->dxUV = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
+	}
+	c += i;
+	for (i = 0; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::BDEF2] + m_vertexCountPerMethod[(size_t)VertexWeightMethod::SDEF] + m_vertexCountPerMethod[(size_t)VertexWeightMethod::QDEF]; ++i) {
+		vertex = m_sortedVertices[i + c];
+		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0]).get128());
+		btTransform t;
+		t.setRotation(vertex->boneRotation[0] * vertex->boneRotation[1]);
+		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());
+		vertex->dxUV = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
+	}
+	c += i;
+	for (; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::QDEF]; ++i) {
+		vertex = m_sortedVertices[i + c];
+		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0]).get128());
+		btTransform t;
+		t.setRotation(vertex->boneRotation[0] * vertex->boneRotation[1] * vertex->boneRotation[2] * vertex->boneRotation[3]);
+		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());
+		vertex->dxUV = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
+	}
 
 	for (auto &material : rendermaterials) {
 		if ((material.dirty & RenderMaterial::DirtyFlags::VertexBuffer) == 0) continue;
@@ -690,12 +731,13 @@ void PMX::Model::updateVertexBuffer()
 		// Update vertex data
 		for (uint32_t i = material.startIndex; i < material.indexCount + material.startIndex; i++) {
 			vertex = this->vertices[this->verticesIndex[i]];
-			DirectX::XMStoreFloat3(&vertices[i].position, vertex->GetFinalPosition().get128());
-			btVector3 n = vertex->GetNormal();
-			vertices[i].normal = DirectX::XMFLOAT3(n.x(), n.y(), n.z());
-			vertices[i].textureCoordinate = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
+			m_vertices[i].position = vertex->dxPos;
+			m_vertices[i].normal = vertex->dxNormal;
+			m_vertices[i].textureCoordinate = vertex->dxUV;
 		}
 	}
+
+	memcpy(mappedResource.pData, m_vertices.data(), sizeof(DirectX::VertexPositionNormalTexture) * m_vertices.size());
 
 	// release the access to the buffer
 	context->Unmap(m_vertexBuffer, 0);

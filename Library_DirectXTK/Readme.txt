@@ -4,18 +4,18 @@ DirectXTK - the DirectX Tool Kit
 
 Copyright (c) Microsoft Corporation. All rights reserved.
 
-October 28, 2013
+April 3, 2014
 
 This package contains the "DirectX Tool Kit", a collection of helper classes for 
-writing Direct3D 11 C++ code for Windows Store apps, Windows 8.x Win32 desktop
-applications, Windows Phone 8 applications, Windows 7 applications, and
-Windows Vista Direct3D 11.0 applications.
+writing Direct3D 11 C++ code for Windows Store apps, Windows phone 8.x applications,
+Xbox One exclusive apps, Xbox One hub apps, Windows 8.x Win32 desktop applications,
+Windows 7 applications, and Windows Vista Direct3D 11.0 applications.
 
 This code is designed to build with Visual Studio 2010, 2012, or 2013. It requires
-the Windows 8.x SDK for functionality such as the DirectXMath library and optionally
-the DXGI 1.2 headers. Visual Studio 2012 and 2013 already include the appropriate 
-Windows SDK, but Visual Studio 2010 users must install the standalone Windows 8.x SDK.
-Details on using the Windows 8.x SDK with VS 2010 are described on the Visual C++ Team Blog:
+the Windows 8.x SDK for functionality such as the DirectXMath library and the DXGI
+1.2 headers. Visual Studio 2012 and 2013 already include the appropriate Windows SDK,
+but Visual Studio 2010 users must install the standalone Windows 8.1 SDK. Details on
+using the Windows 8.1 SDK with VS 2010 are described on the Visual C++ Team Blog:
 
 <http://blogs.msdn.com/b/vcblog/archive/2012/11/23/using-the-windows-8-sdk-with-visual-studio-2010-configuring-multiple-projects.aspx>
 
@@ -25,24 +25,33 @@ see "Where is the DirectX SDK?" <http://msdn.microsoft.com/en-us/library/ee66327
 Inc\
     Public Header Files (in the DirectX C++ namespace):
 
-    SpriteBatch.h - simple & efficient 2D sprite rendering
-    SpriteFont.h - bitmap based text rendering
-    Effects.h - set of built-in shaders for common rendering tasks
-    PrimitiveBatch.h - simple and efficient way to draw user primitives
-    GeometricPrimitive.h - draws basic shapes such as cubes and spheres
-    Model.h - draws rigid and skinned meshes loaded from .CMO or .SDKMESH files
+    Audio.h - low-level audio API using XAudio2 (DirectXTK for Audio public header)
     CommonStates.h - factory providing commonly used D3D state objects
-    VertexTypes.h - structures for commonly used vertex data formats
+    DirectXHelpers.h - misc C++ helpers for D3D programming
     DDSTextureLoader.h - light-weight DDS file texture loader
-    WICTextureLoader.h - WIC-based image file texture loader
+    Effects.h - set of built-in shaders for common rendering tasks
+    GeometricPrimitive.h - draws basic shapes such as cubes and spheres
+    Model.h - draws meshes loaded from .CMO or .SDKMESH files
+    PrimitiveBatch.h - simple and efficient way to draw user primitives
     ScreenGrab.h - light-weight screen shot saver
     SimpleMath.h - simplified C++ wrapper for DirectXMath
+    SpriteBatch.h - simple & efficient 2D sprite rendering
+    SpriteFont.h - bitmap based text rendering
+    VertexTypes.h - structures for commonly used vertex data formats
+    WICTextureLoader.h - WIC-based image file texture loader
+    XboxDDSTextureLoader.h - Xbox One exclusive apps variant of DDSTextureLoader
 
 Src\
     DirectXTK source files and internal implementation headers
 
+Audio\
+    DirectXTK for Audio source files and internal implementation headers
+
 MakeSpriteFont\
     Command line tool used to generate binary resources for use with SpriteFont
+
+XWBTool\
+    Command line tool for building XACT-style wave banks for use with DirectXTK for Audio's WaveBank class
 
 All content and source code for this package are bound to the Microsoft Public License (Ms-PL)
 <http://www.microsoft.com/en-us/openness/licenses.aspx#MPL>.
@@ -51,6 +60,13 @@ For the latest version of DirectXTK, more detailed documentation, discussion for
 reports and feature requests, please visit the Codeplex site.
 
 http://go.microsoft.com/fwlink/?LinkId=248929
+
+Note: Xbox One exclusive apps developers using the Xbox One XDK need to generate the
+      Src\Shaders\Compiled\XboxOne*.inc files to build the library as they are not
+      included in the distribution package. They are built by running the script
+      in Src\Shaders - "CompileShaders xbox", and should be generated with the matching
+      FXC compiler from the Xbox One XDK. While they will continue to work if outdated,
+      a mismatch will cause runtime compilation overhead that would otherwise be avoided.
 
 
 
@@ -150,6 +166,55 @@ Threading model:
     submit sprites on multiple threads if you create a separate SpriteBatch 
     instance per D3D11 deferred context.
 
+Orientation:
+
+    For phones, laptops, and tablets the orientation of the display can be changed
+    by the user. For Windows Store apps, DirectX applications are encouraged to
+    handle the rotation internally rather than relying on DXGI's auto-rotation handling.
+    In older versions of DirectXTK, you had to handle orientation changes via the custom
+    transform matrix on Begin(). In the latest version of DirectXTK, you can handle it
+    via a rotation setting (which is applied after any custom transformation).
+
+    Windows Store apps for Windows 8:
+
+    DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_UNSPECIFIED;
+    switch (m_orientation)
+    {
+    case DisplayOrientations::Landscape: rotation = DXGI_MODE_ROTATION_IDENTITY;  break;
+    case DisplayOrientations::Portrait: rotation = DXGI_MODE_ROTATION_ROTATE270; break;
+    case DisplayOrientations::LandscapeFlipped: rotation = DXGI_MODE_ROTATION_ROTATE180; break;
+    case DisplayOrientations::PortraitFlipped: rotation = DXGI_MODE_ROTATION_ROTATE90; break;
+    }
+    spriteBatch->SetRotation( rotation );
+
+    Windows phone 8.0 apps (see http://www.catalinzima.com/2012/12/handling-orientation-in-a-windows-phone-8-game/):
+
+    DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_UNSPECIFIED;
+    switch (m_orientation)
+    {
+    case DisplayOrientations::Portrait: rotation = DXGI_MODE_ROTATION_IDENTITY;  break;
+    case DisplayOrientations::Landscape: rotation = DXGI_MODE_ROTATION_ROTATE90; break;
+    case DisplayOrientations::PortraitFlipped: rotation = DXGI_MODE_ROTATION_ROTATE180; break;
+    case DisplayOrientations::LandscapeFlipped: rotation = DXGI_MODE_ROTATION_ROTATE270; break;
+    }
+    spriteBatch->SetRotation( rotation );
+
+    Windows Store apps for Windows 8.1:
+
+    spriteBatch->SetRotation( m_deviceResources->ComputeDisplayRotation() );
+
+3D sprites:
+
+    As explained in this article, you can use SpriteBatch to render particles and billboard text in 3D as well
+    as the default 2D behavior.
+
+    http://blogs.msdn.com/b/shawnhar/archive/2011/01/12/spritebatch-billboards-in-a-3d-world.aspx
+
+    To simplify this application, you can set the rotation mode so that SpriteBatch doesn't apply a view transform
+    matrix internally and assumes the full transform is accomplished by Begin's matrix parameter.
+
+    spriteBatch->SetRotation( DXGI_MODE_ROTATION_UNSPECIFIED );
+
 Further reading:
 
     http://www.shawnhargreaves.com/blogindex.html#spritebatch
@@ -220,7 +285,7 @@ grid should be filled with bright pink (red=255, green=0, blue=255). It doesn't
 matter if your grid includes lots of wasted space, because the converter will 
 rearrange characters, packing everything as tightly as possible.
 
-Commandline options for the MakeSpriteFont tool:
+Command-line options for the MakeSpriteFont tool:
 
     /CharacterRegion:<region>
         Specifies which Unicode codepoints to include in the font. Can be 
@@ -256,7 +321,7 @@ Commandline options for the MakeSpriteFont tool:
             Rgba32
                 High quality and supports multicolored fonts, but wastes space.
             Bgra4444
-                Good choice for color fonts on Windows Store apps and Windows Phone
+                Good choice for color fonts on Windows Store apps and Windows phone
                 platforms, as this format requires the DirectX 11.1 Runtime and a
                 WDDM 1.2 driver.
             CompressedMono
@@ -606,7 +671,7 @@ Effects control:
         if ( fog )
         {
             fog->SetFogEnabled(true);
-            fog->SetFogStart(6); // assuming RH coordiantes
+            fog->SetFogStart(6); // assuming RH coordinates
             fog->SetFogEnd(8);
             fog->SetFogColor(Colors::CornflowerBlue);
         }
@@ -728,6 +793,39 @@ Available states:
 
 
 
+--------------
+DirectXHelpers
+--------------
+
+C++ helpers for writing D3D code.
+
+Exception-safe Direct3D 11 resource locking:
+
+    Modern C++ development strongly encourages use of the RAII pattern for exception-safe resource management, ensuring that resources
+    are properly cleaned up if C++ exceptions are thrown. Even without exception handling, it's generally cleaner code to use RAII and
+    rely on the C++ scope variables rules to handle cleanup. Most of these cases are handled by the STL classes such as std::unique_ptr,
+    std::shared_ptr, etc. and the recommended COM smart pointer Microsoft::WRL::ComPtr for Direct3D reference counted objects. One case
+    that isn't so easily managed with existing classes is when you are mapping staging/dynamic Direct3D 11 resources. MapGuard solves
+    this problem, and is modeled after std::lock_mutex.
+
+    MapGuard map( context.Get(), tex.Get(), 0, D3D11_MAP_WRITE, 0 );
+ 
+    for( size_t j = 0; j < 128; ++j )
+    {
+        auto ptr = map.scanline(j);
+        ...
+    }
+
+Debug object naming:
+
+   To help track down resource leaks, the Direct3D 11 debug layer allows you to provide ASCII debug names to Direct3D 11 objects. This
+   is done with a specific GUID and the SetPrivateData method. Since you typically want to exclude this for release builds, it can get
+   somewhat messy to add these to code. The SetDebugObjectName template greatly simplifies this for static debug name strings.
+
+   SetDebugObjectName( tex.Get(), "MyTexture" );
+
+
+
 -----------
 VertexTypes
 -----------
@@ -781,6 +879,12 @@ to trim off any mipmap levels larger than the minimum required size for the give
 device Feature Level and retry. Note this requires the .dds file contains mipmaps to
 retry with a smaller size.
 
+If a Direct3D 11 context is provided and a shader resource view is requested (i.e.
+textureView is non-null), then the texture will be created to support auto-generated
+mipmaps and will have GenerateMips called on it before returning. If no context is
+provided (i.e. d3dContext is null) or the pixel format is unsupported for auto-gen
+mips by the current device, then the resulting texture will have only a single level.
+
 DDSTextureLoader will load BGR 5:6:5 and BGRA 5:5:5:1 DDS files, but these formats will
 fail to create on a system with DirectX 11.0 Runtime. The DXGI 1.2 version of
 DDSTextureLoader will load BGRA 4:4:4:4 DDS files using DXGI_FORMAT_B4G4R4A4_UNORM.
@@ -809,8 +913,8 @@ WICTextureLoader.h contains a loader for BMP, JPEG, PNG, TIFF, GIF, HD Photo, an
 other WIC-supported image formats. This performs any required pixel format conversions
 or image resizing using WIC at load time as well.
 
-NOTE: WICTextureLoader is not supported on Windows Phone 8, because WIC is not 
-available on that platform.
+NOTE: WICTextureLoader is not supported on Windows phone 8.0 because WIC is not 
+available on that platform. It is available on Windows phone starting in version 8.1.
 
 NOTE: WICTextureLoader cannot load .TGA files unless the system has a 3rd party WIC
 codec installed. You must use the DirectXTex library for TGA file format support
@@ -884,8 +988,8 @@ strange looking screenshot files). The caller can also provide a specific
 pixel target format GUID to use as well. The caller provides the GUID of the
 specific file container format to use.
 
-NOTE: SaveWICTextureToFile is not supported on Windows Phone 8, because WIC is not 
-available on that platform.
+NOTE: SaveWICTextureToFile is not supported on Windows phone 8.0 because WIC is not 
+available on that platform. It is available on Windows phone starting in version 8.1.
 
 Capturing a screenshot:
 
@@ -929,7 +1033,7 @@ Why wrap DirectXMath?
 DirectXMath provides highly optimized vector and matrix math functions, which 
 take advantage of SSE SIMD intrinsics when compiled for x86/x64, or the ARM 
 NEON instruction set when compiled for an ARM platform such as Windows RT or 
-Windows Phone. The downside of being designed for efficient SIMD usage is that 
+Windows phone. The downside of being designed for efficient SIMD usage is that 
 DirectXMath can be somewhat complicated to work with. Developers must be aware 
 of correct type usage (understanding the difference between SIMD register types 
 such as XMVECTOR vs. memory storage types such as XMFLOAT4), must take care to 
@@ -980,9 +1084,272 @@ DirectXMath for performance hotspots where runtime efficiency is more important.
 
 
 
+-------------------
+DirectXTK for Audio
+-------------------
+
+The DirectXTK for Audio components implement a low-level audio API similar to 
+XNA Game Studio's Microsoft.Xna.Framework.Audio. This consists of the following
+classes all declared in the Audio.h header (in the Inc folder of the distribution):
+
+    AudioEngine - This class represents an XAudio2 audio graph, device, and mastering voice
+    SoundEffect - A container class for sound resources which can be loaded from .wav files
+    SoundEffectInstance - Provides a single playing, paused, or stopped instance of a sound
+    DynamicSoundEffectInstance - SoundEffectInstance where the application provides the audio data on demand
+    WaveBank - A container class for sound resources packaged into an XACT-style .xwb wave bank
+    AudioListener, AudioEmitter - Utility classes used with SoundEffectInstance::Apply3D
+
+Note: DirectXTK for Audio uses XAudio 2.8 or XAudio 2.7. It does not make use of the legacy XACT Engine, XACT Cue, or XACT SoundBank.
+
+During initialization:
+
+    The first step in using DirectXTK for Audio is to create the AudioEngine, which creates an XAudio2 interface, an XAudio2 mastering voice,
+    and other global resources.
+
+    // This is only needed in Win32 desktop apps
+    CoInitializeEx( nullptr, COINIT_MULTITHREADED );
+
+    AUDIO_ENGINE_FLAGS eflags = AudioEngine_Default;
+    #ifdef _DEBUG
+    eflags = eflags | AudioEngine_Debug;
+    #endif
+    std::unique_ptr<AudioEngine> audEngine( new AudioEngine( eflags ) );
+
+Per-frame processing:
+
+    The application should call Update() every frame to allow for per-frame engine updates,
+    such as one-shot voice management. This could also be done in a worker thread rather than on the
+    main rendering thread.
+
+    if ( !audEngine->Update() )
+    {
+        // No audio device is active
+        if ( audEngine->IsCriticalError() )
+        {
+            ...
+        }    
+    }
+
+    Update() returns false if no audio is actually playing (either due to there being no
+    audio device on the system at the time AudioEngine was created, or because XAudio2 encountered a
+    Critical Error--typically due to speakers being unplugged). Calls to various DirectXTK for Audio
+    methods can still be made in this state but no actual audio processing will take place.
+
+Loading and a playing a looping sound:
+
+    Creating SoundEffectInstances allows full control over the playback, and are provided with a
+    dedicated XAudio2 source voice. This allows control of playback, looping, volume control,
+    panning, and pitch-shifting.
+
+    std::unique_ptr<SoundEffect> soundEffect( new SoundEffect( audEngine.get(), L"Sound.wav" ) );
+    auto effect = soundEffect->CreateInstance();
+
+    ...
+
+    effect->Play( true );
+
+Playing one-shots:
+
+    A common way to play sounds is to trigger them in a 'fire-and-forget' mode. This is done by calling
+    SoundEffect::Play() rather than creating a SoundEffectInstance. These use XAudio2 source voices
+    managed by AudioEngine, are cleaned up automatically when they finish playing, and can overlap in time.
+    One-shot sounds cannot be looped, have 3D positional effects, or have individual volume, pan,
+    or pitch control.
+
+    std::unique_ptr<SoundEffect> soundEffect( new SoundEffect( audEngine.get(), L"Explosion.wav" ) );
+
+    soundEffect->Play();
+
+    ...
+
+    soundEffect->Play();
+
+Applying 3D audio effects to a sound:
+
+    DirectXTK for Audio supports 3D positional audio with optional environmental reverb effects using X3DAudio.
+
+    AUDIO_ENGINE_FLAGS eflags =  AudioEngine_EnvironmentalReverb | AudioEngine_ReverbUseFilters;
+    #ifdef _DEBUG
+    eflags = eflags | AudioEngine_Debug;
+    #endif
+    std::unique_ptr<AudioEngine> audEngine( new AudioEngine( eflags ) );
+
+    audEngine->SetReverb( Reverb_ConcertHall );
+
+    std::unique_ptr<SoundEffect> soundEffect( new SoundEffect( audEngine.get(), L"Sound.wav" ) );
+    auto effect = soundEffect->CreateInstance( SoundEffectInstance_Use3D | SoundEffectInstance_ReverbUseFilters );
+
+    ...
+
+    effect->Play(true);
+
+    ...
+
+    AudioListener listener;
+    listener.SetPosition( ... );
+
+    AudioEmitter emitter;
+    emitter.SetPosition( ... );
+
+    effect->Apply3D( listener, emitter );
+
+    Note: A C++ exception is thrown if you call Apply3D for a SoundEffectInstance that was not created with SoundEffectInstance_Use3D
+
+Using wave banks:
+
+    Rather than loading individual .wav files, a more efficient method is to package them into a 
+    "wave bank". This allows for more efficient loading and memory organization. DirectXTK for Audio's
+    WaveBank class can be used to play one-shots or to create SoundEffectInstances from 'in-memory' wave banks.
+
+    std::unique_ptr<WaveBank> wb( new WaveBank( audEngine.get(), L"wavebank.xwb" ) );
+
+    A SoundEffectInstance can be created from a wavebank referencing a particular wave in the bank:
+
+    auto effect = wb->CreateInstance( 10 );
+    if ( !effect )
+        // Error (invalid index for wave bank)
+
+    ...
+
+    effect->Play( true );
+
+    One-shot sounds can also be played directly from the wave bank.
+
+    wb->Play( 2 );
+    wb->Play( 6 );
+
+    XACT3-style "wave banks" can be created by using the XWBTool command-line tool, or they can be authored
+    using XACT3 in the DirectX SDK. Note that the XWBTool will not perform any format conversions
+    or compression, so more full-featured options are better handled with the XACT3 GUI or XACTBLD, or it can
+    be used on .wav files already compressed by adpcmencode.exe, xwmaencode.exe, xma2encode.exe, etc.
+
+    xwbtool -o wavebank.xwb Sound.wav Explosion.wav Music.wav
+
+    DirectXTK for Audio does not make use of the XACT engine, nor does it make use of XACT "sound banks" .xsb
+    or "cues". We only use .xwb wave banks as a method for packing .wav data.
+
+Command-line options for the XWBTool:
+
+    -s
+        Creates as streaming wave bank, otherwise defaults to in-memory wave bank
+
+    -o <filename>
+        Sets output filename for .xwb file. Otherwise, it defaults to the same base name as the first input .wav file
+
+    -h <h-filename>
+        Generates a C/C++ header file with #defines for each of the sounds in the bank matched to their index
+
+    -n
+        Disables the default warning of overwriting an existing .xwb file
+
+    -c / -nc
+        Forces creation or prevents use of compact wave banks. By default, it will try to use a compact wave bank if possible.
+
+    -f
+        Includes entry friendly name strings in the wave bank for use with 'string' based versions of WaveBank::Play() and
+        WaveBank::CreateInstance() rather than index-based versions.
+
+Voice management
+
+   Each instance of a SoundEffectInstance will allocate it's own source voice when played, which won't be released until it is
+   destroyed. Each time a one-shot sound is played from a SoundEffect or a WaveBank, a voice will be created or a previously used
+   one-shot voice will be reused if possible.
+
+   SetDefaultSampleRate() is used to control the sample rate for voices in the one-shot pool. This should be the same rate
+   as used by the majority of your content. It defaults to 44100 Hz.
+
+   TrimVoicePool() can be used to free up any source voices in the 'idle' list for one-shots, and will cause all non-playing
+   SoundEffectInstance objects to release their source voice. This is used for keeping the total source voice count under
+   a limit for performance or when switching sections where audio content formats change dramatically.
+
+   SetMaxVoicePool() can be used to set a limit on the number of one-shot source voices allocated and/or to put a limit on the
+   source voices available for SoundEffectInstance. If there are insufficient one-shot voices, those sounds will not be heard.
+   If there are insufficient voices for a SoundEffectInstance to play, then a C++ exception is thrown. These values default to
+   'unlimited'.
+
+Platform support:
+
+    Windows 8.x, Windows Store apps, Windows phone 8.x, and Xbox One all include XAudio 2.8. Therefore, the
+    standard DirectXTK.lib includes DirectXTK for Audio for all these platforms.
+
+        * DirectXTK_Windows81
+        * DirectXTK_Windows8
+        * DirectXTK_WindowsPhone81
+        * DirectXTK_WindowsPhone8
+        * DirectXTK_XboxOneXDK
+        * DirectXTK_XboxOneADK
+
+    For Win32 desktop applications targeting Windows 8.x or later, you can make use of XAudio 2.8. The
+    DirectXTKAudioWin8.lib contains the XAudio 2.8 version of DirectXTK for Audio, while DirectXTK.lib
+    for Win32 desktop contains only the math/graphics components. To support Win32 desktop applications
+    on Windows 7 and Windows Vista, we must make use XAudio 2.7, the legacy DirectX SDK, and the legacy
+    DirectX End-User Runtime Redistribution packages (aka DirectSetup). The DirectXTKAudioDX.lib is the
+    XAudio 2.7 version of DirectXTK for Audio.
+
+        * DirectXTK_Desktop_201x + Audio\DirectXTKAudio_Desktop_201x_Win8
+        * DirectXTK_Desktop_201x + Audio\DirectXTKAudio_Desktop_201x_DXSDK
+
+    VS 2010 Note: We only support DirectXTK for Audio with the legacy DirectX SDK due to some issues with
+    using the VS 2010 toolset and the Windows 8.x SDK WinRT headers.
+
+    http://msdn.microsoft.com/en-us/library/windows/desktop/ee415802.aspx
+    http://support.microsoft.com/kb/2728613
+    http://msdn.microsoft.com/en-us/library/windows/desktop/ee663275.aspx
+
+    DirectXTK for Audio supports wave content in PCM and a variant of MS-ADPCM formats. When built for Xbox One
+    or using XAudio 2.7, it also supports xWMA. XMA2 is supported by the Xbox One XDK version only.
+
+    DirectXTK makes use of the latest Direct3D 11.1 headers available in the Windows 8.x SDK, and there are a
+    number of file conflicts between the Windows 8.x SDK and the legacy DirectX SDK. Therefore, when building
+    for down-level support with XAudio 2.7, Audio.h explicitly includes the DirectX SDK version of XAudio2 headers
+    with a full path name. These reflect the default install locations, and if you have installed it elsewhere you
+    will need to update this header. The *_DXSDK.vcxproj files use the DXSDK_DIR environment variable, so only the
+    Audio.h references need updating for an alternative location.
+    
+Threading model:
+
+    The DirectXTK for Audio methods assume it is always called from a single thread. This is generally
+    either the main thread or a worker thread dedicated to audio processing.  The XAudio2 engine itself
+    makes use of lock-free mechanism to make it 'thread-safe'.
+    
+    Note that IVoiceNotify::OnBufferEnd is called from XAudio2's thread, so the callback must be very
+    fast and use thread-safe operations.
+
+Further reading:
+
+    http://blogs.msdn.com/b/chuckw/archive/2012/05/15/learning-xaudio2.aspx
+    http://blogs.msdn.com/b/chuckw/archive/2012/04/02/xaudio2-and-windows-8-consumer-preview.aspx
+
+
+
 ---------------
 RELEASE HISTORY
 ---------------
+
+April 3, 2014
+    Windows phone 8.1 platform support
+
+February 24, 2014
+    DirectXHelper: new utility header with MapGuard and public version of SetDebugObjectName template
+    DDSTextureLoader: Optional support for auto-gen mipmaps
+    DDSTextureLoader/ScreenGrab: support for Direct3D 11 video formats including legacy "YUY2" DDS files
+    GeometricPrimtive: Handedness fix for tetrahedron, octahedron, dodecahedron, and icosahedron
+    SpriteBatch::SetRotation(DXGI_MODE_ROTATION_UNSPECIFIED) to disable viewport matrix
+    XboxDDSTextureLoader: optional forceSRGB parameter
+
+January 24, 2014
+    DirectXTK for Audio updated with voice management and optional mastering volume limiter
+    Added orientation rotation support to SpriteBatch
+    Fixed a resource leak with GetDefaultTexture() used by some Effects
+    Code cleanup (removed DXGI_1_2_FORMATS control define; d2d1.h workaround not needed; ScopedObject typedef removed)
+
+December 24, 2013
+    DirectXTK for Audio
+    Xbox One platform support
+    MakeSpriteFont tool updated with more progress feedback when capturing large fonts
+    Minor updates for .SDKMESH Model loader
+    Fixed bug in .CMO Model loader when handling multiple textures
+    Improved debugging output
 
 October 28, 2013
     Updated for Visual Studio 2013 and Windows 8.1 SDK RTM
@@ -1032,7 +1399,7 @@ November 15, 2012
     Cleaned up warning level 4 warnings
 
 October 30, 2012
-    Added project files for Windows Phone 8
+    Added project files for Windows phone 8
 
 October 12, 2012
     Added PrimitiveBatch for drawing user primitives
