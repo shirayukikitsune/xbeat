@@ -224,7 +224,7 @@ technique11 Bloom
 	{
 		PixelShader = compile ps_5_0 verblurps();
 	}
-	/*pass bloom
+	pass bloom
 	{
 		PixelShader = compile ps_5_0 bloomps();
 	}*/

@@ -39,9 +39,6 @@
     <ClCompile Include="SystemClass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\Manager.cpp">
-      <Filter>Source Files\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="Renderer\D3DRenderer.cpp">
       <Filter>Source Files\Renderer</Filter>
     </ClCompile>
@@ -67,9 +64,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Renderer\ViewFrustum.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\Shaders\MMDEffect.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Renderer\D3DTextureRenderer.cpp">
@@ -111,13 +105,19 @@
     <ClCompile Include="Renderer\PMX\PMXModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\Shaders\PostProcessEffect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\SceneManager.cpp">
+      <Filter>Source Files\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SystemClass.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\Manager.h">
-      <Filter>Header Files\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\D3DRenderer.h">
       <Filter>Header Files\Renderer</Filter>
@@ -141,9 +141,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\ViewFrustum.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\Shaders\MMDEffect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\DXUtil.h">
@@ -194,6 +191,21 @@
     <ClInclude Include="Renderer\OBJ\OBJModel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\Shaders\PostProcessEffect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\SceneManager.h">
+      <Filter>Header Files\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\BaseShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\Entity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Data\Shaders\ColorShader.hlsl">
@@ -205,11 +217,11 @@
     <FxCompile Include="Data\Shaders\LightPixel.hlsl" />
     <FxCompile Include="Data\Shaders\LightVertex.hlsl" />
     <FxCompile Include="Data\Shaders\zxMMD.fx" />
-    <FxCompile Include="Data\Shaders\MMD.fx" />
     <FxCompile Include="Data\Shaders\SkyboxPixel.hlsl" />
     <FxCompile Include="Data\Shaders\TexturePixel.hlsl" />
     <FxCompile Include="Data\Shaders\TextureVertex.hlsl" />
     <FxCompile Include="Data\Shaders\SkyboxVertex.hlsl" />
+    <FxCompile Include="Data\Shaders\PostProcess.fx" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\Models\cube.txt" />

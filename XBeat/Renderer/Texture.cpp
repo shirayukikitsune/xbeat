@@ -22,9 +22,13 @@ bool Texture::Initialize(ID3D11Device *device, const std::wstring &file)
 {
 	HRESULT result;
 
-	std::wstring extension = file.substr(file.find_last_of(L".") + 1);
-	// Transform the extension to upper case
-	std::transform(extension.begin(), extension.end(), extension.begin(), [](const wchar_t& ch) { return toupper(ch); });
+	auto pos = file.find_last_of(L".");
+	std::wstring extension;
+	if (pos != std::string::npos && pos + 1 < file.length()) {
+		extension = file.substr(pos+1);
+		// Transform the extension to upper case
+		std::transform(extension.begin(), extension.end(), extension.begin(), [](const wchar_t& ch) { return toupper(ch); });
+	}
 	DirectX::ScratchImage image;
 	DirectX::TexMetadata metaData;
 
@@ -65,13 +69,10 @@ bool Texture::Initialize(ID3D11Device *device, const std::wstring &file)
 
 void Texture::Shutdown()
 {
-	if (texture != nullptr) {
-		texture->Release();
-		texture = nullptr;
-	}
+	texture.reset();
 }
 
-ID3D11ShaderResourceView *Texture::GetTexture()
+DXType<ID3D11ShaderResourceView> Texture::GetTexture()
 {
 	return texture;
 }

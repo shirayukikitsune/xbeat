@@ -13,7 +13,7 @@ namespace Shaders {
 
 #define BLUR_SAMPLE_COUNT 15
 
-class MMDEffect
+	class PostProcessEffect
 {
 public:
 	struct MatrixBuffer {
@@ -38,23 +38,20 @@ public:
 		DirectX::XMFLOAT2 offsetAndWeight[BLUR_SAMPLE_COUNT];
 	};
 
-	MMDEffect(void);
-	~MMDEffect(void);
+	PostProcessEffect(void);
+	~PostProcessEffect(void);
 
 	bool Initialize(ID3D11Device *device, HWND wnd, int width, int height);
 	void Shutdown();
 	bool Render(std::shared_ptr<D3DRenderer> d3d, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<D3DTextureRenderer> renderTexture, std::shared_ptr<OrthoWindowClass> window, float farZ, float nearZ);
 	DXType<ID3D11Texture2D> GetCurrentOutput();
 	DXType<ID3D11ShaderResourceView> GetCurrentOutputView();
-
-	int bufferIndex;
 private:
 	bool InitializeEffect(ID3D11Device *device, HWND wnd, int width, int height, const std::wstring &filename);
 	void ShutdownEffect();
 	void OutputErrorMessage(ID3D10Blob *error, HWND wnd, const std::wstring &filename);
 
 	bool SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ);
-	void RenderEffect(ID3D11DeviceContext *context, int indexCount);
 
 	DXType<ID3DX11Effect> m_effect;
 	DXType<ID3D11SamplerState> m_sampler;

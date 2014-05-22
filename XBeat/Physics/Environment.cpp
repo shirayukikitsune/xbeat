@@ -3,12 +3,9 @@
 
 #include <BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h>
 #include <BulletSoftBody/btDefaultSoftBodySolver.h>
-#include <BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11.h>
+#include <BulletSoftBody/btSoftBodySolvers.h>
 
 #include <algorithm>
-
-#pragma comment(lib, "d3dcompiler.lib")
-#pragma comment(lib, "d3dx11.lib")
 
 using Physics::Environment;
 
@@ -42,16 +39,8 @@ bool Environment::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (!m_constraintSolver)
 		return false;
 
-	if (!d3d)
-		m_softBodySolver.reset(new btDefaultSoftBodySolver);
-	else
-		m_softBodySolver.reset(new btDX11SoftBodySolver(d3d->GetDevice(), d3d->GetDeviceContext()));
+	m_softBodySolver.reset(new btDefaultSoftBodySolver);
 	if (!m_softBodySolver)
-		return false;
-
-	//m_softBodySolverOutput.reset(new btSoftBodySolverOutputDXtoDX(d3d->GetDevice(), d3d->GetDeviceContext()));
-	m_softBodySolverOutput.reset(new btSoftBodySolverOutputDXtoCPU);
-	if (!m_softBodySolverOutput)
 		return false;
 
 	m_dynamicsWorld.reset(new btSoftRigidDynamicsWorld(m_collisionDispatcher.get(), m_broadphase.get(), m_constraintSolver.get(), m_collisionConfiguration.get(), m_softBodySolver.get()));
@@ -71,8 +60,6 @@ void Environment::Shutdown()
 	}
 	if (m_dynamicsWorld != nullptr)
 		m_dynamicsWorld.reset();
-	if (m_softBodySolverOutput != nullptr)
-		m_softBodySolverOutput.reset();
 	if (m_softBodySolver != nullptr)
 		m_softBodySolver.reset();
 	if (m_constraintSolver != nullptr)

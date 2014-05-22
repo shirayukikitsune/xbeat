@@ -176,9 +176,6 @@ bool SkyBox::LoadTexture(ID3D11Device *device, const std::wstring &file)
 
 void SkyBox::ReleaseTexture()
 {
-	if (texture != nullptr) {
-		texture->Shutdown();
-	}
 	texture.reset();
 }
 

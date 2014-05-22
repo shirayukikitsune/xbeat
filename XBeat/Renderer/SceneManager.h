@@ -14,7 +14,7 @@
 #include "../Input/InputManager.h"
 #include "OrthoWindowClass.h"
 #include "Shaders/Texture.h"
-#include "Shaders/MMDEffect.h"
+#include "Shaders/PostProcessEffect.h"
 #include "../Physics/Environment.h"
 #include "SkyBox.h"
 #include "../Dispatcher.h"
@@ -27,16 +27,18 @@ const bool VSYNC_ENABLED = true;
 const float SCREEN_DEPTH = 500.0f;
 const float SCREEN_NEAR = 0.25f;
 
-ATTRIBUTE_ALIGNED16(class) Manager
+ATTRIBUTE_ALIGNED16(class) SceneManager
 {
 public:
-	Manager();
-	virtual ~Manager();
+	SceneManager();
+	virtual ~SceneManager();
 
 	bool Initialize(int width, int height, HWND wnd, std::shared_ptr<Input::Manager> input, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher);
 	bool LoadScene();
 	void Shutdown();
 	bool Frame(float frameTime);
+
+	void LoadModel(std::wstring filename);
 
 	__forceinline std::shared_ptr<D3DRenderer> GetRenderer() { return d3d; }
 
@@ -59,12 +61,12 @@ private:
 	std::shared_ptr<D3DRenderer> d3d;
 	std::shared_ptr<SkyBox> sky;
 	std::shared_ptr<CameraClass> camera;
-	std::shared_ptr<PMX::Model> model;
+	std::vector<std::shared_ptr<PMX::Model>> m_models;
 	std::shared_ptr<Model> stage;
 	std::shared_ptr<Light> light;
 	std::shared_ptr<Shaders::Light> lightShader;
 	std::shared_ptr<Shaders::Texture> textureShader;
-	std::shared_ptr<Shaders::MMDEffect> mmdEffect;
+	std::shared_ptr<Shaders::PostProcessEffect> m_postProcess;
 	std::shared_ptr<Input::Manager> input;
 	std::shared_ptr<Physics::Environment> physics;
 	std::shared_ptr<D3DTextureRenderer> renderTexture;

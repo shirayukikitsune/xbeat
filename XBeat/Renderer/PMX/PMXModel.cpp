@@ -475,14 +475,7 @@ bool PMX::Model::LoadTexture(ID3D11Device *device)
 
 void PMX::Model::ReleaseTexture()
 {
-	for (auto &tex : renderTextures) {
-		if (tex != nullptr) {
-			tex->Shutdown();
-			tex.reset();
-		}
-	}
-
-	renderTextures.resize(0);
+	renderTextures.clear();
 }
 
 PMX::Bone* PMX::Model::GetBoneByName(const std::wstring &JPname)

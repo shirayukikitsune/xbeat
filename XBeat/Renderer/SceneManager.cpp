@@ -1,4 +1,4 @@
-﻿#include "Manager.h"
+﻿#include "SceneManager.h"
 #include "PMX/PMXModel.h"
 #include "PMX/PMXBone.h"
 #include "OBJ/OBJModel.h"
@@ -6,13 +6,12 @@
 #include <iomanip>
 #include <sstream>
 
-using Renderer::Manager;
+using Renderer::SceneManager;
 
-Manager::Manager()
+SceneManager::SceneManager()
 {
 	d3d.reset();
 	camera.reset();
-	model.reset();
 	stage.reset();
 	lightShader.reset();
 	light.reset();
@@ -20,12 +19,12 @@ Manager::Manager()
 }
 
 
-Manager::~Manager()
+SceneManager::~SceneManager()
 {
 	Shutdown();
 }
 
-bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input::Manager> input, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher)
+bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input::Manager> input, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher)
 {
 	this->input = input;
 	this->physics = physics;
@@ -58,11 +57,11 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 		return false;
 	}
 
-	mmdEffect.reset(new Shaders::MMDEffect);
-	if (mmdEffect == nullptr)
+	m_postProcess.reset(new Shaders::PostProcessEffect);
+	if (m_postProcess == nullptr)
 		return false;
 
-	if (!mmdEffect->Initialize(d3d->GetDevice(), wnd, width, height)) {
+	if (!m_postProcess->Initialize(d3d->GetDevice(), wnd, width, height)) {
 		MessageBox(wnd, L"Could not initialize the effects object", L"Error", MB_OK);
 		return false;
 	}
@@ -108,31 +107,31 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 
 	// Setup bindings
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_Z), [this](void* param) {
-		model.get()->ApplyMorph(L"ﾍﾞｰﾙ非表示1", 1.0f);
-		model.get()->ApplyMorph(L"ﾍﾞｰﾙ非表示2", 1.0f);
-		model.get()->ApplyMorph(L"薔薇非表示", 1.0f);
-		model.get()->ApplyMorph(L"肩服非表示", 1.0f);
-		model.get()->ApplyMorph(L"眼帯off", 1.0f);
+		m_models[0]->ApplyMorph(L"ﾍﾞｰﾙ非表示1", 1.0f);
+		m_models[0]->ApplyMorph(L"ﾍﾞｰﾙ非表示2", 1.0f);
+		m_models[0]->ApplyMorph(L"薔薇非表示", 1.0f);
+		m_models[0]->ApplyMorph(L"肩服非表示", 1.0f);
+		m_models[0]->ApplyMorph(L"眼帯off", 1.0f);
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { model->ApplyMorph(L"翼羽ばたき", 0.9f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { model->GetBoneByName(L"全ての親")->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { m_models[0]->GetBoneByName(L"全ての親")->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(-1.0f, 0.0f, 0.0f)); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { model->ApplyMorph(L"purple", 1.0f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_1), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_2), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_3), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_4), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderSoftBodies); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_0), [this](void* param) { model->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F1), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F2), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F3), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F4), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderSoftBodies); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F5), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
 	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
 		static float rotation[2] = { 0.0f, 0.0f };
 		if (data->x != 0 || data->y != 0) {
-			rotation[0] += data->x / 20.0f;
-			rotation[1] += data->y / 20.0f;
-			auto bone = model->GetBoneByName(L"首");
-			bone->Rotate(btVector3(0.0f, rotation[0], -rotation[1]));
-			//btVector3 v = camera->GetRotation();
-			//camera->SetRotation(v.getX() + rotation[1], v.getY() + rotation[0], 0.0f);
+			rotation[0] += data->x;
+			rotation[1] += data->y;
+			//auto bone = m_models[0]->GetBoneByName(L"首");
+			//bone->Rotate(btVector3(0.0f, rotation[0], -rotation[1]));
+			btQuaternion v(rotation[0], rotation[1], 0.0f);
+			camera->SetRotation(v);
 		}
 	});
 
@@ -144,7 +143,7 @@ bool Manager::Initialize(int width, int height, HWND wnd, std::shared_ptr<Input:
 	return true;
 }
 
-bool Manager::LoadScene() {
+bool SceneManager::LoadScene() {
 	camera.reset(new CameraClass);
 	if (camera == nullptr)
 		return false;
@@ -155,14 +154,17 @@ bool Manager::LoadScene() {
 		return false;
 	}
 
-	model.reset(new PMX::Model);
+	m_models.emplace_back(new PMX::Model);
+	if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
+	//model.reset(new PMX::Model);
 	//if (!model->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 リリス風 Ver106.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
-	if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
 	//if (!model->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
+	//if (!model->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
 		return false;
 	}
@@ -174,7 +176,7 @@ bool Manager::LoadScene() {
 	return true;
 }
 
-void Manager::Shutdown()
+void SceneManager::Shutdown()
 {
 	if (sky != nullptr) {
 		sky->Shutdown();
@@ -200,11 +202,6 @@ void Manager::Shutdown()
 		lightShader.reset();
 	}
 
-	if (model != nullptr) {
-		model->Shutdown();
-		model.reset();
-	}
-
 	if (stage != nullptr) {
 		stage->Shutdown();
 		stage.reset();
@@ -228,7 +225,7 @@ void Manager::Shutdown()
 	}
 }
 
-bool Manager::Frame(float frameTime)
+bool SceneManager::Frame(float frameTime)
 {
 	static float lightDirection[2] = { 0.0f, 1.0f };
 	static bool animating = false, increase = true;
@@ -270,7 +267,7 @@ bool Manager::Frame(float frameTime)
 	/*if (input->IsKeyPressed(DIK_S)) {
 		model.get()->ApplyMorph(L"purple", 0.3f);
 	}*/
-	if (input->IsKeyPressed(DIK_A)) {
+	/*if (input->IsKeyPressed(DIK_A)) {
 		if (!animating) {
 			animTime = 0.0f;
 			animating = true;
@@ -302,7 +299,7 @@ bool Manager::Frame(float frameTime)
 		//value = 0.0f;
 		animating = false;
 		//model->ApplyMorph(L"翼羽ばたき", value);
-	}
+	}*/
 
 	camera->SetPosition(campos.x, campos.y, campos.z);
 	camera->Render();
@@ -313,7 +310,7 @@ bool Manager::Frame(float frameTime)
 	return true;
 }
 
-bool Manager::Render(float frameTime)
+bool SceneManager::Render(float frameTime)
 {
 	if (!RenderToTexture())
 		return false;
@@ -330,7 +327,7 @@ bool Manager::Render(float frameTime)
 	return true;
 }
 
-bool Manager::RenderToTexture()
+bool SceneManager::RenderToTexture()
 {
 	renderTexture->SetRenderTarget(d3d->GetDeviceContext(), d3d->GetDepthStencilView());
 
@@ -344,7 +341,7 @@ bool Manager::RenderToTexture()
 	return true;
 }
 
-bool Manager::RenderScene()
+bool SceneManager::RenderScene()
 {
 	DirectX::XMMATRIX view, projection, world;
 
@@ -360,13 +357,15 @@ bool Manager::RenderScene()
 	if (!stage->Render(d3d, lightShader, view, projection, world, light, camera, frustum))
 		return false;
 
-	if (!model->Render(d3d, lightShader, view, projection, world, light, camera, frustum))
-		return false;
+	for (auto model : m_models) {
+		if (!model->Render(d3d, lightShader, view, projection, world, light, camera, frustum))
+			return false;
+	}
 
 	return true;
 }
 
-bool Manager::RenderEffects()
+bool SceneManager::RenderEffects()
 {
 	DirectX::XMMATRIX view, ortho, world;
 
@@ -374,13 +373,13 @@ bool Manager::RenderEffects()
 	d3d->GetWorldMatrix(world);
 	d3d->GetOrthoMatrix(ortho);
 
-	if (!mmdEffect->Render(d3d, fullWindow->GetIndexCount(), world, view, ortho, renderTexture, fullWindow, SCREEN_DEPTH, SCREEN_NEAR))
+	if (!m_postProcess->Render(d3d, fullWindow->GetIndexCount(), world, view, ortho, renderTexture, fullWindow, SCREEN_DEPTH, SCREEN_NEAR))
 		return false;
 
 	return true;
 }
 
-bool Manager::Render2DTextureScene(float frameTime)
+bool SceneManager::Render2DTextureScene(float frameTime)
 {
 	DirectX::XMMATRIX view, ortho, world;
 
@@ -395,7 +394,7 @@ bool Manager::Render2DTextureScene(float frameTime)
 
 	fullWindow->Render(d3d->GetDeviceContext());
 
-	if (!textureShader->Render(d3d->GetDeviceContext(), fullWindow->GetIndexCount(), world, view, ortho, mmdEffect->GetCurrentOutputView()))
+	if (!textureShader->Render(d3d->GetDeviceContext(), fullWindow->GetIndexCount(), world, view, ortho, m_postProcess->GetCurrentOutputView()))
 		return false;
 
 	d3d->End2D();

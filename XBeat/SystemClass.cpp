@@ -1,6 +1,6 @@
 #include "SystemClass.h"
 #include <tchar.h>
-#include <boost/date_time.hpp>
+#include <chrono>
 
 SystemClass::SystemClass(void)
 {
@@ -42,7 +42,7 @@ bool SystemClass::Initialize()
 
 	frameMsec();
 
-	renderer.reset(new Renderer::Manager);
+	renderer.reset(new Renderer::SceneManager);
 	if (renderer == nullptr)
 		return false;
 
@@ -191,13 +191,13 @@ void SystemClass::ShutdownWindow()
 
 float SystemClass::frameMsec()
 {
-	static boost::posix_time::ptime lastTime = boost::posix_time::microsec_clock::universal_time();
+	static std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
 
-	boost::posix_time::ptime nowTime = boost::posix_time::microsec_clock::universal_time();
-	float msec = (nowTime - lastTime).total_microseconds() / 1000.0f;
+	auto nowTime = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> elapsedSec = nowTime - lastTime;
 	lastTime = nowTime;
 
-	return msec;
+	return elapsedSec.count() * 1000.0f;
 }
 
 LRESULT CALLBACK SystemClass::MessageHandler(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)

@@ -56,6 +56,7 @@ public:
 	void ResetViewport();
 
 	DXType<ID3D11ShaderResourceView> GetDepthResourceView();
+	DXType<ID3D11RenderTargetView> renderTarget;
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
@@ -68,7 +69,6 @@ private:
 	IDXGISwapChain *swapChain;
 	ID3D11Device *device;
 	ID3D11DeviceContext *deviceContext;
-	ID3D11RenderTargetView *renderTarget;
 	ID3D11Texture2D *depthStencilBuffer;
 	ID3D11DepthStencilState *depthStencilState[4];
 	ID3D11DepthStencilView *depthStencilView;

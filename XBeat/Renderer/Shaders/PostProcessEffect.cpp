@@ -1,43 +1,40 @@
-#include "MMDEffect.h"
+#include "PostProcessEffect.h"
 
 #include <D3Dcompiler.h>
 #include <fstream>
 
-using Renderer::Shaders::MMDEffect;
+using Renderer::Shaders::PostProcessEffect;
 
 
-MMDEffect::MMDEffect(void)
+PostProcessEffect::PostProcessEffect(void)
 {
 	m_blurAmmount = 3.8f;
 }
 
 
-MMDEffect::~MMDEffect(void)
+PostProcessEffect::~PostProcessEffect(void)
 {
 	Shutdown();
 }
 
 
-bool MMDEffect::Initialize(ID3D11Device *device, HWND wnd, int width, int height)
+bool PostProcessEffect::Initialize(ID3D11Device *device, HWND wnd, int width, int height)
 {
-	if (!InitializeEffect(device, wnd, width, height, L"./Data/Shaders/MMD.fx"))
+	if (!InitializeEffect(device, wnd, width, height, L"./Data/Shaders/PostProcess.fx"))
 		return false;
 
 	return true;
 }
 
-void MMDEffect::Shutdown()
+void PostProcessEffect::Shutdown()
 {
 	ShutdownEffect();
 }
 
-bool MMDEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<Renderer::D3DTextureRenderer> renderTexture, std::shared_ptr<Renderer::OrthoWindowClass> window, float farZ, float nearZ)
+bool PostProcessEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<Renderer::D3DTextureRenderer> renderTexture, std::shared_ptr<Renderer::OrthoWindowClass> window, float farZ, float nearZ)
 {
 	ID3D11DeviceContext *context = d3d->GetDeviceContext();
 
-	//RenderEffect(context, indexCount);
-
-	bufferIndex = 0;
 	renderTexture->CopyIntoTexture(context, &m_originalBackTexture);
 	renderTexture->CopyIntoTexture(context, &m_currentBackTexture);
 
@@ -60,8 +57,6 @@ bool MMDEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCoun
 		{
 			for (uint32_t pass = 0; pass < m_numPasses[group][technique]; pass++)
 			{
-				//bufferIndex++;
-
 				window->Render(context);
 
 				m_effect->GetGroupByIndex(group)->GetTechniqueByIndex(technique)->GetPassByIndex(pass)->Apply(0, context);
@@ -83,7 +78,7 @@ bool MMDEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCoun
 	return true;
 }
 
-bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int height, const std::wstring &filename)
+bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int height, const std::wstring &filename)
 {
 	HRESULT result;
 	ID3D10Blob *errorMsg;
@@ -288,7 +283,7 @@ bool MMDEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int 
 	return true;
 }
 
-void MMDEffect::ShutdownEffect()
+void PostProcessEffect::ShutdownEffect()
 {
 	if (m_numPasses != nullptr) {
 		delete[] m_numPasses;
@@ -312,7 +307,7 @@ void MMDEffect::ShutdownEffect()
 	}
 }
 
-void MMDEffect::OutputErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
+void PostProcessEffect::OutputErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
 {
 	char *compileError;
 	SIZE_T bufferSize;
@@ -336,7 +331,7 @@ void MMDEffect::OutputErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std
 	MessageBox(wnd, L"Error compiling effect", file.c_str(), MB_OK);
 }
 
-bool MMDEffect::SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ)
+bool PostProcessEffect::SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ)
 {
 	static auto GaussianFunction = [](float sigmaSquared, float offset) { return (1.0f / sqrtf(2.0f * DirectX::XM_PI * sigmaSquared)) * expf(-(offset * offset) / (2 * sigmaSquared)); };
 	BlurSamplersBuffer *blurBuffer;
@@ -412,16 +407,12 @@ bool MMDEffect::SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMA
 	return true;
 }
 
-void MMDEffect::RenderEffect(ID3D11DeviceContext *context, int indexCount)
-{
-}
-
-Renderer::DXType<ID3D11Texture2D> MMDEffect::GetCurrentOutput()
+Renderer::DXType<ID3D11Texture2D> PostProcessEffect::GetCurrentOutput()
 {
 	return m_currentBackTexture;
 }
 
-Renderer::DXType<ID3D11ShaderResourceView> MMDEffect::GetCurrentOutputView()
+Renderer::DXType<ID3D11ShaderResourceView> PostProcessEffect::GetCurrentOutputView()
 {
 	return m_currentBackView;
 }

@@ -244,7 +244,7 @@ union MorphType {
 	};
 };
 
-ATTRIBUTE_ALIGNED16(struct) Vertex{
+ATTRIBUTE_ALIGNED16(struct) Vertex {
 	Position position;
 	Position normal;
 	float uv[2];

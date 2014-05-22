@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "Input/InputManager.h"
-#include "Renderer/Manager.h"
+#include "Renderer/SceneManager.h"
 #include "Physics/Environment.h"
 #include "Dispatcher.h"
 
@@ -45,7 +45,7 @@ private:
 	HWND wnd;
 
 	std::shared_ptr<Input::Manager> input;
-	std::shared_ptr<Renderer::Manager> renderer;
+	std::shared_ptr<Renderer::SceneManager> renderer;
 	std::shared_ptr<Physics::Environment> physics;
 	std::shared_ptr<Dispatcher> dispatcher;
 };

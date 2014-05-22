@@ -8,6 +8,10 @@ namespace Renderer {
 	// Type to be used by every DirectX interface, but should not be used for arrays
 	template <class T>
 	class DXType {
+	public:
+		typedef T* pointer;
+		typedef T const * const_pointer;
+
 	private:
 		T* ptr;
 
@@ -28,10 +32,13 @@ namespace Renderer {
 			return ptr;
 		}
 		void operator=(T* other) {
-			if (ptr != nullptr) ptr->Release();
-
+			reset();
 			ptr = other;
 			if (other != nullptr) other->AddRef();
+		}
+		void operator=(DXType<T> &&other) {
+			reset();
+			ptr = std::move(other.ptr);
 		}
 		operator bool() {
 			return ptr != nullptr;
@@ -45,21 +52,23 @@ namespace Renderer {
 		}
 
 		~DXType() {
-			if (ptr != nullptr) {
-				ptr->Release();
-				ptr = nullptr;
-			}
+			reset();
 		}
 		DXType() {
 			ptr = nullptr;
 		}
 		DXType(T* p) {
 			ptr = p;
-			ptr->AddRef();
+			if (p != nullptr)
+				ptr->AddRef();
 		}
 		DXType(const DXType<T> &other) {
 			ptr = other.ptr;
-			ptr->AddRef();
+			if (ptr != nullptr)
+				ptr->AddRef();
+		}
+		DXType(DXType<T> &&other)
+		: ptr(std::move(other.ptr)) {
 		}
 	};
 }

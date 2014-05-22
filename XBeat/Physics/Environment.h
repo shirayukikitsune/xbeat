@@ -61,7 +61,6 @@ private:
 	std::unique_ptr<btConstraintSolver> m_constraintSolver;
 	std::unique_ptr<btSoftRigidDynamicsWorld> m_dynamicsWorld;
 	std::unique_ptr<btSoftBodySolver> m_softBodySolver;
-	std::unique_ptr<btSoftBodySolverOutput> m_softBodySolverOutput;
 };
 
 }

@@ -175,7 +175,7 @@ void Manager::ProcessInput()
 
 	if (!FAILED(result)) {
 		for (DWORD i = 0; i < items; i++) {
-			pressedKeys[keyChanges[i].dwOfs] = (keyChanges[i].dwData & 0x80) != 0 ? CallbackInfo::OnKeyDown : CallbackInfo::OnKeyUp;
+			pressedKeys[(uint8_t)keyChanges[i].dwOfs] = (keyChanges[i].dwData & 0x80) != 0 ? CallbackInfo::OnKeyDown : CallbackInfo::OnKeyUp;
 		}
 	}
 

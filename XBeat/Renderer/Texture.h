@@ -1,6 +1,6 @@
 #pragma once
 
-#include <d3d11.h>
+#include "DXUtil.h"
 #include <string>
 #include <list>
 
@@ -15,10 +15,10 @@ public:
 	bool Initialize(ID3D11Device *device, const std::wstring &file);
 	void Shutdown();
 
-	ID3D11ShaderResourceView *GetTexture();
+	DXType<ID3D11ShaderResourceView> GetTexture();
 
 private:
-	ID3D11ShaderResourceView *texture;
+	DXType<ID3D11ShaderResourceView> texture;
 };
 
 }

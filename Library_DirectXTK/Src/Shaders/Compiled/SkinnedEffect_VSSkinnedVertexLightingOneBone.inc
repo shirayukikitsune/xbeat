@@ -28,26 +28,26 @@
 //
 // Target Reg Buffer  Start Reg # of Regs        Data Conversion
 // ---------- ------- --------- --------- ----------------------
-// c0         cb0             0       242  ( FLT, FLT, FLT, FLT)
+// c0         cb0             0       245  ( FLT, FLT, FLT, FLT)
 //
 //
 // Runtime generated constant mappings:
 //
 // Target Reg                               Constant Description
 // ---------- --------------------------------------------------
-// c242                            Vertex Shader position offset
+// c245                            Vertex Shader position offset
 //
 //
 // Level9 shader bytecode:
 //
     vs_2_0
-    def c243, 3, 0, 1, 0
+    def c246, 3, 0, 1, 0
     dcl_texcoord v0
     dcl_texcoord1 v1
     dcl_texcoord2 v2
     dcl_texcoord3 v3
     dcl_texcoord4 v4
-    mul r0.x, v3.x, c243.x
+    mul r0.x, v3.x, c246.x
     mova a0.x, r0.x
     mul r0, v4.x, c26[a0.x]
     dp3 r1.x, v1, r0
@@ -65,7 +65,7 @@
     dp3 r2.x, -c3, r1
     dp3 r2.y, -c4, r1
     dp3 r2.z, -c5, r1
-    sge r3.xyz, r2, c243.y
+    sge r3.xyz, r2, c246.y
     mul r2.xyz, r2, r3
     mul r4.xyz, r2.y, c7
     mad r2.xyw, r2.x, c6.xyzz, r4.xyzz
@@ -87,7 +87,7 @@
     dp3 r2.z, r6, r1
     nrm r4.xyz, r5
     dp3 r2.y, r4, r1
-    max r1.xyz, r2, c243.y
+    max r1.xyz, r2, c246.y
     mul r1.xyz, r3, r1
     log r2.x, r1.x
     log r2.y, r1.y
@@ -102,19 +102,19 @@
     mul oT1.xyz, r1, c2
     dp4 oPos.z, r0, c24
     dp4 r1.x, r0, c14
-    max r1.x, r1.x, c243.y
-    min oT1.w, r1.x, c243.z
+    max r1.x, r1.x, c246.y
+    min oT1.w, r1.x, c246.z
     dp4 r1.x, r0, c22
     dp4 r1.y, r0, c23
     dp4 r0.x, r0, c25
-    mad oPos.xy, r0.x, c242, r1
+    mad oPos.xy, r0.x, c245, r1
     mov oPos.w, r0.x
     mov oT0.w, c0.w
     mov oT2.xy, v2
 
 // approximately 74 instruction slots used
 vs_4_0
-dcl_constantbuffer cb0[242], dynamicIndexed
+dcl_constantbuffer cb0[245], dynamicIndexed
 dcl_input v0.xyzw
 dcl_input v1.xyz
 dcl_input v2.xy
@@ -195,10 +195,10 @@ ret
 
 const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
 {
-     68,  88,  66,  67,  87,  31, 
-    224, 191,  86,  93, 247, 204, 
-     34,  99, 246, 236, 244, 110, 
-    198, 124,   1,   0,   0,   0, 
+     68,  88,  66,  67,  91,  65, 
+    216,  45,  93, 110,  77,  35, 
+    237,  33, 133, 233,  88, 144, 
+    162, 227,   1,   0,   0,   0, 
      92,  14,   0,   0,   4,   0, 
       0,   0,  48,   0,   0,   0, 
     168,   4,   0,   0,  16,  13, 
@@ -211,10 +211,10 @@ const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
      48,   0,   0,   0,  48,   0, 
       0,   0,  36,   0,   1,   0, 
      48,   0,   0,   0,   0,   0, 
-    242,   0,   0,   0,   0,   0, 
-      0,   0,   0,   0, 242,   0, 
+    245,   0,   0,   0,   0,   0, 
+      0,   0,   0,   0, 245,   0, 
       0,   2, 254, 255,  81,   0, 
-      0,   5, 243,   0,  15, 160, 
+      0,   5, 246,   0,  15, 160, 
       0,   0,  64,  64,   0,   0, 
       0,   0,   0,   0, 128,  63, 
       0,   0,   0,   0,  31,   0, 
@@ -229,7 +229,7 @@ const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
       0,   2,   5,   0,   4, 128, 
       4,   0,  15, 144,   5,   0, 
       0,   3,   0,   0,   1, 128, 
-      3,   0,   0, 144, 243,   0, 
+      3,   0,   0, 144, 246,   0, 
       0, 160,  46,   0,   0,   2, 
       0,   0,   1, 176,   0,   0, 
       0, 128,   5,   0,   0,   4, 
@@ -278,7 +278,7 @@ const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
       5,   0, 228, 161,   1,   0, 
     228, 128,  13,   0,   0,   3, 
       3,   0,   7, 128,   2,   0, 
-    228, 128, 243,   0,  85, 160, 
+    228, 128, 246,   0,  85, 160, 
       5,   0,   0,   3,   2,   0, 
       7, 128,   2,   0, 228, 128, 
       3,   0, 228, 128,   5,   0, 
@@ -335,7 +335,7 @@ const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
     228, 128,   1,   0, 228, 128, 
      11,   0,   0,   3,   1,   0, 
       7, 128,   2,   0, 228, 128, 
-    243,   0,  85, 160,   5,   0, 
+    246,   0,  85, 160,   5,   0, 
       0,   3,   1,   0,   7, 128, 
       3,   0, 228, 128,   1,   0, 
     228, 128,  15,   0,   0,   2, 
@@ -372,10 +372,10 @@ const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
       0,   0, 228, 128,  14,   0, 
     228, 160,  11,   0,   0,   3, 
       1,   0,   1, 128,   1,   0, 
-      0, 128, 243,   0,  85, 160, 
+      0, 128, 246,   0,  85, 160, 
      10,   0,   0,   3,   1,   0, 
       8, 224,   1,   0,   0, 128, 
-    243,   0, 170, 160,   9,   0, 
+    246,   0, 170, 160,   9,   0, 
       0,   3,   1,   0,   1, 128, 
       0,   0, 228, 128,  22,   0, 
     228, 160,   9,   0,   0,   3, 
@@ -385,7 +385,7 @@ const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
       1, 128,   0,   0, 228, 128, 
      25,   0, 228, 160,   4,   0, 
       0,   4,   0,   0,   3, 192, 
-      0,   0,   0, 128, 242,   0, 
+      0,   0,   0, 128, 245,   0, 
     228, 160,   1,   0, 228, 128, 
       1,   0,   0,   2,   0,   0, 
       8, 192,   0,   0,   0, 128, 
@@ -398,7 +398,7 @@ const BYTE SkinnedEffect_VSSkinnedVertexLightingOneBone[] =
      64,   0,   1,   0,  24,   2, 
       0,   0,  89,   8,   0,   4, 
      70, 142,  32,   0,   0,   0, 
-      0,   0, 242,   0,   0,   0, 
+      0,   0, 245,   0,   0,   0, 
      95,   0,   0,   3, 242,  16, 
      16,   0,   0,   0,   0,   0, 
      95,   0,   0,   3, 114,  16, 

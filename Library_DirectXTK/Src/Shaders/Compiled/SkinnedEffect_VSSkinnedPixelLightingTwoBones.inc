@@ -29,26 +29,26 @@
 //
 // Target Reg Buffer  Start Reg # of Regs        Data Conversion
 // ---------- ------- --------- --------- ----------------------
-// c0         cb0             0       242  ( FLT, FLT, FLT, FLT)
+// c0         cb0             0       245  ( FLT, FLT, FLT, FLT)
 //
 //
 // Runtime generated constant mappings:
 //
 // Target Reg                               Constant Description
 // ---------- --------------------------------------------------
-// c242                            Vertex Shader position offset
+// c245                            Vertex Shader position offset
 //
 //
 // Level9 shader bytecode:
 //
     vs_2_0
-    def c243, 3, 0, 1, 0
+    def c246, 3, 0, 1, 0
     dcl_texcoord v0
     dcl_texcoord1 v1
     dcl_texcoord2 v2
     dcl_texcoord3 v3
     dcl_texcoord4 v4
-    mul r0.xy, v3, c243.x
+    mul r0.xy, v3, c246.x
     mova a0.xy, r0.yxzw
     mul r0, v4.y, c26[a0.x]
     mad r0, c26[a0.y], v4.x, r0
@@ -74,20 +74,20 @@
     rsq r0.x, r0.x
     mul oT2.xyz, r0.x, r2
     dp4 r0.x, r1, c14
-    max r0.x, r0.x, c243.y
-    min oT1.w, r0.x, c243.z
+    max r0.x, r0.x, c246.y
+    min oT1.w, r0.x, c246.z
     dp4 r0.x, r1, c22
     dp4 r0.y, r1, c23
     dp4 r0.z, r1, c25
-    mad oPos.xy, r0.z, c242, r0
+    mad oPos.xy, r0.z, c245, r0
     mov oPos.w, r0.z
     mov oT0.xy, v2
-    mov r0.yz, c243
+    mov r0.yz, c246
     mad oT3, c0.w, r0.yyyz, r0.zzzy
 
 // approximately 36 instruction slots used
 vs_4_0
-dcl_constantbuffer cb0[242], dynamicIndexed
+dcl_constantbuffer cb0[245], dynamicIndexed
 dcl_input v0.xyzw
 dcl_input v1.xyz
 dcl_input v2.xy
@@ -136,10 +136,10 @@ ret
 
 const BYTE SkinnedEffect_VSSkinnedPixelLightingTwoBones[] =
 {
-     68,  88,  66,  67, 163, 194, 
-    247, 169,  98, 146, 170, 161, 
-    181, 157, 159, 161,  31, 127, 
-      1, 147,   1,   0,   0,   0, 
+     68,  88,  66,  67,  29, 229, 
+    235, 246,   2, 243, 248, 215, 
+    237,   2, 195, 174, 189,  67, 
+    105, 236,   1,   0,   0,   0, 
      16,   9,   0,   0,   4,   0, 
       0,   0,  48,   0,   0,   0, 
      28,   3,   0,   0, 172,   7, 
@@ -152,10 +152,10 @@ const BYTE SkinnedEffect_VSSkinnedPixelLightingTwoBones[] =
      48,   0,   0,   0,  48,   0, 
       0,   0,  36,   0,   1,   0, 
      48,   0,   0,   0,   0,   0, 
-    242,   0,   0,   0,   0,   0, 
-      0,   0,   0,   0, 242,   0, 
+    245,   0,   0,   0,   0,   0, 
+      0,   0,   0,   0, 245,   0, 
       0,   2, 254, 255,  81,   0, 
-      0,   5, 243,   0,  15, 160, 
+      0,   5, 246,   0,  15, 160, 
       0,   0,  64,  64,   0,   0, 
       0,   0,   0,   0, 128,  63, 
       0,   0,   0,   0,  31,   0, 
@@ -170,7 +170,7 @@ const BYTE SkinnedEffect_VSSkinnedPixelLightingTwoBones[] =
       0,   2,   5,   0,   4, 128, 
       4,   0,  15, 144,   5,   0, 
       0,   3,   0,   0,   3, 128, 
-      3,   0, 228, 144, 243,   0, 
+      3,   0, 228, 144, 246,   0, 
       0, 160,  46,   0,   0,   2, 
       0,   0,   3, 176,   0,   0, 
     225, 128,   5,   0,   0,   4, 
@@ -244,9 +244,9 @@ const BYTE SkinnedEffect_VSSkinnedPixelLightingTwoBones[] =
     228, 128,  14,   0, 228, 160, 
      11,   0,   0,   3,   0,   0, 
       1, 128,   0,   0,   0, 128, 
-    243,   0,  85, 160,  10,   0, 
+    246,   0,  85, 160,  10,   0, 
       0,   3,   1,   0,   8, 224, 
-      0,   0,   0, 128, 243,   0, 
+      0,   0,   0, 128, 246,   0, 
     170, 160,   9,   0,   0,   3, 
       0,   0,   1, 128,   1,   0, 
     228, 128,  22,   0, 228, 160, 
@@ -257,14 +257,14 @@ const BYTE SkinnedEffect_VSSkinnedPixelLightingTwoBones[] =
       1,   0, 228, 128,  25,   0, 
     228, 160,   4,   0,   0,   4, 
       0,   0,   3, 192,   0,   0, 
-    170, 128, 242,   0, 228, 160, 
+    170, 128, 245,   0, 228, 160, 
       0,   0, 228, 128,   1,   0, 
       0,   2,   0,   0,   8, 192, 
       0,   0, 170, 128,   1,   0, 
       0,   2,   0,   0,   3, 224, 
       2,   0, 228, 144,   1,   0, 
       0,   2,   0,   0,   6, 128, 
-    243,   0, 228, 160,   4,   0, 
+    246,   0, 228, 160,   4,   0, 
       0,   4,   3,   0,  15, 224, 
       0,   0, 255, 160,   0,   0, 
     149, 128,   0,   0, 106, 128, 
@@ -273,7 +273,7 @@ const BYTE SkinnedEffect_VSSkinnedPixelLightingTwoBones[] =
      64,   0,   1,   0,  34,   1, 
       0,   0,  89,   8,   0,   4, 
      70, 142,  32,   0,   0,   0, 
-      0,   0, 242,   0,   0,   0, 
+      0,   0, 245,   0,   0,   0, 
      95,   0,   0,   3, 242,  16, 
      16,   0,   0,   0,   0,   0, 
      95,   0,   0,   3, 114,  16, 
