@@ -38,12 +38,12 @@ struct VertexInput
 	float4 position : SV_Position;
 	float3 normal : NORMAL;
 	float2 tex : TEXCOORD0;
-	float4 exUV1 : TEXCOORD1;
+	/*float4 exUV1 : TEXCOORD1;
 	float4 exUV2 : TEXCOORD2;
 	float4 exUV3 : TEXCOORD3;
-	float4 exUV4 : TEXCOORD4;
-	float4 boneIndices : BONES0;
-	float4 boneWeights : BONES1;
+	float4 exUV4 : TEXCOORD4;*/
+	uint4 boneIndices : BONES0;
+	uint4 boneWeights : BONES1;
 	uint material : MATERIAL0;
 };
 
@@ -54,10 +54,10 @@ struct VertexOutput
 	float3 normal : NORMAL;
 	float3 viewDirection : TEXCOORD1;
 	float depth : TEXCOORD2;
-	float4 exUV1 : TEXCOORD3;
+	/*float4 exUV1 : TEXCOORD3;
 	float4 exUV2 : TEXCOORD4;
 	float4 exUV3 : TEXCOORD5;
-	float4 exUV4 : TEXCOORD6;
+	float4 exUV4 : TEXCOORD6;*/
 	uint material : MATERIAL0;
 };
 

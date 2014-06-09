@@ -68,7 +68,7 @@ bool Light::InternalInitializeBuffers(ID3D11Device *device, HWND wnd)
 	return true;
 }
 
-bool Light::InternalRender(ID3D11DeviceContext *context, UINT indexCount, UINT offset)
+void Light::InternalPrepareRender(ID3D11DeviceContext *context)
 {
 	context->IASetInputLayout(m_layout);
 
@@ -76,7 +76,10 @@ bool Light::InternalRender(ID3D11DeviceContext *context, UINT indexCount, UINT o
 	context->PSSetShader(m_pixelShader, NULL, 0);
 
 	context->PSSetConstantBuffers(1, 1, &m_materialBuffer);
+}
 
+bool Light::InternalRender(ID3D11DeviceContext *context, UINT indexCount, UINT offset)
+{
 	context->DrawIndexed(indexCount, offset, offset);
 
 	return true;

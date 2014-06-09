@@ -215,7 +215,7 @@ float4 DofPS(PixelInputType input) : SV_TARGET {
 //   The bloom needs to blur the screen first (we blur it twice, once horizontally, another vertically), then applies the effect
 technique11 Bloom
 {
-	pass horizontalgaussianblur
+	/*pass horizontalgaussianblur
 	{
 		VertexShader = compile vs_5_0 mainvs();
 		PixelShader = compile ps_5_0 horblurps();
@@ -227,22 +227,22 @@ technique11 Bloom
 	pass bloom
 	{
 		PixelShader = compile ps_5_0 bloomps();
-	}
+	}*/
 	pass dof
 	{
-		//VertexShader = compile vs_5_0 mainvs();
+		VertexShader = compile vs_5_0 mainvs();
 		PixelShader = compile ps_5_0 GetDepth();
 	}
 	pass p1
 	{
 		PixelShader = compile ps_5_0 DofPS();
 	}
-	pass p2
+	/*pass p2
 	{
 		PixelShader = compile ps_5_0 horblurps();
 	}
 	pass p3
 	{
 		PixelShader = compile ps_5_0 verblurps();
-	}
+	}*/
 }

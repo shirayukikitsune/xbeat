@@ -42,9 +42,9 @@ public:
 		DirectX::XMFLOAT3 position;
 		DirectX::XMFLOAT3 normal;
 		DirectX::XMFLOAT2 uv;
-		DirectX::XMFLOAT4 uvEx[4];
-		DirectX::XMFLOAT4 boneIndices;
-		DirectX::XMFLOAT4 boneWeights;
+		//DirectX::XMVECTOR uvEx[4];
+		DirectX::XMUINT4 boneIndices;
+		DirectX::XMUINT4 boneWeights;
 		UINT materialIndex;
 	};
 

@@ -16,8 +16,8 @@ class Light
 {
 public:
 	struct VertexInput {
-		DirectX::XMVECTOR position;
-		DirectX::XMVECTOR normal;
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT3 normal;
 		DirectX::XMFLOAT2 uv;
 	};
 
@@ -36,6 +36,7 @@ private:
 
 protected:
 	virtual bool InternalInitializeBuffers(ID3D11Device *device, HWND hwnd);
+	virtual void InternalPrepareRender(ID3D11DeviceContext *context);
 	virtual bool InternalRender(ID3D11DeviceContext *context, UINT indexCount, UINT offset);
 	virtual void InternalShutdown();
 };

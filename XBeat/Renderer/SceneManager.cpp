@@ -182,6 +182,17 @@ bool SceneManager::LoadScene() {
 	//camera->SetPosition(pos.x(), pos.y(), pos.z());
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
+	lightShader->SetLightCount(1);
+	lightShader->SetLights(light->GetAmbientColor(), light->GetDiffuseColor(), light->GetSpecularColor(), light->GetDirection(), DirectX::XMVectorZero(), 0);
+	Shaders::Light::MaterialBufferType material;
+	material.ambientColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	material.diffuseColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	material.specularColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	lightShader->UpdateMaterialBuffer(material, d3d->GetDeviceContext());
+
+	m_pmxShader->SetLightCount(1);
+	m_pmxShader->SetLights(light->GetAmbientColor(), light->GetDiffuseColor(), light->GetSpecularColor(), light->GetDirection(), DirectX::XMVectorZero(), 0);
+
 	return true;
 }
 

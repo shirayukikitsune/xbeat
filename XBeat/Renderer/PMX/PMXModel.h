@@ -15,6 +15,7 @@
 #include "PMXLoader.h"
 #include "PMXSoftBody.h"
 #include "PMXRigidBody.h"
+#include "PMXShader.h"
 
 namespace Renderer {
 namespace PMX {
@@ -93,7 +94,7 @@ private:
 
 	std::vector<std::shared_ptr<RigidBody>> m_rigidBodies;
 
-	std::vector<DirectX::VertexPositionNormalTexture> m_vertices;
+	std::vector<PMXShader::VertexType> m_vertices;
 
 	bool updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *context);
 	bool m_dirtyBuffer;

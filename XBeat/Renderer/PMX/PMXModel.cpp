@@ -179,6 +179,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	uint32_t lastIndex = 0;
 
 	std::vector<UINT> idx;
+	DirectX::XMUINT4 boneWeights, boneIndices;
 
 	for (uint32_t k = 0; k < this->rendermaterials.size(); k++) {
 		rendermaterials[k].startIndex = lastIndex;
@@ -195,7 +196,39 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 			v.get()[i].UV3 = DirectX::XMFLOAT4(vertex->uvEx[2].x(), vertex->uvEx[2].y(), vertex->uvEx[2].z(), vertex->uvEx[2].w());
 			v.get()[i].UV4 = DirectX::XMFLOAT4(vertex->uvEx[3].x(), vertex->uvEx[3].y(), vertex->uvEx[3].z(), vertex->uvEx[3].w());*/
 #else
-			m_vertices.emplace_back(DirectX::VertexPositionNormalTexture(vertex->position.get128(), vertex->normal.get128(), btVector4(vertex->uv[0], vertex->uv[1], 0.0f, 0.0f).get128()));
+			switch (vertex->weightMethod) {
+			case VertexWeightMethod::BDEF1:
+				boneWeights = DirectX::XMUINT4(vertex->boneInfo.BDEF.weights[0], 0, 0, 0);
+				boneIndices = DirectX::XMUINT4(vertex->boneInfo.BDEF.boneIndexes[0], 0, 0, 0);
+				break;
+			case VertexWeightMethod::BDEF2:
+				boneWeights = DirectX::XMUINT4(vertex->boneInfo.BDEF.weights[0], vertex->boneInfo.BDEF.weights[1], 0, 0);
+				boneIndices = DirectX::XMUINT4(vertex->boneInfo.BDEF.boneIndexes[0], vertex->boneInfo.BDEF.boneIndexes[1], 0, 0);
+				break;
+			case VertexWeightMethod::QDEF:
+			case VertexWeightMethod::BDEF4:
+				boneWeights = DirectX::XMUINT4(vertex->boneInfo.BDEF.weights[0], vertex->boneInfo.BDEF.weights[1], vertex->boneInfo.BDEF.weights[2], vertex->boneInfo.BDEF.weights[3]);
+				boneIndices = DirectX::XMUINT4(vertex->boneInfo.BDEF.boneIndexes[0], vertex->boneInfo.BDEF.boneIndexes[1], vertex->boneInfo.BDEF.boneIndexes[2], vertex->boneInfo.BDEF.boneIndexes[3]);
+				break;
+			case VertexWeightMethod::SDEF:
+				boneWeights = DirectX::XMUINT4(vertex->boneInfo.SDEF.weightBias, 1.0f - vertex->boneInfo.SDEF.weightBias, 0, 0);
+				boneIndices = DirectX::XMUINT4(vertex->boneInfo.SDEF.boneIndexes[0], vertex->boneInfo.SDEF.boneIndexes[1], 0, 0);
+				break;
+			}
+			m_vertices.emplace_back(PMXShader::VertexType{
+				DirectX::XMFLOAT3(vertex->position.x(), vertex->position.y(), vertex->position.z()),
+				DirectX::XMFLOAT3(vertex->normal.x(), vertex->normal.y(), vertex->normal.z()),
+				DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]),
+				/*{
+					vertex->uvEx[0].get128(),
+					vertex->uvEx[1].get128(),
+					vertex->uvEx[2].get128(),
+					vertex->uvEx[3].get128()
+				},*/
+				boneIndices,
+				boneWeights,
+				k,
+			});
 #endif
 
 			idx.emplace_back(i);
@@ -215,7 +248,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	}
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	vertexBufferDesc.ByteWidth = (UINT)(sizeof(DirectX::VertexPositionNormalTexture) * m_vertices.size());
+	vertexBufferDesc.ByteWidth = (UINT)(sizeof(PMXShader::VertexType) * m_vertices.size());
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	vertexBufferDesc.MiscFlags = 0;
@@ -729,7 +762,7 @@ void PMX::Model::updateVertexBuffer()
 			vertex = this->vertices[this->verticesIndex[i]];
 			m_vertices[i].position = vertex->dxPos;
 			m_vertices[i].normal = vertex->dxNormal;
-			m_vertices[i].textureCoordinate = vertex->dxUV;
+			m_vertices[i].uv = vertex->dxUV;
 		}
 	}
 

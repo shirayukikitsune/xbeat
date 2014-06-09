@@ -96,12 +96,12 @@ bool Generic::Update(float time, ID3D11DeviceContext *context)
 
 void Generic::PrepareRender(ID3D11DeviceContext *context)
 {
+	InternalPrepareRender(context);
+
 	context->VSSetConstantBuffers(0, 1, &m_dxcbuffer);
 
 	context->PSSetConstantBuffers(0, 1, &m_dxcbuffer);
 	context->PSSetSamplers(0, 1, &m_sampleState);
-
-	InternalPrepareRender(context);
 }
 
 bool Generic::Render(ID3D11DeviceContext *context, UINT indexCount, UINT offset)

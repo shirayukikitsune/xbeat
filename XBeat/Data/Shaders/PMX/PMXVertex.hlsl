@@ -24,10 +24,10 @@ VertexOutput main(VertexInput input)
 
 	// Store the texture coordinates for the pixel shader.
 	output.tex = input.tex;
-	output.exUV1 = input.exUV1;
+	/*output.exUV1 = input.exUV1;
 	output.exUV2 = input.exUV2;
 	output.exUV3 = input.exUV3;
-	output.exUV4 = input.exUV4;
+	output.exUV4 = input.exUV4;*/
 	output.material = input.material;
 
 	// Calculate the normal vector against the world matrix only.

@@ -37,27 +37,27 @@ void XM_CALLCONV Light::SetSpecularPower(float val)
 	specularPower = val;
 }
 
-DirectX::XMFLOAT4 Light::GetAmbientColor()
+DirectX::XMVECTOR XM_CALLCONV Light::GetAmbientColor()
 {
-	return ambientColor;
+	return DirectX::XMLoadFloat4(&ambientColor);
 }
 
-DirectX::XMFLOAT4 Light::GetDiffuseColor()
+DirectX::XMVECTOR XM_CALLCONV Light::GetDiffuseColor()
 {
-	return diffuseColor;
+	return DirectX::XMLoadFloat4(&diffuseColor);
 }
 
-DirectX::XMFLOAT3 Light::GetSpecularColor()
+DirectX::XMVECTOR XM_CALLCONV Light::GetSpecularColor()
 {
-	return specularColor;
+	return DirectX::XMVectorSet(specularColor.x, specularColor.y, specularColor.z, specularPower);
 }
 
-DirectX::XMFLOAT3 Light::GetDirection()
+DirectX::XMVECTOR XM_CALLCONV Light::GetDirection()
 {
-	return direction;
+	return DirectX::XMLoadFloat3(&direction);
 }
 
-float Light::GetSpecularPower()
+float XM_CALLCONV Light::GetSpecularPower()
 {
 	return specularPower;
 }

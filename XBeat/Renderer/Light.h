@@ -16,10 +16,10 @@ namespace Renderer {
 		void XM_CALLCONV SetDirection(float x, float y, float z);
 		void XM_CALLCONV SetSpecularPower(float p);
 
-		DirectX::XMFLOAT4 XM_CALLCONV GetAmbientColor();
-		DirectX::XMFLOAT4 XM_CALLCONV GetDiffuseColor();
-		DirectX::XMFLOAT3 XM_CALLCONV GetSpecularColor();
-		DirectX::XMFLOAT3 XM_CALLCONV GetDirection();
+		DirectX::XMVECTOR XM_CALLCONV GetAmbientColor();
+		DirectX::XMVECTOR XM_CALLCONV GetDiffuseColor();
+		DirectX::XMVECTOR XM_CALLCONV GetSpecularColor();
+		DirectX::XMVECTOR XM_CALLCONV GetDirection();
 		float XM_CALLCONV GetSpecularPower();
 
 	private:
