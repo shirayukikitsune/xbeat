@@ -21,8 +21,6 @@ public:
 	bool Initialize(ID3D11Device *device, HWND wnd);
 	void Shutdown();
 	bool Render(ID3D11DeviceContext *context, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture);
-
-	static void OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file);
 private:
 	bool InitializeShader(ID3D11Device *device, HWND wnd, const std::wstring &vsFile, const std::wstring &psFile);
 	void ShutdownShader();

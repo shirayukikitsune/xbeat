@@ -2,6 +2,7 @@
 #include "PMX/PMXModel.h"
 #include "PMX/PMXBone.h"
 #include "OBJ/OBJModel.h"
+#include "D3DRenderer.h"
 
 #include <iomanip>
 #include <sstream>
@@ -43,7 +44,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	if (lightShader == nullptr)
 		return false;
 
-	if (!lightShader->Initialize(d3d->GetDevice(), wnd)) {
+	if (!lightShader->InitializeBuffers(d3d->GetDevice(), wnd)) {
 		MessageBox(wnd, L"Could not initialize the shader object", L"Error", MB_OK);
 		return false;
 	}
@@ -54,6 +55,15 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 
 	if (!textureShader->Initialize(d3d->GetDevice(), wnd)) {
 		MessageBox(wnd, L"Could not initialize the texture shader object", L"Error", MB_OK);
+		return false;
+	}
+
+	m_pmxShader.reset(new PMX::PMXShader);
+	if (m_pmxShader == nullptr)
+		return false;
+
+	if (!m_pmxShader->InitializeBuffers(d3d->GetDevice(), wnd)) {
+		MessageBox(wnd, L"Could not initialize the PMX effects object", L"Error", MB_OK);
 		return false;
 	}
 
@@ -70,10 +80,6 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	if (light == nullptr)
 		return false;
 
-	//light->SetAmbientColor(0.9f, 0.5f, 0.0f, 1.0f);
-	light->SetAmbientColor(1.0f, 1.0f, 1.0f, 1.0f);
-	light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
-	light->SetSpecularColor(1.0f, 1.0f, 1.0f, 1.0f);
 	light->SetDirection(0.0f, 0.0f, 1.0f);
 	light->SetSpecularPower(32.0f);
 
@@ -113,6 +119,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		m_models[0]->ApplyMorph(L"肩服非表示", 1.0f);
 		m_models[0]->ApplyMorph(L"眼帯off", 1.0f);
 	});
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_A), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { m_models[0]->GetBoneByName(L"全ての親")->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
@@ -144,7 +151,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 }
 
 bool SceneManager::LoadScene() {
-	camera.reset(new CameraClass);
+	camera.reset(new Camera);
 	if (camera == nullptr)
 		return false;
 
@@ -153,6 +160,7 @@ bool SceneManager::LoadScene() {
 		MessageBox(wnd, L"Failed to initialize the stage object", L"Error", MB_OK);
 		return false;
 	}
+	stage->SetShader(lightShader);
 
 	m_models.emplace_back(new PMX::Model);
 	if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
@@ -168,6 +176,7 @@ bool SceneManager::LoadScene() {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
 		return false;
 	}
+	m_models.back()->SetShader(m_pmxShader);
 
 	//auto pos = model->GetBoneByName(L"頭")->GetPosition();
 	//camera->SetPosition(pos.x(), pos.y(), pos.z());
@@ -302,7 +311,7 @@ bool SceneManager::Frame(float frameTime)
 	}*/
 
 	camera->SetPosition(campos.x, campos.y, campos.z);
-	camera->Render();
+	camera->Update(frameTime);
 
 	if (!Render(frameTime))
 		return false;
@@ -312,13 +321,13 @@ bool SceneManager::Frame(float frameTime)
 
 bool SceneManager::Render(float frameTime)
 {
-	if (!RenderToTexture())
+	if (!RenderToTexture(frameTime))
 		return false;
 
 	/*if (!RenderScene())
 		return false;*/
 
-	if (!RenderEffects())
+	if (!RenderEffects(frameTime))
 		return false;
 
 	if (!Render2DTextureScene(frameTime))
@@ -327,13 +336,13 @@ bool SceneManager::Render(float frameTime)
 	return true;
 }
 
-bool SceneManager::RenderToTexture()
+bool SceneManager::RenderToTexture(float frameTime)
 {
 	renderTexture->SetRenderTarget(d3d->GetDeviceContext(), d3d->GetDepthStencilView());
 
 	renderTexture->ClearRenderTarget(d3d->GetDeviceContext(), d3d->GetDepthStencilView(), 0.0f, 0.0f, 0.0f, 1.0f);
 
-	if (!RenderScene())
+	if (!RenderScene(frameTime))
 		return false;
 
 	d3d->SetBackBufferRenderTarget();
@@ -341,7 +350,7 @@ bool SceneManager::RenderToTexture()
 	return true;
 }
 
-bool SceneManager::RenderScene()
+bool SceneManager::RenderScene(float frameTime)
 {
 	DirectX::XMMATRIX view, projection, world;
 
@@ -354,18 +363,32 @@ bool SceneManager::RenderScene()
 	if (!sky->Render(d3d, world, view, projection, camera, light))
 		return false;
 
-	if (!stage->Render(d3d, lightShader, view, projection, world, light, camera, frustum))
+	lightShader->SetEyePosition(camera->GetPosition());
+	lightShader->SetMatrices(world, view, projection);
+	if (!lightShader->Update(frameTime, d3d->GetDeviceContext()))
 		return false;
 
+	m_pmxShader->SetEyePosition(camera->GetPosition());
+	m_pmxShader->SetMatrices(world, view, projection);
+	if (!m_pmxShader->Update(frameTime, d3d->GetDeviceContext()))
+		return false;
+
+	if (!stage->Update(frameTime))
+		return false;
+
+	stage->Render(d3d->GetDeviceContext(), frustum);
+
 	for (auto model : m_models) {
-		if (!model->Render(d3d, lightShader, view, projection, world, light, camera, frustum))
+		if (!model->Update(frameTime))
 			return false;
+
+		model->Render(d3d->GetDeviceContext(), frustum);
 	}
 
 	return true;
 }
 
-bool SceneManager::RenderEffects()
+bool SceneManager::RenderEffects(float frameTime)
 {
 	DirectX::XMMATRIX view, ortho, world;
 

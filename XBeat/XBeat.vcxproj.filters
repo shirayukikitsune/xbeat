@@ -45,17 +45,8 @@
     <ClCompile Include="Input\InputManager.cpp">
       <Filter>Source Files\Input</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer\CameraClass.cpp">
-      <Filter>Source Files\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="Renderer\Texture.cpp">
       <Filter>Source Files\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\Shaders\ColorShaderClass.cpp">
-      <Filter>Source Files\Renderer\Shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\Shaders\TextureShader.cpp">
-      <Filter>Source Files\Renderer\Shaders</Filter>
     </ClCompile>
     <ClCompile Include="Renderer\Shaders\LightShader.cpp">
       <Filter>Source Files</Filter>
@@ -114,6 +105,15 @@
     <ClCompile Include="Renderer\SceneManager.cpp">
       <Filter>Source Files\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Renderer\Camera.cpp">
+      <Filter>Source Files\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\Shaders\GenericShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\Shaders\TextureShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SystemClass.h">
@@ -122,17 +122,8 @@
     <ClInclude Include="Renderer\D3DRenderer.h">
       <Filter>Header Files\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\CameraClass.h">
-      <Filter>Header Files\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="Renderer\Texture.h">
       <Filter>Header Files\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\Shaders\ColorShaderClass.h">
-      <Filter>Header Files\Renderer\Shaders</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\Shaders\Texture.h">
-      <Filter>Header Files\Renderer\Shaders</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\Shaders\LightShader.h">
       <Filter>Header Files</Filter>
@@ -200,34 +191,36 @@
     <ClInclude Include="Renderer\SceneManager.h">
       <Filter>Header Files\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer\BaseShader.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Renderer\Camera.h">
+      <Filter>Header Files\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Renderer\Entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Renderer\Shaders\GenericShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\Shaders\Texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Data\Shaders\ColorShader.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
-    <FxCompile Include="Data\Shaders\DirectionalLight.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
     <FxCompile Include="Data\Shaders\LightPixel.hlsl" />
     <FxCompile Include="Data\Shaders\LightVertex.hlsl" />
-    <FxCompile Include="Data\Shaders\zxMMD.fx" />
     <FxCompile Include="Data\Shaders\SkyboxPixel.hlsl" />
     <FxCompile Include="Data\Shaders\TexturePixel.hlsl" />
     <FxCompile Include="Data\Shaders\TextureVertex.hlsl" />
     <FxCompile Include="Data\Shaders\SkyboxVertex.hlsl" />
     <FxCompile Include="Data\Shaders\PostProcess.fx" />
+    <FxCompile Include="Data\Shaders\PMX\PMXVertex.hlsl" />
+    <FxCompile Include="Data\Shaders\PMX\PMXPixel.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\Models\cube.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Data\Shaders\PMX\Classes.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\Textures\Sky\miramar.dds" />

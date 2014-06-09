@@ -10,9 +10,9 @@ public:
 	OrthoWindowClass();
 	~OrthoWindowClass();
 
-	bool Initialize(DXType<ID3D11Device> device, int width, int height);
+	bool Initialize(ID3D11Device *device, int width, int height);
 	void Shutdown();
-	void Render(DXType<ID3D11DeviceContext> context);
+	void Render(ID3D11DeviceContext *context);
 
 	int GetIndexCount();
 
@@ -23,12 +23,12 @@ private:
 		DirectX::XMFLOAT2 texture;
 	};
 
-	bool InitializeBuffers(DXType<ID3D11Device> device, int width, int height);
+	bool InitializeBuffers(ID3D11Device *device, int width, int height);
 	void ShutdownBuffers();
-	void RenderBuffers(DXType<ID3D11DeviceContext> context);
+	void RenderBuffers(ID3D11DeviceContext *context);
 
-	DXType<ID3D11Buffer> m_vertexBuffer;
-	DXType<ID3D11Buffer> m_indexBuffer;
+	ID3D11Buffer *m_vertexBuffer;
+	ID3D11Buffer *m_indexBuffer;
 	int m_vertexCount;
 	int m_indexCount;
 };

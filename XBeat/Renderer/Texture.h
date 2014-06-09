@@ -15,10 +15,10 @@ public:
 	bool Initialize(ID3D11Device *device, const std::wstring &file);
 	void Shutdown();
 
-	DXType<ID3D11ShaderResourceView> GetTexture();
+	ID3D11ShaderResourceView *GetTexture();
 
 private:
-	DXType<ID3D11ShaderResourceView> texture;
+	ID3D11ShaderResourceView *texture;
 };
 
 }

@@ -1,9 +1,8 @@
 #include "SkyBox.h"
 #include "Texture.h"
+#include "Shaders/GenericShader.h"
 
 using namespace Renderer;
-
-extern char *getFileContents(const std::wstring &file, SIZE_T &bufSize);
 
 SkyBox::SkyBox(void)
 {
@@ -20,7 +19,7 @@ bool SkyBox::Initialize(std::shared_ptr<D3DRenderer> d3d, const std::wstring &te
 	if (!InitializeBuffers(d3d->GetDevice(), light, wnd, L"./Data/Shaders/SkyboxVertex.cso", L"./Data/Shaders/SkyboxPixel.cso"))
 		return false;
 
-	if (!LoadModel(d3d, 20, 20))
+	if (!LoadModel(d3d, 10, 10))
 		return false;
 
 	if (!LoadTexture(d3d->GetDevice(), texturefile))
@@ -36,7 +35,7 @@ void SkyBox::Shutdown()
 	ShutdownBuffers();
 }
 
-bool SkyBox::Render(std::shared_ptr<D3DRenderer> d3d, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<CameraClass> camera, std::shared_ptr<Light> light)
+bool SkyBox::Render(std::shared_ptr<D3DRenderer> d3d, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<Camera> camera, std::shared_ptr<Light> light)
 {
 	ID3D11DeviceContext *context = d3d->GetDeviceContext();
 	DirectX::XMMATRIX sphereWorld = DirectX::XMMatrixIdentity(), scale = DirectX::XMMatrixScaling(0.3f, 0.3f, 0.3f), translation;
@@ -104,14 +103,14 @@ bool SkyBox::InitializeBuffers(ID3D11Device* device, std::shared_ptr<Light> ligh
 	D3D11_SAMPLER_DESC samplerDesc;
 	SIZE_T vsbufsize, psbufsize;
 
-	char *vsbuffer = getFileContents(vsFile, vsbufsize);
+	char *vsbuffer = Shaders::Generic::getFileContents(vsFile, vsbufsize);
 	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
 	if (FAILED(result)) {
 		delete[] vsbuffer;
 		return false;
 	}
 
-	char *psbuffer = getFileContents(psFile, psbufsize);
+	char *psbuffer = Shaders::Generic::getFileContents(psFile, psbufsize);
 	result = device->CreatePixelShader(psbuffer, psbufsize, NULL, &pixelShader);
 	if (FAILED(result)) {
 		delete[] vsbuffer;
@@ -156,10 +155,11 @@ bool SkyBox::InitializeBuffers(ID3D11Device* device, std::shared_ptr<Light> ligh
 
 void SkyBox::ShutdownBuffers()
 {
-	sampleState.reset();
-	matrixBuffer.reset();
-	vertexShader.reset();
-	pixelShader.reset();
+	DX_DELETEIF(sampleState);
+	DX_DELETEIF(matrixBuffer);
+	DX_DELETEIF(m_layout);
+	DX_DELETEIF(vertexShader);
+	DX_DELETEIF(pixelShader);
 }
 
 bool SkyBox::LoadTexture(ID3D11Device *device, const std::wstring &file)
@@ -308,6 +308,6 @@ bool SkyBox::LoadModel(std::shared_ptr<D3DRenderer> d3d, int latLines, int longL
 
 void SkyBox::ReleaseModel()
 {
-	sphereIndexBuffer.reset();
-	sphereVertBuffer.reset();
+	DX_DELETEIF(sphereIndexBuffer);
+	DX_DELETEIF(sphereVertBuffer);
 }

@@ -12,13 +12,30 @@ Texture2D toonTexture : register(t2);
 
 SamplerState SampleType;
 
-cbuffer LightBuffer : register (cb0)
+struct MatrixBuffer
 {
-	float4 ambientColor;
-	float4 diffuseColor;
-	float3 lightDirection;
-	float specularPower;
-	float4 specularColor;
+	matrix world;
+	matrix view;
+	matrix projection;
+	matrix wvp;
+};
+struct LightBuffer
+{
+	float4 ambient;
+	float4 diffuse;
+	float4 specular;
+	float4 direction;
+	float4 position;
+};
+
+cbuffer data : register (cb0)
+{
+	MatrixBuffer matrices;
+	LightBuffer lights[4];
+
+	float3 eyePosition;
+	float ___padding;
+	uint1 lightCount;
 };
 
 struct MaterialBufferType
@@ -26,17 +43,6 @@ struct MaterialBufferType
 	float4 ambient;
 	float4 diffuse;
 	float4 specular;
-	float4 mulBaseCoefficient;
-	float4 mulSphereCoefficient;
-	float4 mulToonCoefficient;
-	float4 addBaseCoefficient;
-	float4 addSphereCoefficient;
-	float4 addToonCoefficient;
-
-	unsigned int flags;
-	float weight;
-	int index;
-	int padding;
 };
 
 cbuffer MaterialBuffer : register (cb1)
@@ -67,7 +73,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	float lightIntensity;
 	float4 color;
 	float3 reflection;
-	float4 specular;
+	float3 specular;
 	float4 sphereColor;
 	float2 sphereUV;
 	float4 lightColor;
@@ -78,79 +84,37 @@ float4 main(PixelInputType input) : SV_TARGET
 	//if (material.mulBaseCoefficient.w == 0.0f) discard;
 
 	// Sample the texture pixel at this location.
-	textureColor = baseTexture.Sample(SampleType, input.tex);
-	color = ambientColor;
+	textureColor = baseTexture.Sample(SampleType, input.tex) * material.ambient;
 
-	if (material.index != -1) {
-		tmp = textureColor * material.mulBaseCoefficient + material.addBaseCoefficient;
-		textureColor = lerp(textureColor, tmp, material.weight);
-		color *= material.ambient;
-	}
+	for (uint i = 0; i < lightCount; i++) {
+		color = lights[i].ambient;
 
-	specular = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	
-	// Invert the light direction for calculations.
-	lightDir = -lightDirection;
+		specular = float3(0.0f, 0.0f, 0.0f);
 
-	// Calculate the amount of light on this pixel.
-	lightIntensity = saturate(dot(lightDir, input.normal));
-	
-	if (lightIntensity > 0.0f) {
-		float4 append = diffuseColor * lightIntensity;
-		if (material.index != -1)
-			append *= material.diffuse;
-		lightColor = saturate(color + append);
+		// Invert the light direction for calculations.
+		lightDir = -lights[i].direction.xyz;
 
-		reflection = reflect(lightDir, input.normal);
+		// Calculate the amount of light on this pixel.
+		lightIntensity = saturate(dot(lightDir, input.normal));
 
-		if (specularPower > 0.0f) {
-			specular = pow(saturate(dot(reflection, input.viewDirection)), specularPower) * specularColor;
-			if (material.index != -1) {
-				specular *= material.specular;
+		if (lightIntensity > 0.0f) {
+			float4 append = lights[i].diffuse * material.diffuse * lightIntensity;
+			lightColor = saturate(color + append);
+
+			reflection = reflect(lightDir, input.normal);
+
+			if (lights[i].specular.w > 0.0f) {
+				specular = pow(saturate(dot(reflection, input.viewDirection)), lights[i].specular.w) * lights[i].specular.xyz * material.specular.xyz;
 			}
 		}
-	}
-	else lightColor = color;
+		else lightColor = color;
 
-	// Multiply the texture pixel and the input color to get the final result.
-	if ((material.flags & 0x08) == 0)
+		// Multiply the texture pixel and the input color to get the final result.
 		color = textureColor * lightColor;
-	else
-		color = lightColor;
+		color.xyz = saturate(color.xyz + specular);
+	}
 
 	if (color.w <= 0) discard;
-
-	if (material.index == -1) {
-		color.xyz = saturate(color.xyz + specular.xyz);
-		return color;
-	}
-
-	if ((material.flags & 0x01) == 0) {
-		reflection = normalize(reflect(input.viewDirection, input.normal));
-		p = 1.0f / (2.0f * sqrt(reflection.x * reflection.x + reflection.y * reflection.y + pow(reflection.z + 1, 2.0f)));
-
-		sphereUV = reflection.xy * p + 0.5f;
-
-		sphereColor = saturate(sphereTexture.Sample(SampleType, sphereUV));
-		tmp = sphereColor*material.mulSphereCoefficient + material.addSphereCoefficient;
-		sphereColor = lerp(sphereColor, tmp, material.weight);
-
-		if ((material.flags & 0x02) == 0)
-			color.xyz += color.xyz * sphereColor.xyz;
-		else
-			color.xyz += sphereColor.xyz;
-
-		color = saturate(color);
-	}
-
-	color.xyz = saturate(color.xyz + specular.xyz);
-	
-	if ((material.flags & 0x04) == 0) {
-		float4 toonColor = toonTexture.Sample(SampleType, float2(input.depth, dot(lightDir, input.normal) * 0.5f + 0.5f));
-		tmp = toonColor*material.mulToonCoefficient + material.addToonCoefficient;
-		toonColor = lerp(toonColor, tmp, material.weight);
-		color.xyz *= toonColor.xyz;
-	}
 
 	return color;
 }

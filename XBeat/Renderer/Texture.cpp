@@ -69,10 +69,10 @@ bool Texture::Initialize(ID3D11Device *device, const std::wstring &file)
 
 void Texture::Shutdown()
 {
-	texture.reset();
+	DX_DELETEIF(texture);
 }
 
-DXType<ID3D11ShaderResourceView> Texture::GetTexture()
+ID3D11ShaderResourceView *Texture::GetTexture()
 {
 	return texture;
 }

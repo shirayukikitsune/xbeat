@@ -3,297 +3,104 @@
 
 using namespace Renderer::Shaders;
 
-Light::Light(void)
+bool Light::UpdateMaterialBuffer(MaterialBufferType material, ID3D11DeviceContext *context)
 {
-	vertexShader = nullptr;
-	pixelShader = nullptr;
-	layout = nullptr;
-	matrixBuffer = nullptr;
-	sampleState = nullptr;
-	lightBuffer = nullptr;
-	cameraBuffer = nullptr;
-}
+	D3D11_MAPPED_SUBRESOURCE map;
+	HRESULT hr;
 
-
-Light::~Light(void)
-{
-	Shutdown();
-}
-
-bool Light::Initialize(ID3D11Device *device, HWND wnd)
-{
-	if (!InitializeShader(device, wnd, L"./Data/Shaders/LightVertex.cso", L"./Data/Shaders/LightPixel.cso"))
+	hr = context->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+	if (FAILED(hr))
 		return false;
+
+	memcpy(map.pData, &material, sizeof(MaterialBufferType));
+
+	context->Unmap(m_materialBuffer, 0);
 
 	return true;
 }
 
-void Light::Shutdown()
-{
-	ShutdownShader();
-}
-
-bool Light::Render(ID3D11DeviceContext *context, int indexCount, unsigned int offset, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView **textures, int textureCount, DirectX::XMFLOAT3 lightDirection, DirectX::XMFLOAT4 diffuseColor, DirectX::XMFLOAT4 ambientColor, DirectX::XMFLOAT3 cameraPosition, DirectX::XMFLOAT4 specularColor, float specularPower, Renderer::DXType<ID3D11Buffer> materialBuffer)
-{
-	DirectX::XMMATRIX wvp = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection);
-
-	if (!SetShaderParameters(context, world, wvp, lightDirection, diffuseColor, ambientColor, cameraPosition, specularColor, specularPower, materialBuffer))
-		return false;
-
-	RenderShader(context, indexCount, offset, textures, textureCount);
-	return true;
-}
-
-char *getFileContents(const std::wstring &file, SIZE_T &bufSize)
-{
-	std::ifstream ifs;
-	ifs.open(file, std::ios::binary);
-
-	if (ifs.fail())
-		return nullptr;
-
-	ifs.seekg(0, std::ios::end);
-	bufSize = (SIZE_T)ifs.tellg();
-	ifs.seekg(0, std::ios::beg);
-
-	char* buffer = new char[bufSize];
-	ifs.read(buffer, bufSize);
-
-	ifs.close();
-
-	return buffer;
-}
-
-bool Light::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstring &vsFile, const std::wstring &psFile)
+bool Light::InternalInitializeBuffers(ID3D11Device *device, HWND wnd)
 {
 	HRESULT result;
-#if 0
 	D3D11_INPUT_ELEMENT_DESC polygonLayout[] = {
-		{ "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		// UV[1..4]
-		/*{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 4, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },*/
+			{ "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
-	UINT numElements = sizeof (polygonLayout) / sizeof (polygonLayout[0]);
-#endif
-	D3D11_BUFFER_DESC matrixBufferDesc;
-	D3D11_SAMPLER_DESC samplerDesc;
-	D3D11_BUFFER_DESC cameraBufferDesc;
-	D3D11_BUFFER_DESC lightBufferDesc;
+	UINT numElements = sizeof(polygonLayout) / sizeof(polygonLayout[0]);
+	D3D11_BUFFER_DESC buffDesc;
 	SIZE_T vsbufsize, psbufsize;
 
-	char *vsbuffer = getFileContents(vsFile, vsbufsize);
-	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
+	char *vsbuffer = getFileContents(L"./Data/Shaders/LightVertex.cso", vsbufsize);
+	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &m_vertexShader);
 	if (FAILED(result)) {
 		delete[] vsbuffer;
 		return false;
 	}
 
-	char *psbuffer = getFileContents(psFile, psbufsize);
-	result = device->CreatePixelShader(psbuffer, psbufsize, NULL, &pixelShader);
+	char *psbuffer = getFileContents(L"./Data/Shaders/LightPixel.cso", psbufsize);
+	result = device->CreatePixelShader(psbuffer, psbufsize, NULL, &m_pixelShader);
+	delete[] psbuffer;
 	if (FAILED(result)) {
 		delete[] vsbuffer;
-		delete[] psbuffer;
 		return false;
 	}
 
-	result = device->CreateInputLayout(DirectX::VertexPositionNormalTexture::InputElements, DirectX::VertexPositionNormalTexture::InputElementCount, vsbuffer, vsbufsize, &layout);
-	//result = device->CreateInputLayout(polygonLayout, numElements, vsbuffer, vsbufsize, &layout);
-	if (FAILED(result)) {
-		return false;
-	}
-
+	result = device->CreateInputLayout(polygonLayout, numElements, vsbuffer, vsbufsize, &m_layout);
 	delete[] vsbuffer;
+	if (FAILED(result)) {
+		return false;
+	}
+
 	vsbuffer = nullptr;
 
-	delete[] psbuffer;
-	psbuffer = nullptr;
+	buffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	buffDesc.ByteWidth = sizeof(MaterialBufferType);
+	buffDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	buffDesc.MiscFlags = 0;
+	buffDesc.StructureByteStride = 0;
+	buffDesc.Usage = D3D11_USAGE_DYNAMIC;
 
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 1;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-	result = device->CreateSamplerState(&samplerDesc, &sampleState);
-	if (FAILED(result))
-		return false;
-
-	matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	matrixBufferDesc.ByteWidth = sizeof (MatrixBufferType);
-	matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	matrixBufferDesc.MiscFlags = 0;
-	matrixBufferDesc.StructureByteStride = 0;
-
-	result = device->CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
-	if (FAILED(result))
-		return false;
-
-	cameraBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	cameraBufferDesc.ByteWidth = sizeof (CameraBufferType);
-	cameraBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cameraBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	cameraBufferDesc.MiscFlags = 0;
-	cameraBufferDesc.StructureByteStride = 0;
-
-	result = device->CreateBuffer(&cameraBufferDesc, NULL, &cameraBuffer);
-	if (FAILED(result))
-		return false;
-
-	lightBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	lightBufferDesc.ByteWidth = sizeof (LightBufferType);
-	lightBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	lightBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	lightBufferDesc.MiscFlags = 0;
-	lightBufferDesc.StructureByteStride = 0;
-
-	result = device->CreateBuffer(&lightBufferDesc, NULL, &lightBuffer);
+	result = device->CreateBuffer(&buffDesc, NULL, &m_materialBuffer);
 	if (FAILED(result))
 		return false;
 
 	return true;
 }
 
-void Light::ShutdownShader() 
+bool Light::InternalRender(ID3D11DeviceContext *context, UINT indexCount, UINT offset)
 {
-	if (lightBuffer) {
-		lightBuffer->Release();
-		lightBuffer = nullptr;
-	}
+	context->IASetInputLayout(m_layout);
 
-	if (cameraBuffer) {
-		cameraBuffer->Release();
-		cameraBuffer = nullptr;
-	}
+	context->VSSetShader(m_vertexShader, NULL, 0);
+	context->PSSetShader(m_pixelShader, NULL, 0);
 
-	if (sampleState) {
-		sampleState->Release();
-		sampleState = nullptr;
-	}
+	context->PSSetConstantBuffers(1, 1, &m_materialBuffer);
 
-	if (matrixBuffer) {
-		matrixBuffer->Release();
-		matrixBuffer = nullptr;
-	}
-
-	if (layout) {
-		layout->Release();
-		layout = nullptr;
-	}
-
-	if (pixelShader) {
-		pixelShader->Release();
-		pixelShader = nullptr;
-	}
-
-	if (vertexShader) {
-		vertexShader->Release();
-		vertexShader = nullptr;
-	}
-}
-
-void Light::OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
-{
-	char *compileError;
-	SIZE_T bufferSize;
-	std::ofstream fout;
-
-	compileError = (char*)errorMessage->GetBufferPointer();
-	bufferSize = errorMessage->GetBufferSize();
-
-	fout.open("shader-errors.log", std::ios::app);
-	if (fout.bad()) {
-		errorMessage->Release();
-		return;
-	}
-
-	fout.write(compileError, bufferSize);
-
-	fout.close();
-
-	errorMessage->Release();
-
-	MessageBox(wnd, L"Error compiling shader", file.c_str(), MB_OK);
-}
-
-bool Light::SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX wvp, DirectX::XMFLOAT3 lightDirection, DirectX::XMFLOAT4 diffuseColor, DirectX::XMFLOAT4 ambientColor, DirectX::XMFLOAT3 cameraPosition, DirectX::XMFLOAT4 specularColor, float specularPower, Renderer::DXType<ID3D11Buffer> materialBuffer)
-{
-	HRESULT result;
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	MatrixBufferType *dataPtr;
-	LightBufferType *dataPtr2;
-	CameraBufferType *dataPtr3;
-
-	result = context->Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
-
-	dataPtr = (MatrixBufferType*)mappedResource.pData;
-
-	dataPtr->world = DirectX::XMMatrixTranspose(world);
-	dataPtr->wvp = DirectX::XMMatrixTranspose(wvp);
-
-	context->Unmap(matrixBuffer, 0);
-
-	context->VSSetConstantBuffers(0, 1, &matrixBuffer);
-
-	result = context->Map(cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
-
-	dataPtr3 = (CameraBufferType*)mappedResource.pData;
-
-	(DirectX::XMFLOAT3)dataPtr3->cameraPosition = cameraPosition;
-
-	context->Unmap(cameraBuffer, 0);
-
-	context->VSSetConstantBuffers(1, 1, &cameraBuffer);
-
-	// Mess with the Pixel Shader
-	result = context->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
-
-	dataPtr2 = (LightBufferType*)mappedResource.pData;
-
-	dataPtr2->ambientColor = ambientColor;
-	dataPtr2->diffuseColor = diffuseColor;
-	dataPtr2->lightDirection = lightDirection;
-	dataPtr2->specularPower = specularPower;
-	dataPtr2->specularColor = specularColor;
-
-	context->Unmap(lightBuffer, 0);
-
-	context->PSSetConstantBuffers(0, 1, &lightBuffer);
-
-	if (materialBuffer != nullptr)
-		context->PSSetConstantBuffers(1, 1, &materialBuffer);
-
-	context->IASetInputLayout(layout);
-
-	context->VSSetShader(vertexShader, NULL, 0);
-	context->PSSetShader(pixelShader, NULL, 0);
-
-	context->PSSetSamplers(0, 1, &sampleState);
-
-	return true;
-}
-
-void Light::RenderShader(ID3D11DeviceContext *context, int indexCount, unsigned int offset, ID3D11ShaderResourceView **textures, int textureCount)
-{
-	context->PSSetShaderResources(0, textureCount, textures);
 	context->DrawIndexed(indexCount, offset, offset);
+
+	return true;
+}
+
+void Light::InternalShutdown()
+{
+	if (m_materialBuffer) {
+		m_materialBuffer->Release();
+		m_materialBuffer = nullptr;
+	}
+
+	if (m_layout) {
+		m_layout->Release();
+		m_layout = nullptr;
+	}
+
+	if (m_pixelShader) {
+		m_pixelShader->Release();
+		m_pixelShader = nullptr;
+	}
+
+	if (m_vertexShader) {
+		m_vertexShader->Release();
+		m_vertexShader = nullptr;
+	}
 }

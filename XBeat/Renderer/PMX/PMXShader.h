@@ -1,71 +1,68 @@
 #pragma once
 
 #include "PMXDefinitions.h"
-#include "../Light.h"
-#include "../DXUtil.h"
+#include "../Shaders/GenericShader.h"
 #include <d3dx11effect.h>
+#include <array>
+#include <map>
 
 namespace Renderer {
 namespace PMX {
 
 class PMXShader
+	: public Shaders::Generic
 {
 public:
 	struct Limits {
 		enum {
 			Morphs = 50,
 			Bones = 250,
-			Lights = 3,
+			Materials = 50,
 		};
 	};
 
-	struct ConstBuffer {
-		struct MatrixBuffer {
-			DirectX::XMMATRIX world, view, projection;
-			DirectX::XMVECTOR eyePosition;
-		} matrices;
+	struct MaterialBufferType {
+		DirectX::XMFLOAT4 ambientColor;
+		DirectX::XMFLOAT4 diffuseColor;
+		DirectX::XMFLOAT4 specularColor;
+		DirectX::XMFLOAT4 mulBaseCoefficient;
+		DirectX::XMFLOAT4 mulSphereCoefficient;
+		DirectX::XMFLOAT4 mulToonCoefficient;
+		DirectX::XMFLOAT4 addBaseCoefficient;
+		DirectX::XMFLOAT4 addSphereCoefficient;
+		DirectX::XMFLOAT4 addToonCoefficient;
 
-		struct MaterialBuffer {
-			DirectX::XMVECTOR ambient, diffuse, specular;
-			DirectX::XMVECTOR mulBaseCoeff, mulSphereCoeff, mulToonCoeff;
-			DirectX::XMVECTOR addBaseCoeff, addSphereCoeff, addToonCoeff;
-
-			uint32_t flags;
-			float morphWeight;
-			int index;
-			int padding;
-		} material;
-
-		struct LightsBuffer {
-			DirectX::XMVECTOR ambient[Limits::Lights], diffuse[Limits::Lights], specular[Limits::Lights];
-			DirectX::XMVECTOR direction[Limits::Lights];
-		} lights;
+		uint32_t flags;
+		float morphWeight;
+		int index;
+		int padding;
 	};
 
-	PMXShader();
-	~PMXShader();
+	struct VertexType {
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT3 normal;
+		DirectX::XMFLOAT2 uv;
+		DirectX::XMFLOAT4 uvEx[4];
+		DirectX::XMFLOAT4 boneIndices;
+		DirectX::XMFLOAT4 boneWeights;
+		UINT materialIndex;
+	};
+
+	MaterialBufferType& GetMaterial(int index) { return m_materials[index]; }
+	bool UpdateMaterialBuffer(ID3D11DeviceContext *context);
 
 private:
+	ID3D11Buffer *m_materialBuffer;
+	ID3D11UnorderedAccessView *m_materialUav;
+	ID3D11VertexShader *m_vertexShader;
+	ID3D11PixelShader *m_pixelShader;
+	std::array<MaterialBufferType, Limits::Materials> m_materials;
 
-	enum struct ConstBufferDirtyFlags {
-		None = 0x0,
-		Matrices = 0x1,
-		Material = 0x2,
-		Lights = 0x4,
-		All = 0xFF
-	};
-	
-	uint32_t m_cbufferDirty;
-
-	__forceinline bool IsDirty(ConstBufferDirtyFlags flags = ConstBufferDirtyFlags::All) {
-		return (m_cbufferDirty & (uint32_t)flags) != 0;
-	}
-	__forceinline void SetDirty(ConstBufferDirtyFlags flag) {
-		m_cbufferDirty |= (uint32_t)flag;
-	}
-	__forceinline void ClearDirty(ConstBufferDirtyFlags flag) {
-		m_cbufferDirty &= ~((uint32_t)flag);
-	}
+protected:
+	virtual bool InternalInitializeBuffers(ID3D11Device *device, HWND hwnd);
+	virtual bool InternalRender(ID3D11DeviceContext *context, UINT indexCount, UINT offset);
+	virtual void InternalShutdown();
+	virtual void InternalPrepareRender(ID3D11DeviceContext *context);
 };
 
 }

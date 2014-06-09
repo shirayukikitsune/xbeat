@@ -1,9 +1,10 @@
-﻿#include "../CameraClass.h"
+﻿#include "../Camera.h"
 #include "../Shaders/LightShader.h"
 #include "../Light.h"
 #include "PMXModel.h"
 #include "PMXBone.h"
 #include "PMXMaterial.h"
+#include "PMXShader.h"
 #include "../D3DRenderer.h"
 
 #include <fstream>
@@ -39,6 +40,8 @@ PMX::Model::Model(void)
 {
 	m_debugFlags = DebugFlags::None;
 	for (auto &i : m_vertexCountPerMethod) i = 0U;
+
+	m_indexBuffer = m_vertexBuffer = m_materialBuffer = nullptr;
 }
 
 
@@ -152,6 +155,8 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (d3d == nullptr)
 		return true; // Exit silently...?
 
+	m_d3d = d3d;
+
 	ID3D11Device *device = d3d->GetDevice();
 
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc, materialBufferDesc;
@@ -210,7 +215,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	}
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	vertexBufferDesc.ByteWidth = sizeof(DirectX::VertexPositionNormalTexture) * m_vertices.size();
+	vertexBufferDesc.ByteWidth = (UINT)(sizeof(DirectX::VertexPositionNormalTexture) * m_vertices.size());
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	vertexBufferDesc.MiscFlags = 0;
@@ -225,7 +230,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		return false;
 
 	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	indexBufferDesc.ByteWidth = sizeof(UINT) * idx.size();
+	indexBufferDesc.ByteWidth = (UINT)(sizeof(UINT) * idx.size());
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
@@ -244,6 +249,21 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 
 void PMX::Model::ShutdownBuffers()
 {
+	if (m_materialBuffer) {
+		m_materialBuffer->Release();
+		m_materialBuffer = nullptr;
+	}
+
+	if (m_vertexBuffer) {
+		m_vertexBuffer->Release();
+		m_vertexBuffer = nullptr;
+	}
+
+	if (m_indexBuffer) {
+		m_indexBuffer->Release();
+		m_indexBuffer = nullptr;
+	}
+
 	for (auto &material : rendermaterials)
 	{
 		material.Shutdown();
@@ -286,59 +306,49 @@ bool PMX::Model::loadModel(istream &ifs)
 	return true;
 }
 
-bool PMX::Model::updateMaterialBuffer(uint32_t material, DXType<ID3D11DeviceContext> context)
+bool PMX::Model::updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *context)
 {
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	HRESULT hr;
 	ID3D11ShaderResourceView *textures[3];
-	Shaders::Light::MaterialBufferType *matBuffer;
+	auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
+	if (!shader) return false;
 
-	hr = context->Map(m_materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(hr))
-		return false;
+	auto &mbuffer = shader->GetMaterial(material);
 
-	matBuffer = (Shaders::Light::MaterialBufferType*)mappedResource.pData;
+	textures[0] = rendermaterials[material].baseTexture ? rendermaterials[material].baseTexture->GetTexture() : nullptr;
+	textures[1] = rendermaterials[material].sphereTexture ? rendermaterials[material].sphereTexture->GetTexture() : nullptr;
+	textures[2] = rendermaterials[material].toonTexture ? rendermaterials[material].toonTexture->GetTexture() : nullptr;
 
-	if (material < rendermaterials.size()) {
-		textures[0] = rendermaterials[material].baseTexture ? rendermaterials[material].baseTexture->GetTexture() : nullptr;
-		textures[1] = rendermaterials[material].sphereTexture ? rendermaterials[material].sphereTexture->GetTexture() : nullptr;
-		textures[2] = rendermaterials[material].toonTexture ? rendermaterials[material].toonTexture->GetTexture() : nullptr;
+	mbuffer.flags = 0;
 
-		matBuffer->flags = 0;
+	mbuffer.flags |= (textures[1] == nullptr || materials[material]->sphereMode == MaterialSphereMode::Disabled) ? 0x01 : 0;
+	mbuffer.flags |= materials[material]->sphereMode == MaterialSphereMode::Add ? 0x02 : 0;
+	mbuffer.flags |= textures[2] == nullptr ? 0x04 : 0;
+	mbuffer.flags |= textures[0] == nullptr ? 0x08 : 0;
 
-		matBuffer->flags |= (textures[1] == nullptr || materials[material]->sphereMode == MaterialSphereMode::Disabled) ? 0x01 : 0;
-		matBuffer->flags |= materials[material]->sphereMode == MaterialSphereMode::Add ? 0x02 : 0;
-		matBuffer->flags |= textures[2] == nullptr ? 0x04 : 0;
-		matBuffer->flags |= textures[0] == nullptr ? 0x08 : 0;
+	mbuffer.morphWeight = rendermaterials[material].getWeight();
 
-		matBuffer->morphWeight = rendermaterials[material].getWeight();
+	mbuffer.addBaseCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->baseCoefficient);
+	mbuffer.addSphereCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->sphereCoefficient);
+	mbuffer.addToonCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->toonCoefficient);
+	mbuffer.mulBaseCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->baseCoefficient);
+	mbuffer.mulSphereCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->sphereCoefficient);
+	mbuffer.mulToonCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->toonCoefficient);
 
-		matBuffer->addBaseCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->baseCoefficient);
-		matBuffer->addSphereCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->sphereCoefficient);
-		matBuffer->addToonCoefficient = color4ToFloat4(rendermaterials[material].getAdditiveMorph()->toonCoefficient);
-		matBuffer->mulBaseCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->baseCoefficient);
-		matBuffer->mulSphereCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->sphereCoefficient);
-		matBuffer->mulToonCoefficient = color4ToFloat4(rendermaterials[material].getMultiplicativeMorph()->toonCoefficient);
+	mbuffer.specularColor = rendermaterials[material].getSpecular(materials[material]);
 
-		matBuffer->specularColor = rendermaterials[material].getSpecular(materials[material]);
-
-		if ((matBuffer->flags & 0x04) == 0) {
-			matBuffer->diffuseColor = rendermaterials[material].getDiffuse(materials[material]);
-			matBuffer->ambientColor = rendermaterials[material].getAmbient(materials[material]);
-		}
-		else {
-			matBuffer->diffuseColor = matBuffer->ambientColor = rendermaterials[material].getAverage(materials[material]);
-		}
-		matBuffer->index = (int)material;
+	if ((mbuffer.flags & 0x04) == 0) {
+		mbuffer.diffuseColor = rendermaterials[material].getDiffuse(materials[material]);
+		mbuffer.ambientColor = rendermaterials[material].getAmbient(materials[material]);
 	}
-	else matBuffer->index = -1;
-
-	context->Unmap(m_materialBuffer, 0);
+	else {
+		mbuffer.diffuseColor = mbuffer.ambientColor = rendermaterials[material].getAverage(materials[material]);
+	}
+	mbuffer.index = (int)material;
 
 	return true;
 }
 
-bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr<Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Light> light, std::shared_ptr<CameraClass> camera, std::shared_ptr<ViewFrustum> frustum)
+void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum)
 {
 	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
 		for (auto &bone : bones) {
@@ -350,17 +360,9 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 
 	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
 		unsigned int stride = sizeof(DirectX::VertexPositionNormalTexture);
-		DirectX::XMFLOAT3 cameraPosition;
-		ID3D11DeviceContext *context = d3d->GetDeviceContext();
 		Shaders::Light::MaterialBufferType matBuf;
-		DirectX::XMMATRIX wvp = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection);
-
-		DirectX::XMStoreFloat3(&cameraPosition, camera->GetPosition());
 
 		ID3D11ShaderResourceView *textures[3];
-
-		if (!lightShader->SetShaderParameters(context, world, wvp, light->GetDirection(), light->GetDiffuseColor(), light->GetAmbientColor(), cameraPosition, light->GetSpecularColor(), light->GetSpecularPower(), m_materialBuffer))
-			return false;
 
 		unsigned int vsOffset = 0;
 		// Set the vertex buffer to active in the input assembler so it can be rendered.
@@ -379,8 +381,14 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			if (!updateMaterialBuffer(i, context))
-				return false;
+				return;
+		}
 
+		auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
+		shader->UpdateMaterialBuffer(context);
+		shader->PrepareRender(context);
+
+		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
 			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
 			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
@@ -390,36 +398,31 @@ bool PMX::Model::RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr
 				// Enable no-culling rasterizer if material has transparency or if it is marked to be rendered by both sides
 
 				if (!isTransparent) {
-					context->RSSetState(d3d->GetRasterState(1));
+					context->RSSetState(m_d3d->GetRasterState(1));
 					isTransparent = true;
-					d3d->EnableAlphaBlending();
+					m_d3d->EnableAlphaBlending();
 				}
 			}
 			else if (isTransparent) {
 				isTransparent = false;
-				context->RSSetState(d3d->GetRasterState(0));
-				d3d->DisableAlphaBlending();
+				context->RSSetState(m_d3d->GetRasterState(0));
+				m_d3d->DisableAlphaBlending();
 			}
 
-			lightShader->RenderShader(context,
-				rendermaterials[i].indexCount,
-				rendermaterials[i].startIndex,
-				textures,
-				3);
+			context->PSSetShaderResources(0, 3, textures);
+			m_shader->Render(context, rendermaterials[i].indexCount, rendermaterials[i].startIndex);
 		}
 
 		if (isTransparent) {
-			context->RSSetState(d3d->GetRasterState(0));
-			d3d->DisableAlphaBlending();
+			context->RSSetState(m_d3d->GetRasterState(0));
+			m_d3d->DisableAlphaBlending();
 		}
 	}
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
 		for (auto &bone : bones)
-			bone->Render(world, view, projection);
+			bone->Render(m_shader->GetCBuffer().matrix.world, m_shader->GetCBuffer().matrix.view, m_shader->GetCBuffer().matrix.projection);
 	}
-
-	return true;
 }
 
 bool PMX::Model::LoadTexture(ID3D11Device *device)
@@ -700,7 +703,7 @@ void PMX::Model::updateVertexBuffer()
 	c += i;
 	for (i = 0; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::BDEF2] + m_vertexCountPerMethod[(size_t)VertexWeightMethod::SDEF] + m_vertexCountPerMethod[(size_t)VertexWeightMethod::QDEF]; ++i) {
 		vertex = m_sortedVertices[i + c];
-		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0]).get128());
+		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0] + vertex->boneOffset[1]).get128());
 		btTransform t;
 		t.setRotation(vertex->boneRotation[0] * vertex->boneRotation[1]);
 		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());
@@ -709,7 +712,7 @@ void PMX::Model::updateVertexBuffer()
 	c += i;
 	for (; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::QDEF]; ++i) {
 		vertex = m_sortedVertices[i + c];
-		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0]).get128());
+		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0] + vertex->boneOffset[1] + vertex->boneOffset[2] + vertex->boneOffset[3]).get128());
 		btTransform t;
 		t.setRotation(vertex->boneRotation[0] * vertex->boneRotation[1] * vertex->boneRotation[2] * vertex->boneRotation[3]);
 		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());

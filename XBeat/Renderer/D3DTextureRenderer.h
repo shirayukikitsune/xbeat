@@ -16,8 +16,8 @@ public:
 
 	void SetRenderTarget(ID3D11DeviceContext *context, ID3D11DepthStencilView *depthStencilView);
 	void ClearRenderTarget(ID3D11DeviceContext *context, ID3D11DepthStencilView *depthStencilView, float red, float green, float blue, float alpha);
-	DXType<ID3D11ShaderResourceView> GetShaderResourceView();
-	DXType<ID3D11ShaderResourceView> GetDepthStencilView();
+	ID3D11ShaderResourceView* GetShaderResourceView();
+	ID3D11ShaderResourceView* GetDepthStencilView();
 	void CopyIntoTexture(ID3D11DeviceContext* context, ID3D11Texture2D **target);
 
 	void GetProjectionMatrix(DirectX::XMMATRIX &projection);
@@ -29,12 +29,12 @@ public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
-	DXType<ID3D11Texture2D> m_renderTargetTexture;
-	DXType<ID3D11RenderTargetView> m_renderTargetView;
-	DXType<ID3D11ShaderResourceView> m_shaderResourceView;
-	DXType<ID3D11ShaderResourceView> m_depthResourceView;
-	DXType<ID3D11DepthStencilView> m_depthStencilView;
-	DXType<ID3D11Texture2D> m_depthStencilBuffer;
+	ID3D11Texture2D *m_renderTargetTexture;
+	ID3D11RenderTargetView *m_renderTargetView;
+	ID3D11ShaderResourceView *m_shaderResourceView;
+	ID3D11ShaderResourceView *m_depthResourceView;
+	ID3D11DepthStencilView *m_depthStencilView;
+	ID3D11Texture2D *m_depthStencilBuffer;
 	D3D11_VIEWPORT m_viewport;
 	DirectX::XMMATRIX m_projection, m_ortho;
 	int m_texWidth, m_texHeight;

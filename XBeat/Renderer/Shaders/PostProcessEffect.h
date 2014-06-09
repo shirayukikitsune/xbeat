@@ -35,7 +35,7 @@ public:
 	};
 
 	__declspec(align(16)) struct BlurSamplersBuffer {
-		DirectX::XMFLOAT2 offsetAndWeight[BLUR_SAMPLE_COUNT];
+		DirectX::XMFLOAT2A offsetAndWeight[BLUR_SAMPLE_COUNT];
 	};
 
 	PostProcessEffect(void);
@@ -44,26 +44,26 @@ public:
 	bool Initialize(ID3D11Device *device, HWND wnd, int width, int height);
 	void Shutdown();
 	bool Render(std::shared_ptr<D3DRenderer> d3d, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<D3DTextureRenderer> renderTexture, std::shared_ptr<OrthoWindowClass> window, float farZ, float nearZ);
-	DXType<ID3D11Texture2D> GetCurrentOutput();
-	DXType<ID3D11ShaderResourceView> GetCurrentOutputView();
+	ID3D11Texture2D *GetCurrentOutput();
+	ID3D11ShaderResourceView *GetCurrentOutputView();
 private:
 	bool InitializeEffect(ID3D11Device *device, HWND wnd, int width, int height, const std::wstring &filename);
 	void ShutdownEffect();
-	void OutputErrorMessage(ID3D10Blob *error, HWND wnd, const std::wstring &filename);
+	void OutputErrorMessage(ID3DBlob *error, HWND wnd, const std::wstring &filename);
 
 	bool SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ);
 
-	DXType<ID3DX11Effect> m_effect;
-	DXType<ID3D11SamplerState> m_sampler;
-	DXType<ID3D11InputLayout> m_layout;
-	DXType<ID3D11Buffer> m_matrixBuffer;
-	DXType<ID3D11Buffer> m_screenSizeBuffer;
-	DXType<ID3D11Buffer> m_dofBuffer;
-	DXType<ID3D11Buffer> m_blurBuffer;
-	DXType<ID3D11Texture2D> m_originalBackTexture;
-	DXType<ID3D11ShaderResourceView> m_originalBackView;
-	DXType<ID3D11Texture2D> m_currentBackTexture;
-	DXType<ID3D11ShaderResourceView> m_currentBackView;
+	ID3DX11Effect *m_effect;
+	ID3D11SamplerState *m_sampler;
+	ID3D11InputLayout *m_layout;
+	ID3D11Buffer *m_matrixBuffer;
+	ID3D11Buffer *m_screenSizeBuffer;
+	ID3D11Buffer *m_dofBuffer;
+	ID3D11Buffer *m_blurBuffer;
+	ID3D11Texture2D *m_originalBackTexture;
+	ID3D11ShaderResourceView *m_originalBackView;
+	ID3D11Texture2D *m_currentBackTexture;
+	ID3D11ShaderResourceView *m_currentBackView;
 
 	ID3DX11EffectVariable *m_originalSceneVar;
 	ID3DX11EffectVariable *m_depthSceneVar;

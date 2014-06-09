@@ -3,7 +3,6 @@
 #include <memory>
 
 using Renderer::OrthoWindowClass;
-using Renderer::DXType;
 
 OrthoWindowClass::OrthoWindowClass(void)
 {
@@ -16,7 +15,7 @@ OrthoWindowClass::~OrthoWindowClass(void)
 {
 }
 
-bool OrthoWindowClass::Initialize(DXType<ID3D11Device> device, int width, int height)
+bool OrthoWindowClass::Initialize(ID3D11Device *device, int width, int height)
 {
 	if (!InitializeBuffers(device, width, height))
 		return false;
@@ -29,7 +28,7 @@ void OrthoWindowClass::Shutdown()
 	ShutdownBuffers();
 }
 
-void OrthoWindowClass::Render(DXType<ID3D11DeviceContext> context)
+void OrthoWindowClass::Render(ID3D11DeviceContext *context)
 {
 	RenderBuffers(context);
 }
@@ -39,7 +38,7 @@ int OrthoWindowClass::GetIndexCount()
 	return m_indexCount;
 }
 
-bool OrthoWindowClass::InitializeBuffers(DXType<ID3D11Device> device, int width, int height)
+bool OrthoWindowClass::InitializeBuffers(ID3D11Device *device, int width, int height)
 {
 	float left, right, top, bottom;
 	std::unique_ptr<VertexType> vertices;
@@ -86,7 +85,7 @@ bool OrthoWindowClass::InitializeBuffers(DXType<ID3D11Device> device, int width,
 		indices.get()[i] = i;
 	}
 
-	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 	vertexBufferDesc.ByteWidth = sizeof (VertexType) * m_vertexCount;
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = 0;
@@ -101,7 +100,7 @@ bool OrthoWindowClass::InitializeBuffers(DXType<ID3D11Device> device, int width,
 	if (FAILED(result))
 		return false;
 
-	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 	indexBufferDesc.ByteWidth = sizeof (uint32_t) * m_indexCount;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
@@ -124,16 +123,11 @@ bool OrthoWindowClass::InitializeBuffers(DXType<ID3D11Device> device, int width,
 
 void OrthoWindowClass::ShutdownBuffers()
 {
-	if (m_indexBuffer) {
-		m_indexBuffer = nullptr;
-	}
-
-	if (m_vertexBuffer) {
-		m_vertexBuffer = nullptr;
-	}
+	DX_DELETEIF(m_indexBuffer);
+	DX_DELETEIF(m_vertexBuffer);
 }
 
-void OrthoWindowClass::RenderBuffers(DXType<ID3D11DeviceContext> context)
+void OrthoWindowClass::RenderBuffers(ID3D11DeviceContext *context)
 {
 	uint32_t stride = sizeof (VertexType), offset = 0;
 

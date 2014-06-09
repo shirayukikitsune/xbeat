@@ -18,7 +18,8 @@ public:
 
 	DirectX::XMVECTOR GetRotation();
 
-	void Render();
+	virtual bool Update(float msec);
+
 	void XM_CALLCONV GetViewMatrix(DirectX::XMMATRIX &matrix);
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();

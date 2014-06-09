@@ -34,7 +34,7 @@ DirectX::XMVECTOR Camera::GetRotation()
 	return m_rotation;
 }
 
-void Camera::Render()
+bool Camera::Update(float msec)
 {
 	DirectX::XMVECTOR up, lookAt;
 
@@ -44,6 +44,8 @@ void Camera::Render()
 	lookAt = DirectX::XMVectorAdd(m_position, lookAt);
 
 	m_viewMatrix = DirectX::XMMatrixLookAtLH(m_position, lookAt, up);
+
+	return true;
 }
 
 void XM_CALLCONV Camera::GetViewMatrix(DirectX::XMMATRIX &viewMatrix)

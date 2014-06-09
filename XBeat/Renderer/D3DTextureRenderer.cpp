@@ -106,30 +106,12 @@ bool D3DTextureRenderer::Initialize(ID3D11Device *device, int width, int height,
 
 void D3DTextureRenderer::Shutdown()
 {
-	if (m_depthStencilView)
-	{
-		m_depthStencilView = nullptr;
-	}
-
-	if (m_depthStencilBuffer)
-	{
-		m_depthStencilView = nullptr;
-	}
-
-	if (m_shaderResourceView)
-	{
-		m_shaderResourceView = nullptr;
-	}
-
-	if (m_renderTargetView)
-	{
-		m_renderTargetView = nullptr;
-	}
-
-	if (m_renderTargetTexture)
-	{
-		m_renderTargetTexture = nullptr;
-	}
+	DX_DELETEIF(m_depthResourceView);
+	DX_DELETEIF(m_depthStencilView);
+	DX_DELETEIF(m_depthStencilBuffer);
+	DX_DELETEIF(m_shaderResourceView);
+	DX_DELETEIF(m_renderTargetView);
+	DX_DELETEIF(m_renderTargetTexture);
 }
 
 void D3DTextureRenderer::SetRenderTarget(ID3D11DeviceContext *context, ID3D11DepthStencilView *depthStencilView)
@@ -153,12 +135,12 @@ void D3DTextureRenderer::CopyIntoTexture(ID3D11DeviceContext *context, ID3D11Tex
 	context->CopyResource(*texture, m_renderTargetTexture);
 }
 
-Renderer::DXType<ID3D11ShaderResourceView> D3DTextureRenderer::GetShaderResourceView()
+ID3D11ShaderResourceView* D3DTextureRenderer::GetShaderResourceView()
 {
 	return m_shaderResourceView;
 }
 
-Renderer::DXType<ID3D11ShaderResourceView> D3DTextureRenderer::GetDepthStencilView()
+ID3D11ShaderResourceView* D3DTextureRenderer::GetDepthStencilView()
 {
 	return m_depthResourceView;
 }

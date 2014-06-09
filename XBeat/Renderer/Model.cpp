@@ -1,8 +1,10 @@
-#include "CameraClass.h"
+#include "Camera.h"
 #include "Shaders/LightShader.h"
 #include "Light.h"
 #include "Model.h"
+#include "DXUtil.h"
 #include "D3DRenderer.h"
+#include "ViewFrustum.h"
 
 using Renderer::Model;
 
@@ -43,12 +45,8 @@ void Model::Shutdown()
 	ReleaseModel();
 }
 
-bool Model::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, std::shared_ptr<Renderer::Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Renderer::Light> light, std::shared_ptr<Renderer::CameraClass> camera, std::shared_ptr<Renderer::ViewFrustum> frustum)
+void Model::Render(ID3D11DeviceContext *context, std::shared_ptr<Renderer::ViewFrustum> frustum)
 {
-	if (!RenderBuffers(d3d, lightShader, view, projection, world, light, camera, frustum))
-		return false;
-
-	return true;
 }
 
 bool Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
@@ -69,7 +67,7 @@ void Model::ReleaseTexture()
 {
 }
 
-bool Model::RenderBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d, std::shared_ptr<Renderer::Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Renderer::Light> light, std::shared_ptr<Renderer::CameraClass> camera, std::shared_ptr<Renderer::ViewFrustum> frustum)
+bool Model::RenderBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d, std::shared_ptr<Renderer::Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Renderer::Light> light, std::shared_ptr<Renderer::Camera> camera, std::shared_ptr<Renderer::ViewFrustum> frustum)
 {
 	return true;
 }

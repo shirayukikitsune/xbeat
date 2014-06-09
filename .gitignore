@@ -169,8 +169,8 @@ pip-log.txt
 *.log
 
 # Data files
-XBeat/Data/Models/*
-*.lib
+XBeat/Data/Models/
+*.dds
 *.cso
-*.cso
-*.lib
+*.jpg
+*.jpeg

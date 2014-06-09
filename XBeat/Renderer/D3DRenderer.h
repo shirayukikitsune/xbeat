@@ -55,8 +55,8 @@ public:
 
 	void ResetViewport();
 
-	DXType<ID3D11ShaderResourceView> GetDepthResourceView();
-	DXType<ID3D11RenderTargetView> renderTarget;
+	ID3D11ShaderResourceView* GetDepthResourceView();
+	ID3D11RenderTargetView* renderTarget;
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
@@ -72,7 +72,7 @@ private:
 	ID3D11Texture2D *depthStencilBuffer;
 	ID3D11DepthStencilState *depthStencilState[4];
 	ID3D11DepthStencilView *depthStencilView;
-	DXType<ID3D11ShaderResourceView> depthResourceView;
+	ID3D11ShaderResourceView *depthResourceView;
 	ID3D11BlendState *blendState[2];
 	ID3D11RasterizerState *rasterState[3];
 	D3D11_VIEWPORT viewport;

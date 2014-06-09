@@ -8,7 +8,7 @@ using Renderer::Shaders::PostProcessEffect;
 
 PostProcessEffect::PostProcessEffect(void)
 {
-	m_blurAmmount = 3.8f;
+	m_blurAmmount = 1.8f;
 }
 
 
@@ -81,7 +81,7 @@ bool PostProcessEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int i
 bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int width, int height, const std::wstring &filename)
 {
 	HRESULT result;
-	ID3D10Blob *errorMsg;
+	ID3DBlob *errorMsg;
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_INPUT_ELEMENT_DESC layoutDesc[2];
 	D3D11_SAMPLER_DESC samplerDesc;
@@ -143,6 +143,7 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 		}
 		else {
 			OutputErrorMessage(errorMsg, wnd, filename);
+			errorMsg->Release();
 			return false;
 		}
 	}
@@ -290,24 +291,20 @@ void PostProcessEffect::ShutdownEffect()
 		m_numPasses = nullptr;
 	}
 
-	if (m_matrixBuffer) {
-		m_matrixBuffer = nullptr;
-	}
-
-	if (m_sampler) {
-		m_sampler = nullptr;
-	}
-
-	if (m_layout) {
-		m_layout = nullptr;
-	}
-
-	if (m_effect) {
-		m_effect = nullptr;
-	}
+	DX_DELETEIF(m_originalBackTexture)
+	DX_DELETEIF(m_currentBackTexture)
+	DX_DELETEIF(m_originalBackView)
+	DX_DELETEIF(m_currentBackView)
+	DX_DELETEIF(m_blurBuffer)
+	DX_DELETEIF(m_dofBuffer)
+	DX_DELETEIF(m_matrixBuffer)
+	DX_DELETEIF(m_screenSizeBuffer)
+	DX_DELETEIF(m_sampler)
+	DX_DELETEIF(m_layout)
+	DX_DELETEIF(m_effect)
 }
 
-void PostProcessEffect::OutputErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
+void PostProcessEffect::OutputErrorMessage(ID3DBlob *errorMessage, HWND wnd, const std::wstring &file)
 {
 	char *compileError;
 	SIZE_T bufferSize;
@@ -407,12 +404,12 @@ bool PostProcessEffect::SetEffectParameters(ID3D11DeviceContext *context, Direct
 	return true;
 }
 
-Renderer::DXType<ID3D11Texture2D> PostProcessEffect::GetCurrentOutput()
+ID3D11Texture2D* PostProcessEffect::GetCurrentOutput()
 {
 	return m_currentBackTexture;
 }
 
-Renderer::DXType<ID3D11ShaderResourceView> PostProcessEffect::GetCurrentOutputView()
+ID3D11ShaderResourceView* PostProcessEffect::GetCurrentOutputView()
 {
 	return m_currentBackView;
 }

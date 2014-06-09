@@ -60,6 +60,10 @@ public:
 	Material* GetMaterialById(uint32_t id);
 	RenderMaterial* GetRenderMaterialById(uint32_t id);
 
+	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum);
+
+	std::shared_ptr<D3DRenderer> m_d3d;
+
 private:
 	std::vector<Vertex*> vertices;
 	std::vector<Vertex*> m_sortedVertices;
@@ -91,18 +95,18 @@ private:
 
 	std::vector<DirectX::VertexPositionNormalTexture> m_vertices;
 
-	bool updateMaterialBuffer(uint32_t material, DXType<ID3D11DeviceContext> context);
+	bool updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *context);
 	bool m_dirtyBuffer;
-	DXType<ID3D11Buffer> m_materialBuffer;
-	DXType<ID3D11Buffer> m_vertexBuffer;
-	DXType<ID3D11Buffer> m_indexBuffer;
+	ID3D11Buffer *m_materialBuffer;
+	ID3D11Buffer *m_vertexBuffer;
+	ID3D11Buffer *m_indexBuffer;
 
 	uint32_t m_debugFlags;
 
 protected:
 	virtual bool InitializeBuffers(std::shared_ptr<D3DRenderer> d3d);
 	virtual void ShutdownBuffers();
-	virtual bool RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr<Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Light> light, std::shared_ptr<CameraClass> camera, std::shared_ptr<ViewFrustum> frustum);
+	//virtual bool RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr<Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Light> light, std::shared_ptr<Camera> camera, std::shared_ptr<ViewFrustum> frustum);
 
 	virtual bool LoadModel(const std::wstring &filename);
 	virtual void ReleaseModel();

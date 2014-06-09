@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "D3DRenderer.h"
-#include "CameraClass.h"
+#include "Camera.h"
 #include "PMX/PMXModel.h"
 #include "Model.h"
 #include "Shaders/LightShader.h"
@@ -19,11 +19,12 @@
 #include "SkyBox.h"
 #include "../Dispatcher.h"
 #include "SpriteFont.h"
+#include "PMX/PMXShader.h"
 
 namespace Renderer {
 
 const bool FULL_SCREEN = false;
-const bool VSYNC_ENABLED = true;
+const bool VSYNC_ENABLED = false;
 const float SCREEN_DEPTH = 500.0f;
 const float SCREEN_NEAR = 0.25f;
 
@@ -46,9 +47,9 @@ public:
 
 private:
 	bool Render(float frameTime);
-	bool RenderToTexture();
-	bool RenderScene();
-	bool RenderEffects();
+	bool RenderToTexture(float frameTime);
+	bool RenderScene(float frameTime);
+	bool RenderEffects(float frameTime);
 	bool Render2DTextureScene(float frameTime);
 
 	int screenWidth, screenHeight;
@@ -60,13 +61,14 @@ private:
 	std::shared_ptr<ViewFrustum> frustum;
 	std::shared_ptr<D3DRenderer> d3d;
 	std::shared_ptr<SkyBox> sky;
-	std::shared_ptr<CameraClass> camera;
+	std::shared_ptr<Camera> camera;
 	std::vector<std::shared_ptr<PMX::Model>> m_models;
 	std::shared_ptr<Model> stage;
 	std::shared_ptr<Light> light;
 	std::shared_ptr<Shaders::Light> lightShader;
 	std::shared_ptr<Shaders::Texture> textureShader;
 	std::shared_ptr<Shaders::PostProcessEffect> m_postProcess;
+	std::shared_ptr<PMX::PMXShader> m_pmxShader;
 	std::shared_ptr<Input::Manager> input;
 	std::shared_ptr<Physics::Environment> physics;
 	std::shared_ptr<D3DTextureRenderer> renderTexture;

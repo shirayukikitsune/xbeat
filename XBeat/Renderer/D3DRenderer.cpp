@@ -33,9 +33,9 @@ bool D3DRenderer::FindBestRefreshRate(int width, int height, uint32_t &numerator
 	HRESULT result;
 	uint32_t numModes, i;
 	size_t strLength;
-	DXType<IDXGIFactory> factory;
-	DXType<IDXGIAdapter> adapter;
-	DXType<IDXGIOutput> adapterOutput;
+	IDXGIFactory *factory;
+	IDXGIAdapter *adapter;
+	IDXGIOutput *adapterOutput;
 	std::vector<DXGI_MODE_DESC> displayModeList;
 	DXGI_ADAPTER_DESC adapterDesc;
 	int error;
@@ -80,6 +80,10 @@ bool D3DRenderer::FindBestRefreshRate(int width, int height, uint32_t &numerator
 
 	displayModeList.clear();
 
+	adapterOutput->Release();
+	adapter->Release();
+	factory->Release();
+
 	return true;
 }
 
@@ -89,7 +93,7 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	uint32_t numerator, denominator;
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
 	D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
-	DXType<ID3D11Texture2D> backBuffer;
+	ID3D11Texture2D *backBuffer;
 	D3D11_TEXTURE2D_DESC depthBufferDesc;
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
@@ -154,7 +158,7 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	if (FAILED(result))
 		return false;
 
-	backBuffer.reset();
+	backBuffer->Release();
 
 	ZeroMemory(&depthBufferDesc, sizeof depthBufferDesc);
 
@@ -470,7 +474,7 @@ ID3D11Texture2D *D3DRenderer::GetDepthStencilTexture()
 	return depthStencilBuffer;
 }
 
-Renderer::DXType<ID3D11ShaderResourceView> D3DRenderer::GetDepthResourceView()
+ID3D11ShaderResourceView *D3DRenderer::GetDepthResourceView()
 {
 	return depthResourceView;
 }

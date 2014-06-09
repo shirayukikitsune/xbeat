@@ -294,7 +294,7 @@ void Bone::updateVertices()
 
 		if (weight > 0.0f) {
 			vertex.first->boneOffset[vertex.second] = (m_transform(localPosition) - localPosition) * weight;
-			vertex.first->boneRotation[vertex.second] = this->slerp(weight, btQuaternion::getIdentity(), m_transform.getRotation());
+			vertex.first->boneRotation[vertex.second] = this->slerp(weight, m_initialRotation, m_transform.getRotation());
 
 			for (auto &m : vertex.first->materials)
 				m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;

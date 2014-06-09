@@ -2,7 +2,7 @@
 #include "DXUtil.h"
 #include "D3DRenderer.h"
 #include "Shaders/Texture.h"
-#include "CameraClass.h"
+#include "Camera.h"
 #include "Light.h"
 #include "ViewFrustum.h"
 #include "VertexTypes.h"
@@ -24,7 +24,7 @@ public:
 
 	bool Initialize(std::shared_ptr<D3DRenderer> d3d, const std::wstring &texturefile, std::shared_ptr<Light> light, HWND wnd);
 	void Shutdown();
-	bool Render(std::shared_ptr<D3DRenderer> d3d, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<CameraClass> camera, std::shared_ptr<Light> light);
+	bool Render(std::shared_ptr<D3DRenderer> d3d, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<Camera> camera, std::shared_ptr<Light> light);
 
 private:
 	struct MatrixBufferType {
@@ -42,15 +42,15 @@ private:
 	void ReleaseModel();
 
 	std::unique_ptr<DirectX::GeometricPrimitive> m_sphere;
-	DXType<ID3D11InputLayout> m_layout;
+	ID3D11InputLayout *m_layout;
 	std::unique_ptr<Texture> texture;
 
-	DXType<ID3D11VertexShader> vertexShader;
-	DXType<ID3D11PixelShader> pixelShader;
-	DXType<ID3D11Buffer> matrixBuffer;
-	DXType<ID3D11SamplerState> sampleState;
-	DXType<ID3D11Buffer> sphereIndexBuffer;
-	DXType<ID3D11Buffer> sphereVertBuffer;
+	ID3D11VertexShader *vertexShader;
+	ID3D11PixelShader *pixelShader;
+	ID3D11Buffer *matrixBuffer;
+	ID3D11SamplerState *sampleState;
+	ID3D11Buffer *sphereIndexBuffer;
+	ID3D11Buffer *sphereVertBuffer;
 
 	int NumSphereVertices, NumSphereFaces;
 };

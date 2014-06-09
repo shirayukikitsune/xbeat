@@ -1,5 +1,5 @@
 #include "Texture.h"
-#include <fstream>
+#include "GenericShader.h"
 
 using namespace Renderer::Shaders;
 
@@ -51,14 +51,14 @@ bool Texture::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstrin
 	D3D11_SAMPLER_DESC samplerDesc;
 	SIZE_T vsbufsize, psbufsize;
 
-	char *vsbuffer = getFileContents(vsFile, vsbufsize);
+	char *vsbuffer = Generic::getFileContents(vsFile, vsbufsize);
 	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &vertexShader);
 	if (FAILED(result)) {
 		delete[] vsbuffer;
 		return false;
 	}
 
-	char *psbuffer = getFileContents(psFile, psbufsize);
+	char *psbuffer = Generic::getFileContents(psFile, psbufsize);
 	result = device->CreatePixelShader(psbuffer, psbufsize, NULL, &pixelShader);
 	if (FAILED(result)) {
 		delete[] vsbuffer;
@@ -149,30 +149,6 @@ void Texture::ShutdownShader()
 		vertexShader->Release();
 		vertexShader = nullptr;
 	}
-}
-
-void Texture::OutputShaderErrorMessage(ID3D10Blob *errorMessage, HWND wnd, const std::wstring &file)
-{
-	char *compileError;
-	SIZE_T bufferSize;
-	std::ofstream fout;
-
-	compileError = (char*)errorMessage->GetBufferPointer();
-	bufferSize = errorMessage->GetBufferSize();
-
-	fout.open("shader-errors.log", std::ios::app);
-	if (fout.bad()) {
-		errorMessage->Release();
-		return;
-	}
-
-	fout.write(compileError, bufferSize);
-
-	fout.close();
-
-	errorMessage->Release();
-
-	MessageBox(wnd, L"Error compiling shader", file.c_str(), MB_OK);
 }
 
 bool Texture::SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture)

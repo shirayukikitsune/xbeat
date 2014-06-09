@@ -1,7 +1,7 @@
 /*
   XBeat Project - A Project Diva inspired game
 
-  Copyright (c) 2013 Bruno Rodrigues Ferreira
+  Copyright (c) 2013-2014 Bruno Rodrigues Ferreira
 */
 
 /* ----------------------------------------------------------------- */
