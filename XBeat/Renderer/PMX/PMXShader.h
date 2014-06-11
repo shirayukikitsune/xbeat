@@ -17,7 +17,7 @@ public:
 		enum {
 			Morphs = 50,
 			Bones = 250,
-			Materials = 50,
+			Materials = 100,
 		};
 	};
 
@@ -52,8 +52,8 @@ public:
 	bool UpdateMaterialBuffer(ID3D11DeviceContext *context);
 
 private:
-	ID3D11Buffer *m_materialBuffer;
-	ID3D11UnorderedAccessView *m_materialUav;
+	ID3D11Buffer *m_materialBuffer, *m_tmpMatBuffer;
+	ID3D11ShaderResourceView *m_materialSrv;
 	ID3D11VertexShader *m_vertexShader;
 	ID3D11PixelShader *m_pixelShader;
 	std::array<MaterialBufferType, Limits::Materials> m_materials;

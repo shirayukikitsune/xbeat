@@ -34,8 +34,9 @@ public:
 		float unused;
 	};
 
-	__declspec(align(16)) struct BlurSamplersBuffer {
-		DirectX::XMFLOAT2A offsetAndWeight[BLUR_SAMPLE_COUNT];
+	struct BlurSamplersBuffer {
+		DirectX::XMFLOAT2 offsetAndWeight[BLUR_SAMPLE_COUNT];
+		DirectX::XMFLOAT2 padding;
 	};
 
 	PostProcessEffect(void);

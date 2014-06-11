@@ -171,14 +171,10 @@ void SystemClass::InitializeWindow(int &width, int &height)
 	ShowWindow(wnd, SW_SHOW);
 	SetForegroundWindow(wnd);
 	SetFocus(wnd);
-
-	ShowCursor(false);
 }
 
 void SystemClass::ShutdownWindow()
 {
-	ShowCursor(true);
-
 	if (Renderer::FULL_SCREEN)
 		ChangeDisplaySettings(NULL, 0);
 

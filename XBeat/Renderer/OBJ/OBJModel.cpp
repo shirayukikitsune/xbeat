@@ -122,7 +122,7 @@ void OBJModel::Render(ID3D11DeviceContext* context, std::shared_ptr<ViewFrustum>
 	DirectX::XMFLOAT3 cameraPosition;
 
 	// Set vertex buffer stride and offset.
-	stride = sizeof(DirectX::VertexPositionNormalTexture);
+	stride = sizeof(Shaders::Light::VertexInput);
 	offset = 0;
 
 	// Set the vertex buffer to active in the input assembler so it can be rendered.

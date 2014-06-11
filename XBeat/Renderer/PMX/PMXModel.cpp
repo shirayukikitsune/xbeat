@@ -277,6 +277,11 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (FAILED(result))
 		return false;
 
+#ifdef DEBUG
+	m_vertexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, 6, "PMX VB");
+	m_indexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, 6, "PMX IB");
+#endif
+
 	return true;
 }
 
@@ -392,8 +397,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 	}
 
 	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
-		unsigned int stride = sizeof(DirectX::VertexPositionNormalTexture);
-		Shaders::Light::MaterialBufferType matBuf;
+		unsigned int stride = sizeof(PMXShader::VertexType);
 
 		ID3D11ShaderResourceView *textures[3];
 
@@ -407,8 +411,6 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		bool isTransparent = false;
-
 		// Check if our model was changed and perform the updates
 		updateVertexBuffer();
 
@@ -421,35 +423,20 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		shader->UpdateMaterialBuffer(context);
 		shader->PrepareRender(context);
 
+		context->RSSetState(m_d3d->GetRasterState(1));
+		m_d3d->EnableAlphaBlending();
+
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
 			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
 			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
 
-			if ((materials[i]->flags & (uint8_t)MaterialFlags::DoubleSide) == (uint8_t)MaterialFlags::DoubleSide ||
-				(rendermaterials[i].getDiffuse(materials[i]).w < 1.0f || rendermaterials[i].getAmbient(materials[i]).w < 1.0f)) {
-				// Enable no-culling rasterizer if material has transparency or if it is marked to be rendered by both sides
-
-				if (!isTransparent) {
-					context->RSSetState(m_d3d->GetRasterState(1));
-					isTransparent = true;
-					m_d3d->EnableAlphaBlending();
-				}
-			}
-			else if (isTransparent) {
-				isTransparent = false;
-				context->RSSetState(m_d3d->GetRasterState(0));
-				m_d3d->DisableAlphaBlending();
-			}
-
 			context->PSSetShaderResources(0, 3, textures);
 			m_shader->Render(context, rendermaterials[i].indexCount, rendermaterials[i].startIndex);
 		}
 
-		if (isTransparent) {
-			context->RSSetState(m_d3d->GetRasterState(0));
-			m_d3d->DisableAlphaBlending();
-		}
+		context->RSSetState(m_d3d->GetRasterState(0));
+		m_d3d->DisableAlphaBlending();
 	}
 
 	if (m_debugFlags & DebugFlags::RenderBones) {

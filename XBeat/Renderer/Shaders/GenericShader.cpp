@@ -6,10 +6,10 @@ using namespace Renderer::Shaders;
 
 void XM_CALLCONV Generic::SetMatrices(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection)
 {
-	m_cbuffer.matrix.world = world;
-	m_cbuffer.matrix.view = view;
-	m_cbuffer.matrix.projection = projection;
-	m_cbuffer.matrix.wvp = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection);
+	m_cbuffer.matrix.world = DirectX::XMMatrixTranspose(world);
+	m_cbuffer.matrix.view = DirectX::XMMatrixTranspose(view);
+	m_cbuffer.matrix.projection = DirectX::XMMatrixTranspose(projection);
+	m_cbuffer.matrix.wvp = DirectX::XMMatrixTranspose(DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection));
 }
 
 void XM_CALLCONV Generic::SetEyePosition(DirectX::FXMVECTOR eyePosition)
@@ -75,6 +75,11 @@ bool Generic::InitializeBuffers(ID3D11Device *device, HWND hwnd)
 	if (FAILED(hr))
 		return false;
 
+#ifdef DEBUG
+	m_dxcbuffer->SetPrivateData(WKPDID_D3DDebugObjectName, 16, "GenericShader CB");
+	m_sampleState->SetPrivateData(WKPDID_D3DDebugObjectName, 16, "GenericShader SS");
+#endif
+
 	// Allow derived classes to initialize their own buffers
 	return InternalInitializeBuffers(device, hwnd);
 }
@@ -82,7 +87,7 @@ bool Generic::InitializeBuffers(ID3D11Device *device, HWND hwnd)
 bool Generic::Update(float time, ID3D11DeviceContext *context)
 {
 	D3D11_MAPPED_SUBRESOURCE map;
-	HRESULT hr = context->Map(m_dxcbuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+	HRESULT hr = context->Map(m_dxcbuffer, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &map);
 
 	if (FAILED(hr))
 		return false;

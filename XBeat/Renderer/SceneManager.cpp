@@ -82,6 +82,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 
 	light->SetDirection(0.0f, 0.0f, 1.0f);
 	light->SetSpecularPower(32.0f);
+	light->SetAmbientColor(0.8f, 0.7f, 0.0f, 1.0f);
 
 	renderTexture.reset(new D3DTextureRenderer);
 	if (renderTexture == nullptr)
@@ -133,10 +134,8 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
 		static float rotation[2] = { 0.0f, 0.0f };
 		if (data->x != 0 || data->y != 0) {
-			rotation[0] += data->x;
-			rotation[1] += data->y;
-			//auto bone = m_models[0]->GetBoneByName(L"首");
-			//bone->Rotate(btVector3(0.0f, rotation[0], -rotation[1]));
+			rotation[0] += data->x / 1000.f;
+			rotation[1] += data->y / 1000.f;
 			btQuaternion v(rotation[0], rotation[1], 0.0f);
 			camera->SetRotation(v);
 		}
@@ -163,16 +162,16 @@ bool SceneManager::LoadScene() {
 	stage->SetShader(lightShader);
 
 	m_models.emplace_back(new PMX::Model);
-	if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
 	//model.reset(new PMX::Model);
-	//if (!model->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 リリス風 Ver106.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
-	//if (!model->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
+	if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 モリガン風 Ver106 盛り仕様.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
 		return false;
 	}
@@ -436,8 +435,13 @@ bool SceneManager::Render2DTextureScene(float frameTime)
 	// Render UI artifacts
 	m_batch->Begin();
 	std::wstringstream ss;
-	ss << L"FPS: " << std::setprecision(3) << 1000.0f / frameTime << L" - " << frameTime << L"ms";
-	m_font->DrawString(m_batch.get(), ss.str().c_str(), DirectX::XMFLOAT2(10.0f, 10.0f), DirectX::Colors::Yellow);
+	ss.precision(1);
+	ss << L"FPS: " << std::fixed << 1000.0f / frameTime << L" - " << frameTime << L"ms";
+	m_font->DrawString(m_batch.get(), ss.str().c_str(), DirectX::XMFLOAT2(9.0f, 9.0f), DirectX::Colors::Black, 0, DirectX::XMFLOAT2(0, 0), 1.0f);
+	m_font->DrawString(m_batch.get(), ss.str().c_str(), DirectX::XMFLOAT2(11.0f, 9.0f), DirectX::Colors::Black, 0, DirectX::XMFLOAT2(0, 0), 1.0f);
+	m_font->DrawString(m_batch.get(), ss.str().c_str(), DirectX::XMFLOAT2(9.0f, 11.0f), DirectX::Colors::Black, 0, DirectX::XMFLOAT2(0, 0), 1.0f);
+	m_font->DrawString(m_batch.get(), ss.str().c_str(), DirectX::XMFLOAT2(11.0f, 11.0f), DirectX::Colors::Black, 0, DirectX::XMFLOAT2(0, 0), 1.0f);
+	m_font->DrawString(m_batch.get(), ss.str().c_str(), DirectX::XMFLOAT2(10.0f, 10.0f), DirectX::Colors::Yellow, 0, DirectX::XMFLOAT2(0, 0), 1.0f);
 	m_batch->End();
 
 	d3d->EndScene();

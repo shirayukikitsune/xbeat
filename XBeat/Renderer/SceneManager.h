@@ -25,7 +25,7 @@ namespace Renderer {
 
 const bool FULL_SCREEN = false;
 const bool VSYNC_ENABLED = false;
-const float SCREEN_DEPTH = 500.0f;
+const float SCREEN_DEPTH = 300.0f;
 const float SCREEN_NEAR = 0.25f;
 
 ATTRIBUTE_ALIGNED16(class) SceneManager

@@ -61,8 +61,8 @@ PixelInputType main(VertexInputType input)
     input.position.w = 1.0f;
 	 
 	// Calculate the position of the vertex against the world, view, and projection matrices.
-    output.position = mul(input.position, matrices.wvp);
-    
+	output.position = mul(input.position, matrices.wvp);
+
 	// Store the texture coordinates for the pixel shader.
 	output.tex = input.tex;
 
@@ -72,7 +72,7 @@ PixelInputType main(VertexInputType input)
 	// Normalize the normal vector.
 	output.normal = normalize(output.normal);
 
-	// the view direction is the vector starting at the camera and points towards the vector
+	// the view direction is the vector starting at the camera and points towards the vertex
 	// A->B = B - A
 	worldPos = mul(input.position, matrices.world);
 	output.viewDirection = normalize(worldPos.xyz - eyePosition.xyz);

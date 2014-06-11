@@ -8,7 +8,7 @@ using Renderer::Shaders::PostProcessEffect;
 
 PostProcessEffect::PostProcessEffect(void)
 {
-	m_blurAmmount = 1.8f;
+	m_blurAmmount = 0.1f;
 }
 
 
@@ -143,7 +143,6 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 		}
 		else {
 			OutputErrorMessage(errorMsg, wnd, filename);
-			errorMsg->Release();
 			return false;
 		}
 	}

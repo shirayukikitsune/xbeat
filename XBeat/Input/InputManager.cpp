@@ -80,7 +80,7 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 	if (FAILED(result))
 		return false;
 
-	result = mouse->SetCooperativeLevel(wnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
+	result = mouse->SetCooperativeLevel(wnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
 	if (FAILED(result))
 		return false;
 
@@ -155,17 +155,6 @@ bool Manager::ReadMouse()
 
 void Manager::ProcessInput()
 {
-	// Update the location of the mouse cursor based on the change of the mouse location during the frame.
-	mouseX += currentMouseState.lX;
-	mouseY += currentMouseState.lY;
-
-	// Ensure the mouse location doesn't exceed the screen width or height.
-	if(mouseX < 0)  { mouseX = 0; }
-	if(mouseY < 0)  { mouseY = 0; }
-	
-	if(mouseX > screenWidth)  { mouseX = screenWidth; }
-	if(mouseY > screenHeight) { mouseY = screenHeight; }
-
 	DIDEVICEOBJECTDATA keyChanges[keyboardBufferSize];
 	DWORD items = keyboardBufferSize;
 	HRESULT result;
@@ -196,8 +185,8 @@ void Manager::ProcessInput()
 	// Check for mouse movements
 	if (mouseCallback) {
 		std::shared_ptr<MouseMovement> m(new MouseMovement);
-		m->x = currentMouseState.lX - lastMouseState.lX;
-		m->y = currentMouseState.lY - lastMouseState.lY;
+		m->x = currentMouseState.lX;
+		m->y = currentMouseState.lY;
 		this->dispatcher->AddTask(std::bind(mouseCallback, m));
 	}
 	for (int i = 0; i < 8; i++)

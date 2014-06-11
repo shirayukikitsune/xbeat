@@ -146,7 +146,7 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 #ifdef _DEBUG
 	deviceFlags |= D3D11_CREATE_DEVICE_DEBUG | D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS;
 #endif
-	result = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, deviceFlags, featureLevels, sizeof (featureLevels) / sizeof (featureLevels[0]), D3D11_SDK_VERSION, &swapChainDesc, &swapChain, &device, NULL, &deviceContext);
+	result = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, deviceFlags, featureLevels, sizeof(featureLevels) / sizeof(featureLevels[0]), D3D11_SDK_VERSION, &swapChainDesc, &swapChain, &device, NULL, &deviceContext);
 	if (FAILED(result))
 		return false;
 

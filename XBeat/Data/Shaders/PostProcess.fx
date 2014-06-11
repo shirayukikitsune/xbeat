@@ -211,11 +211,83 @@ float4 DofPS(PixelInputType input) : SV_TARGET {
 	return float4(cOut.rgb, 1);
 }
 
+
+static const float3x3 G2[9] = {
+	1.0 / (2.0*sqrt(2.0)) * float3x3(1.0, sqrt(2.0), 1.0, 0.0, 0.0, 0.0, -1.0, -sqrt(2.0), -1.0),
+	1.0 / (2.0*sqrt(2.0)) * float3x3(1.0, 0.0, -1.0, sqrt(2.0), 0.0, -sqrt(2.0), 1.0, 0.0, -1.0),
+	1.0 / (2.0*sqrt(2.0)) * float3x3(0.0, -1.0, sqrt(2.0), 1.0, 0.0, -1.0, -sqrt(2.0), 1.0, 0.0),
+	1.0 / (2.0*sqrt(2.0)) * float3x3(sqrt(2.0), -1.0, 0.0, -1.0, 0.0, 1.0, 0.0, 1.0, -sqrt(2.0)),
+	1.0 / 2.0 * float3x3(0.0, 1.0, 0.0, -1.0, 0.0, -1.0, 0.0, 1.0, 0.0),
+	1.0 / 2.0 * float3x3(-1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0),
+	1.0 / 6.0 * float3x3(1.0, -2.0, 1.0, -2.0, 4.0, -2.0, 1.0, -2.0, 1.0),
+	1.0 / 6.0 * float3x3(-2.0, 1.0, -2.0, 1.0, 4.0, 1.0, -2.0, 1.0, -2.0),
+	1.0 / 3.0 * float3x3(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+};
+
+float4 Edge_FreiChen(PixelInputType input) : SV_TARGET{
+	int i, j;
+	float3x3 I;
+	float3 color;
+	float cnv[9];
+
+	[unroll]
+	for (i = 0; i < 3; i++) {
+		[unroll]
+		for (j = 0; j < 3; j++) {
+			color = CurrentScene.Sample(TexSampler, (input.texCoord * screenDimentions + float2(i - 1, j - 1)) * texelSize).rgb;
+			I[i][j] = length(color);
+		}
+	}
+
+	[unroll]
+	for (i = 0; i < 9; i++) {
+		float dp3 = dot(G2[i][0], I[0]) + dot(G2[i][1], I[1]) + dot(G2[i][2], I[2]);
+		cnv[i] = dp3 * dp3;
+	}
+
+	float M = (cnv[4] + cnv[5]) + (cnv[6] + cnv[7]);
+	float S = (cnv[0] + cnv[1]) + (cnv[2] + cnv[3]) + (cnv[4] + cnv[5]) + (cnv[6] + cnv[7]) + cnv[8];
+	float v = sqrt(M / S);
+	return CurrentScene.Sample(TexSampler, input.texCoord) - float4(v, v, v, 0.0f);
+}
+
+// http://www.geeks3d.com/20110408/cross-stitching-post-processing-shader-glsl-filter-geexlab-pixel-bender/
+static const float stitchSize = 8.0f;
+static const bool invert = false;
+
+float4 crossStitch(PixelInputType input) : SV_TARGET {
+	float4 c = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	float2 cPos = input.texCoord * screenDimentions;
+	float2 tlPos = floor(cPos / float2(stitchSize, stitchSize));
+	tlPos *= stitchSize;
+	int remX = cPos.x % stitchSize;
+	int remY = cPos.y % stitchSize;
+	if (remX == remY) tlPos = cPos;
+	float2 blPos = tlPos;
+	blPos.y += (stitchSize - 1.0f);
+	if (remX == remY || (int)cPos.x - (int)blPos.x == (int)blPos.y - (int)cPos.y) {
+		if (invert) {
+			return float4(0.2f, 0.15f, 0.05f, 1.0f);
+		}
+		else {
+			return CurrentScene.Sample(TexSampler, tlPos * texelSize) * 1.4f;
+		}
+	}
+	else {
+		if (invert) {
+			return CurrentScene.Sample(TexSampler, tlPos * texelSize) * 1.4f;
+		}
+		else {
+			return float4(0.0f, 0.0f, 0.0f, 1.0f);
+		}
+	}
+}
+
 // Define our technique here
 //   The bloom needs to blur the screen first (we blur it twice, once horizontally, another vertically), then applies the effect
 technique11 Bloom
 {
-	/*pass horizontalgaussianblur
+	pass horizontalgaussianblur
 	{
 		VertexShader = compile vs_5_0 mainvs();
 		PixelShader = compile ps_5_0 horblurps();
@@ -227,7 +299,7 @@ technique11 Bloom
 	pass bloom
 	{
 		PixelShader = compile ps_5_0 bloomps();
-	}*/
+	}
 	pass dof
 	{
 		VertexShader = compile vs_5_0 mainvs();
@@ -237,12 +309,21 @@ technique11 Bloom
 	{
 		PixelShader = compile ps_5_0 DofPS();
 	}
-	/*pass p2
+	pass p2
 	{
 		PixelShader = compile ps_5_0 horblurps();
 	}
 	pass p3
 	{
 		PixelShader = compile ps_5_0 verblurps();
-	}*/
+	}
+	pass Edge
+	{
+		//VertexShader = compile vs_5_0 mainvs();
+		PixelShader = compile ps_5_0 Edge_FreiChen();
+	}
+	pass CrossStitch
+	{
+		PixelShader = compile ps_5_0 crossStitch();
+	}
 }

@@ -11,10 +11,10 @@ cbuffer data : register (cb0)
 	float3 __padding2;
 };
 
-StructuredBuffer<MaterialBufferType> materials : register (u4);
 Texture2D baseTexture : register(t0);
 Texture2D sphereTexture : register(t1);
 Texture2D toonTexture : register(t2);
+StructuredBuffer<MaterialBufferType> materials : register(t4);
 SamplerState SampleType;
 
 float4 main(PixelInput input) : SV_TARGET
