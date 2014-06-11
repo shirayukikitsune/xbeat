@@ -89,7 +89,6 @@ private:
 	IDirectInputDevice8 *mouse;
 
 	int screenWidth, screenHeight;
-	int mouseX, mouseY;
 
 	uint8_t keyState[256];
 	std::unordered_map<uint8_t, CallbackInfo::Event> pressedKeys;

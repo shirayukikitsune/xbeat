@@ -35,8 +35,6 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 	this->screenWidth = width;
 	this->screenHeight = height;
 	
-	this->mouseX = this->mouseY = 0;
-
 	this->dispatcher = dispatcher;
 
 	memset(keyState, 0, sizeof(keyState));
@@ -68,9 +66,7 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 	if (FAILED(result))
 		return false;
 
-	result = keyboard->Acquire();
-	/*if (FAILED(result))
-		return false;*/
+	keyboard->Acquire();
 
 	result = dinput->CreateDevice(GUID_SysMouse, &mouse, NULL);
 	if (FAILED(result))
@@ -84,9 +80,7 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 	if (FAILED(result))
 		return false;
 
-	result = mouse->Acquire();
-	/*if (FAILED(result))
-		return false;*/
+	mouse->Acquire();
 
 	return true;
 }
@@ -130,7 +124,7 @@ bool Manager::ReadKeyboard()
 	result = keyboard->GetDeviceState(sizeof (keyState), (LPVOID)&keyState);
 	if (FAILED(result)) {
 		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED)
-			keyboard->Acquire();
+			return !(FAILED(keyboard->Acquire()));
 		else
 			return false;
 	}
@@ -145,7 +139,7 @@ bool Manager::ReadMouse()
 	result = mouse->GetDeviceState(sizeof (DIMOUSESTATE2), (LPVOID)&currentMouseState);
 	if (FAILED(result)) {
 		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED)
-			mouse->Acquire();
+			return !(FAILED(mouse->Acquire()));
 		else
 			return false;
 	}
