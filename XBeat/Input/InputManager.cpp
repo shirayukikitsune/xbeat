@@ -212,12 +212,6 @@ bool Manager::IsKeyPressed(int key)
 	return pressedKeys.find(key) != pressedKeys.end();
 }
 
-void Manager::GetMouseLocation(int &x, int &y)
-{
-	x = mouseX;
-	y = mouseY;
-}
-
 void Manager::AddBinding(CallbackInfo& info, Callback callback)
 {
 	bindings[info] = callback;

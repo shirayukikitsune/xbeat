@@ -71,8 +71,6 @@ public:
 	bool IsEscapePressed();
 	bool IsKeyPressed(int key);
 
-	void GetMouseLocation(int &x, int &y);
-
 	void AddBinding(CallbackInfo &info, Callback callback);
 	void RemoveBinding(CallbackInfo &info);
 
