@@ -753,7 +753,7 @@ void PMX::Model::updateVertexBuffer()
 		}
 	}
 
-	memcpy(mappedResource.pData, m_vertices.data(), sizeof(DirectX::VertexPositionNormalTexture) * m_vertices.size());
+	memcpy(mappedResource.pData, m_vertices.data(), sizeof(PMXShader::VertexType) * m_vertices.size());
 
 	// release the access to the buffer
 	context->Unmap(m_vertexBuffer, 0);
