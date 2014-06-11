@@ -252,8 +252,8 @@ float4 Edge_FreiChen(PixelInputType input) : SV_TARGET{
 }
 
 // http://www.geeks3d.com/20110408/cross-stitching-post-processing-shader-glsl-filter-geexlab-pixel-bender/
-static const float stitchSize = 6.0f;
-static const bool invert = true;
+static const float stitchSize = 8.0f;
+static const bool invert = false;
 
 float4 crossStitch(PixelInputType input) : SV_TARGET {
 	float4 c = float4(0.0f, 0.0f, 0.0f, 0.0f);
