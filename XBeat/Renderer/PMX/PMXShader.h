@@ -16,7 +16,7 @@ public:
 	struct Limits {
 		enum {
 			Morphs = 50,
-			Bones = 250,
+			Bones = 400,
 			Materials = 100,
 		};
 	};
@@ -38,6 +38,12 @@ public:
 		int padding;
 	};
 
+	struct BoneBufferType {
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT3 direction;
+		DirectX::XMFLOAT2 padding;
+	};
+
 	struct VertexType {
 		DirectX::XMFLOAT3 position;
 		DirectX::XMFLOAT3 normal;
@@ -51,12 +57,18 @@ public:
 	MaterialBufferType& GetMaterial(int index) { return m_materials[index]; }
 	bool UpdateMaterialBuffer(ID3D11DeviceContext *context);
 
+	BoneBufferType& GetBone(int index) { return m_bones[index]; }
+	bool UpdateBoneBuffer(ID3D11DeviceContext *context);
+
 private:
 	ID3D11Buffer *m_materialBuffer, *m_tmpMatBuffer;
 	ID3D11ShaderResourceView *m_materialSrv;
+	ID3D11Buffer *m_bonesBuffer, *m_tmpBoneBuffer;
+	ID3D11ShaderResourceView *m_bonesSrv;
 	ID3D11VertexShader *m_vertexShader;
 	ID3D11PixelShader *m_pixelShader;
 	std::array<MaterialBufferType, Limits::Materials> m_materials;
+	std::array<BoneBufferType, Limits::Bones> m_bones;
 
 protected:
 	virtual bool InternalInitializeBuffers(ID3D11Device *device, HWND hwnd);

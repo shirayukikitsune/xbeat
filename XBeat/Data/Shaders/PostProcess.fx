@@ -54,8 +54,6 @@ static const float ApertureDiameter = 3;
 cbuffer GaussianBlurBuffer {
 	float2 blurWeightsAndOffsets[BLUR_SAMPLE_COUNT];
 }
-float blurDistance = 0.0015f;
-float blurWeights[9] = { 0.01f, 0.02f, 0.10f, 0.22f, 0.30f, 0.22f, 0.10f, 0.02f, 0.01f };
 
 static const float2 poisson[8] =
 {
@@ -96,8 +94,6 @@ float4 horblurps(PixelInputType input) : SV_TARGET
 
 	for (int i = 0; i < BLUR_SAMPLE_COUNT; i++)
 		sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x + blurWeightsAndOffsets[i].x * texelSize.x, input.texCoord.y)) * blurWeightsAndOffsets[i].y;
-	//for (int i = 0; i < 9; i++)
-		//sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x + (i - 4.0f) * texelSize.x, input.texCoord.y)) * blurWeights[i];
 
 	sum.w = 1.0f;
 
@@ -111,8 +107,6 @@ float4 verblurps(PixelInputType input) : SV_TARGET
 
 	for (int i = 0; i < BLUR_SAMPLE_COUNT; i++)
 		sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x, input.texCoord.y + blurWeightsAndOffsets[i].x * texelSize.y)) * blurWeightsAndOffsets[i].y;
-	//for (int i = 0; i < 9; i++)
-		//sum += CurrentScene.Sample(BlurSampler, float2(input.texCoord.x, input.texCoord.y + (i - 4.0f) * texelSize.y)) * blurWeights[i];
 
 	sum.w = 1.0f;
 
