@@ -302,7 +302,6 @@ technique11 Bloom
 	}
 	pass dof
 	{
-		VertexShader = compile vs_5_0 mainvs();
 		PixelShader = compile ps_5_0 GetDepth();
 	}
 	pass p1
@@ -319,11 +318,10 @@ technique11 Bloom
 	}
 	pass Edge
 	{
-		//VertexShader = compile vs_5_0 mainvs();
 		PixelShader = compile ps_5_0 Edge_FreiChen();
 	}
-	pass CrossStitch
+	/*pass CrossStitch
 	{
 		PixelShader = compile ps_5_0 crossStitch();
-	}
+	}*/
 }
