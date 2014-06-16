@@ -5,6 +5,18 @@
 
 using namespace Renderer::PMX;
 
+btTransform DirectXMatrixToBtTransform(DirectX::XMMATRIX M)
+{
+	DirectX::XMVECTOR position, rotation, unused;
+	DirectX::XMMatrixDecompose(&unused, &rotation, &position, M);
+	btQuaternion q;
+	q.set128(rotation);
+	btVector3 p;
+	p.set128(position);
+	return btTransform(q, p);
+}
+
+
 KinematicMotionState::KinematicMotionState(const btTransform &startTrans, const btTransform &boneTrans, Bone *bone)
 {
 	m_bone = bone;
@@ -17,7 +29,7 @@ KinematicMotionState::~KinematicMotionState()
 
 void KinematicMotionState::getWorldTransform(btTransform &worldTrans) const
 {
-	worldTrans = m_bone->getLocalTransform() * m_transform;
+	worldTrans = DirectXMatrixToBtTransform(m_bone->getLocalTransform()) * m_transform;
 }
 
 void KinematicMotionState::setWorldTransform(const btTransform &transform)
@@ -58,14 +70,12 @@ void RigidBody::Initialize(std::shared_ptr<Physics::Environment> physics, Model 
 		m_bone = model->GetBoneById(body->targetBone);
 	else m_bone = model->GetRootBone();
 
-	btVector3 position = m_bone->GetPosition();
+	DirectX::XMVECTOR position = m_bone->GetPosition();
 
-	startTransform.setIdentity();
-	startTransform.setOrigin(m_bone->getLocalTransform().getOrigin());
-	startTransform *= m_transform;
+	startTransform = DirectXMatrixToBtTransform(m_bone->getLocalTransform()) * m_transform;
 
 	if (body->mode == RigidBodyMode::Static)
-		m_motion.reset(new KinematicMotionState(startTransform, m_bone->getLocalTransform(), m_bone));
+		m_motion.reset(new KinematicMotionState(startTransform, DirectXMatrixToBtTransform(m_bone->getLocalTransform()), m_bone));
 	else m_motion.reset(new btDefaultMotionState(startTransform));
 
 	btRigidBody::btRigidBodyConstructionInfo ci(body->mass, m_motion.get(), m_shape.get(), inertia);

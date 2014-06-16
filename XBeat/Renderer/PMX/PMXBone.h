@@ -39,11 +39,11 @@ public:
 
 	Bone* GetParentBone();
 
-	Position GetPosition();
-	Position GetOffsetPosition();
-	Position GetEndPosition();
-	btQuaternion GetRotation();
-	__forceinline btQuaternion GetInitialRotation() const { return m_initialRotation; }
+	DirectX::XMVECTOR XM_CALLCONV GetPosition();
+	DirectX::XMVECTOR XM_CALLCONV GetOffsetPosition();
+	DirectX::XMVECTOR XM_CALLCONV GetEndPosition();
+	DirectX::XMVECTOR XM_CALLCONV GetRotation();
+	__forceinline DirectX::XMVECTOR XM_CALLCONV GetInitialRotation() const { return m_initialRotation; }
 
 	bool Update(bool force = false);
 
@@ -54,11 +54,10 @@ public:
 
 	void ApplyMorph(Morph *morph, float weight);
 
-	__forceinline const btTransform& getLocalTransform() const { return m_transform; }
+	__forceinline DirectX::XMMATRIX XM_CALLCONV getLocalTransform() const { return m_transform; }
 
 	bool XM_CALLCONV Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection);
 
-	void updateVertices();
 	void updateChildren();
 
 	bool wasTouched();
@@ -67,7 +66,6 @@ public:
 
 private:
 	float getVertexWeight(Vertex *vertex);
-	btQuaternion slerp(btScalar fT, const btQuaternion &rkP, const btQuaternion &rkQ, bool shortestPath = true);
 
 	bool m_dirty;
 
@@ -78,13 +76,12 @@ private:
 
 	std::deque<Bone*> children;
 
-	btTransform m_transform;
-	btTransform m_inheritTransform;
-	btTransform m_toOriginTransform;
-	btTransform m_userTransform;
-	btTransform m_morphTransform;
+	DirectX::XMMATRIX m_transform;
+	DirectX::XMMATRIX m_inheritTransform;
+	DirectX::XMMATRIX m_userTransform;
+	DirectX::XMMATRIX m_morphTransform;
 
-	btQuaternion m_initialRotation;
+	DirectX::XMVECTOR m_initialRotation;
 
 	uint32_t id;
 

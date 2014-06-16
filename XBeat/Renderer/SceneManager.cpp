@@ -58,15 +58,6 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		return false;
 	}
 
-	m_pmxShader.reset(new PMX::PMXShader);
-	if (m_pmxShader == nullptr)
-		return false;
-
-	if (!m_pmxShader->InitializeBuffers(d3d->GetDevice(), wnd)) {
-		MessageBox(wnd, L"Could not initialize the PMX effects object", L"Error", MB_OK);
-		return false;
-	}
-
 	m_postProcess.reset(new Shaders::PostProcessEffect);
 	if (m_postProcess == nullptr)
 		return false;
@@ -83,7 +74,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	light->SetDirection(0.0f, 0.0f, 1.0f);
 	light->SetSpecularPower(8.f);
 	light->SetAmbientColor(1.0f, 1.0f, 1.0f, 1.0f);
-	light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
+	light->SetDiffuseColor(0.8f, 0.7f, 0.0f, 1.0f);
 
 	renderTexture.reset(new D3DTextureRenderer);
 	if (renderTexture == nullptr)
@@ -142,7 +133,9 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) {
 		auto bone = m_models[0]->GetBoneByName(L"右腕");
-		bone->Rotate(bone->GetOffsetPosition(), 1.0f);
+		btVector3 a;
+		a.set128(bone->GetOffsetPosition());
+		bone->Rotate(a, 1.0f);
 	});
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(-1.0f, 0.0f, 0.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
@@ -183,18 +176,33 @@ bool SceneManager::LoadScene() {
 
 	m_models.emplace_back(new PMX::Model);
 	//model.reset(new PMX::Model);
-	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 モリガン風 Ver106 盛り仕様.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
-	if (!m_models.back()->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
-	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	if (!m_models.back()->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
 		return false;
 	}
-	m_models.back()->SetShader(m_pmxShader);
+	m_models[0]->GetBoneByName(L"全ての親")->Translate(btVector3(-7.5f, 0, 0));
+	m_pmxShader.emplace_back(new PMX::PMXShader);
+	if (!m_pmxShader[0]->InitializeBuffers(d3d->GetDevice(), wnd)) {
+		MessageBox(wnd, L"Could not initialize the PMX effects object", L"Error", MB_OK);
+		return false;
+	}
+	m_models[0]->SetShader(m_pmxShader[0]);
+
+	m_models.emplace_back(new PMX::Model);
+	m_models[1]->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 モリガン風 Ver106 盛り仕様.pmx", physics, m_dispatcher);
+	m_models[1]->GetBoneByName(L"全ての親")->Translate(btVector3(7.5f, 0, 0));
+	m_pmxShader.emplace_back(new PMX::PMXShader);
+	if (!m_pmxShader[1]->InitializeBuffers(d3d->GetDevice(), wnd)) {
+		MessageBox(wnd, L"Could not initialize the PMX effects object", L"Error", MB_OK);
+		return false;
+	}
+	m_models[1]->SetShader(m_pmxShader[1]);
 
 	//auto pos = model->GetBoneByName(L"頭")->GetPosition();
 	//camera->SetPosition(pos.x(), pos.y(), pos.z());
@@ -208,8 +216,10 @@ bool SceneManager::LoadScene() {
 	material.specularColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	lightShader->UpdateMaterialBuffer(material, d3d->GetDeviceContext());
 
-	m_pmxShader->SetLightCount(1);
-	m_pmxShader->SetLights(light->GetAmbientColor(), light->GetDiffuseColor(), light->GetSpecularColor(), light->GetDirection(), DirectX::XMVectorZero(), 0);
+	for (auto &shader : m_pmxShader) {
+		shader->SetLightCount(1);
+		shader->SetLights(light->GetAmbientColor(), light->GetDiffuseColor(), light->GetSpecularColor(), light->GetDirection(), DirectX::XMVectorZero(), 0);
+	}
 
 	return true;
 }
@@ -265,22 +275,13 @@ void SceneManager::Shutdown()
 
 bool SceneManager::Frame(float frameTime)
 {
-	static float lightDirection[2] = { 0.0f, 1.0f };
-	static bool animating = false, increase = true;
-	static float value = 0.0f;
-	static float totalTime = 0.0f, animTime = 0.0f;
+	static float totalTime = 0.0f;
 
 	wchar_t title[512];
 	swprintf_s<512>(title, L"XBeat - Frame Time: %.3fms - FPS: %.1f", frameTime, 1000.0f / (float)frameTime);
 	SetWindowText(this->wnd, title);
 
 	totalTime += frameTime;
-	//lightDirection[0] = sinf(3.1415f * 2.0f * totalTime / 10000.f);
-	//lightDirection[1] = cosf(3.1415f * 2.0f * totalTime / 10000.f);
-	//lightDirection[0] += msec / 1000.f;
-	//lightDirection[1] += msec / 1000.f;
-
-	//light->SetDirection(lightDirection[0], 0.0f, lightDirection[1]);
 
 	DirectX::XMFLOAT3 campos;
 	DirectX::XMStoreFloat3(&campos, camera->GetPosition());
@@ -301,43 +302,6 @@ bool SceneManager::Frame(float frameTime)
 		else
 			campos.z -= 0.1f;
 	}
-	//else { model.get()->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 0.0f, 0.0f)); }
-	/*if (input->IsKeyPressed(DIK_S)) {
-		model.get()->ApplyMorph(L"purple", 0.3f);
-	}*/
-	/*if (input->IsKeyPressed(DIK_A)) {
-		if (!animating) {
-			animTime = 0.0f;
-			animating = true;
-			increase = true;
-		}
-
-		if (increase) {
-			animTime += frameTime;
-		}
-		else {
-			animTime -= frameTime;
-		}
-
-		value = sinf(animTime / 50);
-		//value = expf(animTime / 600.f) - 1;
-
-		if (value >= 1.0f) {
-			value = 1.0f;
-			increase = false;
-		}
-		else if (value <= 0.f) {
-			value = 0.f;
-			increase = true;
-		}
-
-		model->ApplyMorph(L"翼羽ばたき", value);
-	}
-	else if (animating) {
-		//value = 0.0f;
-		animating = false;
-		//model->ApplyMorph(L"翼羽ばたき", value);
-	}*/
 
 	camera->SetPosition(campos.x, campos.y, campos.z);
 	camera->Update(frameTime);
@@ -397,10 +361,12 @@ bool SceneManager::RenderScene(float frameTime)
 	if (!lightShader->Update(frameTime, d3d->GetDeviceContext()))
 		return false;
 
-	m_pmxShader->SetEyePosition(camera->GetPosition());
-	m_pmxShader->SetMatrices(world, view, projection);
-	if (!m_pmxShader->Update(frameTime, d3d->GetDeviceContext()))
-		return false;
+	for (auto &shader : m_pmxShader) {
+		shader->SetEyePosition(camera->GetPosition());
+		shader->SetMatrices(world, view, projection);
+		if (!shader->Update(frameTime, d3d->GetDeviceContext()))
+			return false;
+	}
 
 	if (!stage->Update(frameTime))
 		return false;

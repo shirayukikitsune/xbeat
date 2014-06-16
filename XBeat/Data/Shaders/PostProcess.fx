@@ -242,7 +242,7 @@ float4 Edge_FreiChen(PixelInputType input) : SV_TARGET{
 	float M = (cnv[4] + cnv[5]) + (cnv[6] + cnv[7]);
 	float S = (cnv[0] + cnv[1]) + (cnv[2] + cnv[3]) + (cnv[4] + cnv[5]) + (cnv[6] + cnv[7]) + cnv[8];
 	float v = sqrt(M / S);
-	return CurrentScene.Sample(TexSampler, input.texCoord) - float4(v, v, v, 0.0f);
+	return CurrentScene.Sample(TexSampler, input.texCoord) - float4(v*2.0f, v*2.0f, v*2.0f, 0.0f);
 }
 
 // http://www.geeks3d.com/20110408/cross-stitching-post-processing-shader-glsl-filter-geexlab-pixel-bender/
@@ -281,7 +281,7 @@ float4 crossStitch(PixelInputType input) : SV_TARGET {
 //   The bloom needs to blur the screen first (we blur it twice, once horizontally, another vertically), then applies the effect
 technique11 Bloom
 {
-	pass horizontalgaussianblur
+	/*pass horizontalgaussianblur
 	{
 		VertexShader = compile vs_5_0 mainvs();
 		PixelShader = compile ps_5_0 horblurps();
@@ -309,9 +309,10 @@ technique11 Bloom
 	pass p3
 	{
 		PixelShader = compile ps_5_0 verblurps();
-	}
+	}*/
 	pass Edge
 	{
+		VertexShader = compile vs_5_0 mainvs();
 		PixelShader = compile ps_5_0 Edge_FreiChen();
 	}
 	/*pass CrossStitch

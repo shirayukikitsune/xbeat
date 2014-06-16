@@ -393,9 +393,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 	for (auto & bone : bones) {
 		if (bone->wasTouched()) {
 			auto &shaderBone = shader->GetBone(bone->GetId());
-			btScalar arr[16];
-			bone->getLocalTransform().getOpenGLMatrix(arr);
-			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMATRIX(arr));
+			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMATRIX(bone->getLocalTransform()));
 			update = true;
 		}
 	}

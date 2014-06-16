@@ -25,8 +25,8 @@ namespace Renderer {
 
 const bool FULL_SCREEN = false;
 const bool VSYNC_ENABLED = false;
-const float SCREEN_DEPTH = 1000.0f;
-const float SCREEN_NEAR = 0.01f;
+const float SCREEN_DEPTH = 500.0f;
+const float SCREEN_NEAR = 0.25f;
 
 ATTRIBUTE_ALIGNED16(class) SceneManager
 {
@@ -68,7 +68,7 @@ private:
 	std::shared_ptr<Shaders::Light> lightShader;
 	std::shared_ptr<Shaders::Texture> textureShader;
 	std::shared_ptr<Shaders::PostProcessEffect> m_postProcess;
-	std::shared_ptr<PMX::PMXShader> m_pmxShader;
+	std::vector<std::shared_ptr<PMX::PMXShader>> m_pmxShader;
 	std::shared_ptr<Input::Manager> input;
 	std::shared_ptr<Physics::Environment> physics;
 	std::shared_ptr<D3DTextureRenderer> renderTexture;
