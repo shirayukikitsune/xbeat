@@ -18,6 +18,7 @@ struct MatrixBuffer
 	matrix view;
 	matrix projection;
 	matrix wvp;
+	matrix worldInverse;
 };
 struct LightBuffer
 {
@@ -31,7 +32,7 @@ struct LightBuffer
 cbuffer data : register (cb0)
 {
 	MatrixBuffer matrices;
-	LightBuffer lights[4];
+	LightBuffer lights[3];
 
 	float3 eyePosition;
 	float ___padding;

@@ -61,14 +61,13 @@ public:
 	Material* GetMaterialById(uint32_t id);
 	RenderMaterial* GetRenderMaterialById(uint32_t id);
 
+	virtual bool Update(float msec);
 	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum);
 
 	std::shared_ptr<D3DRenderer> m_d3d;
 
 private:
 	std::vector<Vertex*> vertices;
-	std::vector<Vertex*> m_sortedVertices;
-	std::array<uint32_t, (size_t)VertexWeightMethod::Count> m_vertexCountPerMethod;
 
 	std::vector<uint32_t> verticesIndex;
 	std::vector<std::wstring> textures;
@@ -107,7 +106,6 @@ private:
 protected:
 	virtual bool InitializeBuffers(std::shared_ptr<D3DRenderer> d3d);
 	virtual void ShutdownBuffers();
-	//virtual bool RenderBuffers(std::shared_ptr<D3DRenderer> d3d, std::shared_ptr<Shaders::Light> lightShader, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, DirectX::CXMMATRIX world, std::shared_ptr<Light> light, std::shared_ptr<Camera> camera, std::shared_ptr<ViewFrustum> frustum);
 
 	virtual bool LoadModel(const std::wstring &filename);
 	virtual void ReleaseModel();
@@ -119,7 +117,6 @@ private:
 	void applyVertexMorph(Morph* morph, float weight);
 	void applyMaterialMorph(Morph* morph, float weight);
 	void applyMaterialMorph(MorphType* morph, RenderMaterial* material, float weight);
-	void updateVertexBuffer();
 	void applyBoneMorph(Morph* morph, float weight);
 	void applyFlipMorph(Morph* morph, float weight);
 	void applyImpulseMorph(Morph* morph, float weight);

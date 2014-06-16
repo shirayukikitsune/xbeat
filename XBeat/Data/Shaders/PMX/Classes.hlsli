@@ -1,9 +1,13 @@
+#define MAX_BONES 1000
+#define MAX_LIGHTS 3
+
 struct MatrixBuffer
 {
 	matrix world;
 	matrix view;
 	matrix projection;
 	matrix wvp;
+	matrix worldInverse;
 };
 
 struct LightBuffer
@@ -33,6 +37,11 @@ struct MaterialBufferType
 	int padding;
 };
 
+struct BoneBufferType
+{
+	matrix transform;
+};
+
 struct VertexInput
 {
 	float4 position : SV_Position;
@@ -43,7 +52,7 @@ struct VertexInput
 	float4 exUV3 : TEXCOORD3;
 	float4 exUV4 : TEXCOORD4;*/
 	uint4 boneIndices : BONES0;
-	uint4 boneWeights : BONES1;
+	float4 boneWeights : BONES1;
 	uint material : MATERIAL0;
 };
 
@@ -58,7 +67,16 @@ struct VertexOutput
 	float4 exUV2 : TEXCOORD4;
 	float4 exUV3 : TEXCOORD5;
 	float4 exUV4 : TEXCOORD6;*/
+	uint4 boneIndices : BONES0;
+	float4 boneWeights : BONES1;
 	uint material : MATERIAL0;
 };
 
+typedef VertexOutput GeometryIO;
 typedef VertexOutput PixelInput;
+
+struct PixelOutput
+{
+	float4 color : SV_Target;
+	//float depth : SV_Depth;
+};

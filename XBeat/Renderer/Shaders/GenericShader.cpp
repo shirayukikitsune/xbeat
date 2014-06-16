@@ -10,6 +10,7 @@ void XM_CALLCONV Generic::SetMatrices(DirectX::FXMMATRIX world, DirectX::CXMMATR
 	m_cbuffer.matrix.view = DirectX::XMMatrixTranspose(view);
 	m_cbuffer.matrix.projection = DirectX::XMMatrixTranspose(projection);
 	m_cbuffer.matrix.wvp = DirectX::XMMatrixTranspose(DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(world, view), projection));
+	m_cbuffer.matrix.worldInverse = DirectX::XMMatrixInverse(nullptr, world);
 }
 
 void XM_CALLCONV Generic::SetEyePosition(DirectX::FXMVECTOR eyePosition)

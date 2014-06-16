@@ -39,7 +39,6 @@ const int defaultToonTexCount = sizeof (defaultToonTexs) / sizeof (defaultToonTe
 PMX::Model::Model(void)
 {
 	m_debugFlags = DebugFlags::None;
-	for (auto &i : m_vertexCountPerMethod) i = 0U;
 
 	m_indexBuffer = m_vertexBuffer = m_materialBuffer = nullptr;
 }
@@ -56,11 +55,6 @@ bool PMX::Model::LoadModel(const wstring &filename)
 		return false;
 
 	basePath = filename.substr(0, filename.find_last_of(L"\\/") + 1);
-
-	// Build the sorted vertices list
-	m_sortedVertices = vertices;
-	std::sort(m_sortedVertices.begin(), m_sortedVertices.end(), [](Vertex* a, Vertex* b) { return a->weightMethod != VertexWeightMethod::BDEF4 && a->weightMethod < b->weightMethod; });
-	std::for_each(m_sortedVertices.begin(), m_sortedVertices.end(), [this](Vertex* v) { m_vertexCountPerMethod[(size_t)v->weightMethod]++; });
 
 	// Build the physics bodies
 	m_rigidBodies.resize(bodies.size());
@@ -179,7 +173,8 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	uint32_t lastIndex = 0;
 
 	std::vector<UINT> idx;
-	DirectX::XMUINT4 boneWeights, boneIndices;
+	DirectX::XMFLOAT4 boneWeights;
+	DirectX::XMUINT4 boneIndices;
 
 	for (uint32_t k = 0; k < this->rendermaterials.size(); k++) {
 		rendermaterials[k].startIndex = lastIndex;
@@ -187,31 +182,23 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		for (uint32_t i = 0; i < (uint32_t)this->materials[k]->indexCount; i++) {
 			Vertex* vertex = vertices[this->verticesIndex[i + lastIndex]];
 			vertex->materials.push_front(std::pair<RenderMaterial*,UINT>(&rendermaterials[k], i));
-#if 0
-			v.get()[i].position = DirectX::XMFLOAT3(vertex->position.x(), vertex->position.y(), vertex->position.z());
-			v.get()[i].texture = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
-			v.get()[i].normal = DirectX::XMFLOAT3(vertex->normal.x(), vertex->normal.y(), vertex->normal.z());
-			/*v.get()[i].UV1 = DirectX::XMFLOAT4(vertex->uvEx[0].x(), vertex->uvEx[0].y(), vertex->uvEx[0].z(), vertex->uvEx[0].w());
-			v.get()[i].UV2 = DirectX::XMFLOAT4(vertex->uvEx[1].x(), vertex->uvEx[1].y(), vertex->uvEx[1].z(), vertex->uvEx[1].w());
-			v.get()[i].UV3 = DirectX::XMFLOAT4(vertex->uvEx[2].x(), vertex->uvEx[2].y(), vertex->uvEx[2].z(), vertex->uvEx[2].w());
-			v.get()[i].UV4 = DirectX::XMFLOAT4(vertex->uvEx[3].x(), vertex->uvEx[3].y(), vertex->uvEx[3].z(), vertex->uvEx[3].w());*/
-#else
+
 			switch (vertex->weightMethod) {
 			case VertexWeightMethod::BDEF1:
-				boneWeights = DirectX::XMUINT4(vertex->boneInfo.BDEF.weights[0], 0, 0, 0);
+				boneWeights = DirectX::XMFLOAT4(vertex->boneInfo.BDEF.weights[0], 0, 0, 0);
 				boneIndices = DirectX::XMUINT4(vertex->boneInfo.BDEF.boneIndexes[0], 0, 0, 0);
 				break;
 			case VertexWeightMethod::BDEF2:
-				boneWeights = DirectX::XMUINT4(vertex->boneInfo.BDEF.weights[0], vertex->boneInfo.BDEF.weights[1], 0, 0);
+				boneWeights = DirectX::XMFLOAT4(vertex->boneInfo.BDEF.weights[0], vertex->boneInfo.BDEF.weights[1], 0, 0);
 				boneIndices = DirectX::XMUINT4(vertex->boneInfo.BDEF.boneIndexes[0], vertex->boneInfo.BDEF.boneIndexes[1], 0, 0);
 				break;
 			case VertexWeightMethod::QDEF:
 			case VertexWeightMethod::BDEF4:
-				boneWeights = DirectX::XMUINT4(vertex->boneInfo.BDEF.weights[0], vertex->boneInfo.BDEF.weights[1], vertex->boneInfo.BDEF.weights[2], vertex->boneInfo.BDEF.weights[3]);
+				boneWeights = DirectX::XMFLOAT4(vertex->boneInfo.BDEF.weights[0], vertex->boneInfo.BDEF.weights[1], vertex->boneInfo.BDEF.weights[2], vertex->boneInfo.BDEF.weights[3]);
 				boneIndices = DirectX::XMUINT4(vertex->boneInfo.BDEF.boneIndexes[0], vertex->boneInfo.BDEF.boneIndexes[1], vertex->boneInfo.BDEF.boneIndexes[2], vertex->boneInfo.BDEF.boneIndexes[3]);
 				break;
 			case VertexWeightMethod::SDEF:
-				boneWeights = DirectX::XMUINT4(vertex->boneInfo.SDEF.weightBias, 1.0f - vertex->boneInfo.SDEF.weightBias, 0, 0);
+				boneWeights = DirectX::XMFLOAT4(vertex->boneInfo.SDEF.weightBias, 1.0f - vertex->boneInfo.SDEF.weightBias, 0, 0);
 				boneIndices = DirectX::XMUINT4(vertex->boneInfo.SDEF.boneIndexes[0], vertex->boneInfo.SDEF.boneIndexes[1], 0, 0);
 				break;
 			}
@@ -229,7 +216,6 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 				boneWeights,
 				k,
 			});
-#endif
 
 			idx.emplace_back(i);
 		}
@@ -247,10 +233,10 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		bone->Initialize(d3d);
 	}
 
-	vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 	vertexBufferDesc.ByteWidth = (UINT)(sizeof(PMXShader::VertexType) * m_vertices.size());
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	vertexBufferDesc.CPUAccessFlags = 0;
 	vertexBufferDesc.MiscFlags = 0;
 	vertexBufferDesc.StructureByteStride = 0;
 
@@ -386,7 +372,7 @@ bool PMX::Model::updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *co
 	return true;
 }
 
-void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum)
+bool PMX::Model::Update(float msec)
 {
 	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
 		for (auto &bone : bones) {
@@ -395,6 +381,25 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 			}
 		}
 	}
+
+	return true;
+}
+
+void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum)
+{
+	auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
+
+	bool update = false;
+	for (auto & bone : bones) {
+		if (bone->wasTouched()) {
+			auto &shaderBone = shader->GetBone(bone->GetId());
+			btScalar arr[16];
+			bone->getLocalTransform().getOpenGLMatrix(arr);
+			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMATRIX(arr));
+			update = true;
+		}
+	}
+	if (update) shader->UpdateBoneBuffer(context);
 
 	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
 		unsigned int stride = sizeof(PMXShader::VertexType);
@@ -411,15 +416,11 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		// Check if our model was changed and perform the updates
-		updateVertexBuffer();
-
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			if (!updateMaterialBuffer(i, context))
 				return;
 		}
 
-		auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
 		shader->UpdateMaterialBuffer(context);
 		shader->PrepareRender(context);
 
@@ -440,8 +441,15 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 	}
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
+		context->RSSetState(m_d3d->GetRasterState(1));
+
+		DirectX::XMMATRIX v = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.view);
+		DirectX::XMMATRIX p = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.projection);
+
 		for (auto &bone : bones)
-			bone->Render(m_shader->GetCBuffer().matrix.world, m_shader->GetCBuffer().matrix.view, m_shader->GetCBuffer().matrix.projection);
+			bone->Render(v, p);
+
+		context->RSSetState(m_d3d->GetRasterState(0));
 	}
 }
 
@@ -681,82 +689,4 @@ void PMX::Model::applyFlipMorph(Morph* morph, float weight)
 			ApplyMorph(morphs[morph->data[i].group.index], 0.0f);
 	}
 }
-
-void PMX::Model::updateVertexBuffer()
-{
-	ID3D11Device *device;
-	ID3D11DeviceContext *context;
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	Vertex *vertex;
-	HRESULT result;
-
-	// Prevent vertex update if there are no updates to be done
-	bool update = false;
-	for (auto &material : rendermaterials) {
-		if ((material.dirty & RenderMaterial::DirtyFlags::VertexBuffer) != 0) {
-			update = true;
-			break;
-		}
-	}
-
-	if (!update) return;
-
-	// get the d3d11 device and context from the vertex buffer
-	m_vertexBuffer->GetDevice(&device);
-	device->GetImmediateContext(&context);
-
-	// get access to the buffer
-	result = context->Map(m_vertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return;
-
-	uint32_t i = 0, c = 0;
-	for (; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::BDEF1]; ++i) {
-		vertex = m_sortedVertices[i];
-		
-		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0]).get128());
-		btTransform t;
-		t.setRotation(vertex->boneRotation[0]);
-		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());
-		vertex->dxUV = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
-	}
-	c += i;
-	for (i = 0; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::BDEF2] + m_vertexCountPerMethod[(size_t)VertexWeightMethod::SDEF] + m_vertexCountPerMethod[(size_t)VertexWeightMethod::QDEF]; ++i) {
-		vertex = m_sortedVertices[i + c];
-		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0] + vertex->boneOffset[1]).get128());
-		btTransform t;
-		t.setRotation(vertex->boneRotation[0] * vertex->boneRotation[1]);
-		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());
-		vertex->dxUV = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
-	}
-	c += i;
-	for (; i < m_vertexCountPerMethod[(size_t)VertexWeightMethod::QDEF]; ++i) {
-		vertex = m_sortedVertices[i + c];
-		DirectX::XMStoreFloat3(&vertex->dxPos, (vertex->GetFinalPosition() + vertex->boneOffset[0] + vertex->boneOffset[1] + vertex->boneOffset[2] + vertex->boneOffset[3]).get128());
-		btTransform t;
-		t.setRotation(vertex->boneRotation[0] * vertex->boneRotation[1] * vertex->boneRotation[2] * vertex->boneRotation[3]);
-		DirectX::XMStoreFloat3(&vertex->dxNormal, t(vertex->normal).normalized().get128());
-		vertex->dxUV = DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]);
-	}
-
-	for (auto &material : rendermaterials) {
-		if ((material.dirty & RenderMaterial::DirtyFlags::VertexBuffer) == 0) continue;
-
-		material.dirty &= ~RenderMaterial::DirtyFlags::VertexBuffer;
-
-		// Update vertex data
-		for (uint32_t i = material.startIndex; i < material.indexCount + material.startIndex; i++) {
-			vertex = this->vertices[this->verticesIndex[i]];
-			m_vertices[i].position = vertex->dxPos;
-			m_vertices[i].normal = vertex->dxNormal;
-			m_vertices[i].uv = vertex->dxUV;
-		}
-	}
-
-	memcpy(mappedResource.pData, m_vertices.data(), sizeof(PMXShader::VertexType) * m_vertices.size());
-
-	// release the access to the buffer
-	context->Unmap(m_vertexBuffer, 0);
-}
-
 

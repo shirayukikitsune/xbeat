@@ -33,6 +33,7 @@ void Bone::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		// cos(O) = (a . b) / ||a||.||b||
 		btScalar angle = btAcos(up.dot(direction) / direction.length());
 
+		axis.normalize();
 		m_initialRotation.setRotation(axis, angle);
 	}
 	else m_initialRotation = btQuaternion::getIdentity();
@@ -137,7 +138,7 @@ bool Bone::Update(bool force)
 			position += parent->getLocalTransform().getOrigin();
 		else if (HasAnyFlag(BoneFlags::InheritTranslation)) 
 			position += parent->m_inheritTransform.getOrigin() * this->inherit.rate;
-		else position += parent->m_inheritTransform.getOrigin() + parent->m_morphTransform.getOrigin();
+		else position += parent->m_transform.getOrigin();
 	}
 
 	parent = HasAnyFlag(BoneFlags::InheritRotation) ? model->GetBoneById(this->inherit.from) : (this->parent != -1 ? GetParentBone() : nullptr);
@@ -147,7 +148,7 @@ bool Bone::Update(bool force)
 			rotation = parent->getLocalTransform().getRotation();
 		else if (HasAnyFlag(BoneFlags::InheritRotation))
 			rotation = this->slerp(this->inherit.rate, parent->m_inheritTransform.getRotation(), btQuaternion::getIdentity());
-		else rotation = parent->m_inheritTransform.getRotation() * parent->m_morphTransform.getRotation();
+		else rotation = parent->m_transform.getRotation();
 	}
 
 	m_inheritTransform.setOrigin(position);
@@ -160,6 +161,7 @@ bool Bone::Update(bool force)
 	m_transform.setRotation(rotation);
 
 	m_dirty = false;
+	m_touched = true;
 	return true;
 }
 
@@ -167,6 +169,22 @@ void Bone::Transform(const btVector3& angles, const btVector3& offset, Deformati
 {
 	Rotate(angles, origin);
 	Translate(offset, origin);
+}
+
+void Bone::Rotate(const btVector3& axis, float angle, DeformationOrigin origin)
+{
+	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable)))
+		return;
+
+	m_dirty = true;
+
+	btQuaternion q(axis, angle);
+
+	// Get the rotation component
+	if (origin == DeformationOrigin::User)
+		m_userTransform.setRotation(m_userTransform.getRotation() * q);
+	else
+		m_transform.setRotation(m_transform.getRotation() * q);
 }
 
 void Bone::Rotate(const btVector3& angles, DeformationOrigin origin)
@@ -257,7 +275,8 @@ btQuaternion Bone::slerp(btScalar fT, const btQuaternion &rkP, const btQuaternio
 
 void Bone::updateChildren()
 {
-	updateVertices();
+	// Not anymore! VERTEX SHADER MWAHAHAHAHA
+	//updateVertices();
 
 	for (auto &child : children) {
 		child->Update(true);
@@ -302,6 +321,14 @@ void Bone::updateVertices()
 	}
 }
 
+bool Bone::wasTouched()
+{
+	// Great hack(?) to check if the bone was updated this frame
+	bool ret = m_touched;
+	m_touched = false;
+	return ret;
+}
+
 float Bone::getVertexWeight(Vertex *vertex)
 {
 	int i;
@@ -324,7 +351,7 @@ float Bone::getVertexWeight(Vertex *vertex)
 	return 0.0f;
 }
 
-bool Bone::Render(DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection)
+bool XM_CALLCONV Bone::Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection)
 {
 	DirectX::XMMATRIX w;
 
@@ -335,7 +362,7 @@ bool Bone::Render(DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CX
 			return true;
 		}
 
-		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, len.length(), 0.3f, 1.0f), DirectX::XMVectorZero(), GetRotation().get128(), GetPosition().get128());
+		w = DirectX::XMMatrixTransformation(DirectX::XMVectorZero(), DirectX::XMQuaternionIdentity(), DirectX::XMVectorSet(0.3f, len.length(), 0.3f, 1.0f), DirectX::XMVectorZero(), GetRotation().get128(), GetPosition().get128());
 
 		m_primitive->Draw(w, view, projection);
 	}

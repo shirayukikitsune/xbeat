@@ -17,6 +17,7 @@ namespace Shaders {
 				DirectX::XMMATRIX view;
 				DirectX::XMMATRIX projection;
 				DirectX::XMMATRIX wvp;
+				DirectX::XMMATRIX worldInverse;
 			} matrix;
 
 			struct Light {
@@ -25,7 +26,7 @@ namespace Shaders {
 				DirectX::XMVECTOR specularColorAndPower;
 				DirectX::XMVECTOR direction;
 				DirectX::XMVECTOR position;
-			} lights[4];
+			} lights[3];
 
 			DirectX::XMVECTOR eyePosition;
 

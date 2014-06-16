@@ -16,7 +16,7 @@ public:
 	struct Limits {
 		enum {
 			Morphs = 50,
-			Bones = 400,
+			Bones = 1000,
 			Materials = 100,
 		};
 	};
@@ -39,9 +39,7 @@ public:
 	};
 
 	struct BoneBufferType {
-		DirectX::XMFLOAT3 position;
-		DirectX::XMFLOAT3 direction;
-		DirectX::XMFLOAT2 padding;
+		DirectX::XMMATRIX transform;
 	};
 
 	struct VertexType {
@@ -50,7 +48,7 @@ public:
 		DirectX::XMFLOAT2 uv;
 		//DirectX::XMVECTOR uvEx[4];
 		DirectX::XMUINT4 boneIndices;
-		DirectX::XMUINT4 boneWeights;
+		DirectX::XMFLOAT4 boneWeights;
 		UINT materialIndex;
 	};
 

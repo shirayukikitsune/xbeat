@@ -30,6 +30,8 @@ public:
 	__forceinline bool HasAllFlags(BoneFlags flag) const { return (flags & (uint16_t)flag) == (uint16_t)flag; }
 	__forceinline bool HasAnyFlag(BoneFlags flag) const { return (flags & (uint16_t)flag) != 0; }
 
+	__forceinline uint32_t GetId() const { return id; }
+
 	void Initialize(std::shared_ptr<D3DRenderer> d3d);
 	void Reset();
 
@@ -41,10 +43,12 @@ public:
 	Position GetOffsetPosition();
 	Position GetEndPosition();
 	btQuaternion GetRotation();
+	__forceinline btQuaternion GetInitialRotation() const { return m_initialRotation; }
 
 	bool Update(bool force = false);
 
 	void Transform(const btVector3& angles, const btVector3& offset, DeformationOrigin origin = DeformationOrigin::User);
+	void Rotate(const btVector3& axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
 	void Rotate(const btVector3& angles, DeformationOrigin origin = DeformationOrigin::User);
 	void Translate(const btVector3& offset, DeformationOrigin origin = DeformationOrigin::User);
 
@@ -52,10 +56,12 @@ public:
 
 	__forceinline const btTransform& getLocalTransform() const { return m_transform; }
 
-	bool Render(DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
+	bool XM_CALLCONV Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection);
 
 	void updateVertices();
 	void updateChildren();
+
+	bool wasTouched();
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
@@ -105,6 +111,8 @@ private:
 
 	// Used for debug render
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
+
+	bool m_touched;
 
 #ifdef PMX_TEST
 	friend class PMXTest::BoneTest;

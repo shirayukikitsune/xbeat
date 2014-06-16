@@ -58,7 +58,7 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 			{ "TEXCOORD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 4, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },*/
 			{ "BONES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "BONES", 1, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "BONES", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "MATERIAL", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = sizeof(polygonLayout) / sizeof(polygonLayout[0]);
@@ -125,6 +125,8 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 	buffDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	buffDesc.StructureByteStride = sizeof(BoneBufferType);
 	buffDesc.Usage = D3D11_USAGE_DEFAULT;
+
+	std::for_each(m_bones.begin(), m_bones.end(), [](BoneBufferType& b) { b.transform = DirectX::XMMatrixIdentity(); });
 
 	data.pSysMem = m_bones.data();
 	data.SysMemPitch = sizeof(BoneBufferType);
