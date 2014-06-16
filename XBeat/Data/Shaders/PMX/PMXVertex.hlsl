@@ -45,8 +45,7 @@ VertexOutput main(VertexInput input)
 	output.material = input.material;
 
 	// Calculate the normal vector against the world matrix only.
-	//output.normal = normalize(mul(input.normal, (float3x3)matrices.world));
-	output.normal = normalize(mul(input.normal, (float3x3)matrices.worldInverse));
+	output.normal = normalize(mul(mul(input.normal, (float3x3)finalTransform), (float3x3)matrices.worldInverse));
 
 	// the view direction is the vector starting at the camera and points towards the vector
 	// A->B = B - A
