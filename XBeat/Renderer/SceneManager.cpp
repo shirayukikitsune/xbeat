@@ -179,30 +179,30 @@ bool SceneManager::LoadScene() {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
-	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
-	if (!m_models.back()->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
+	if (!m_models.back()->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
 		return false;
 	}
-	m_models[0]->GetBoneByName(L"全ての親")->Translate(btVector3(-7.5f, 0, 0));
 	m_pmxShader.emplace_back(new PMX::PMXShader);
 	if (!m_pmxShader[0]->InitializeBuffers(d3d->GetDevice(), wnd)) {
 		MessageBox(wnd, L"Could not initialize the PMX effects object", L"Error", MB_OK);
 		return false;
 	}
 	m_models[0]->SetShader(m_pmxShader[0]);
+	m_models[0]->GetRootBone()->Translate(btVector3(-7.5f, 0, 0));
 
 	m_models.emplace_back(new PMX::Model);
 	m_models[1]->Initialize(d3d, L"./Data/Models/Tda式ミクAP改変 モリガン風 Ver106 配布用/Tda式ミクAP改変 モリガン風 Ver106 盛り仕様.pmx", physics, m_dispatcher);
-	m_models[1]->GetBoneByName(L"全ての親")->Translate(btVector3(7.5f, 0, 0));
 	m_pmxShader.emplace_back(new PMX::PMXShader);
 	if (!m_pmxShader[1]->InitializeBuffers(d3d->GetDevice(), wnd)) {
 		MessageBox(wnd, L"Could not initialize the PMX effects object", L"Error", MB_OK);
 		return false;
 	}
 	m_models[1]->SetShader(m_pmxShader[1]);
+	m_models[1]->GetRootBone()->Translate(btVector3(7.5f, 0, 0));
 
 	//auto pos = model->GetBoneByName(L"頭")->GetPosition();
 	//camera->SetPosition(pos.x(), pos.y(), pos.z());
@@ -361,19 +361,17 @@ bool SceneManager::RenderScene(float frameTime)
 	if (!lightShader->Update(frameTime, d3d->GetDeviceContext()))
 		return false;
 
-	for (auto &shader : m_pmxShader) {
-		shader->SetEyePosition(camera->GetPosition());
-		shader->SetMatrices(world, view, projection);
-		if (!shader->Update(frameTime, d3d->GetDeviceContext()))
-			return false;
-	}
-
 	if (!stage->Update(frameTime))
 		return false;
 
 	stage->Render(d3d->GetDeviceContext(), frustum);
 
 	for (auto model : m_models) {
+		auto shader = std::dynamic_pointer_cast<PMX::PMXShader>(model->GetShader());
+		shader->SetEyePosition(camera->GetPosition());
+		shader->SetMatrices(model->GetRootBone()->getLocalTransform(), view, projection);
+		if (!shader->Update(frameTime, d3d->GetDeviceContext()))
+			return false;
 		if (!model->Update(frameTime))
 			return false;
 

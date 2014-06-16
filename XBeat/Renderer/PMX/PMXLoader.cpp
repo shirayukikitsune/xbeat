@@ -75,43 +75,13 @@ bool Loader::FromMemory(Model* model, const char *&data)
 		Bone *parent;
 		for (auto &bone : model->bones) {
 			parent = bone->GetParentBone();
-			if (parent != nullptr)
-				parent->children.push_back(bone);
+			parent->children.push_back(bone);
 
 			bone->Update();
 		}
-	}
 
-	// Build the bones vertices maps
-	{
-		auto applyFunction = [model](Vertex* v, Bone* b, int index) {
-			if (b) {
-				b->vertices.push_back(std::make_pair(v, index));
-				v->bones[index] = b;
-			}
-		};
-		auto applyBone = [model, applyFunction](Vertex* v, int index) {
-			if (v) applyFunction(v, model->GetBoneById(v->boneInfo.BDEF.boneIndexes[index]), index);
-		};
-		for (auto &vertex : model->vertices) {
-			switch (vertex->weightMethod) {
-			case VertexWeightMethod::BDEF4:
-			case VertexWeightMethod::QDEF:
-				applyBone(vertex, 3);
-				applyBone(vertex, 2);
-			case VertexWeightMethod::BDEF2:
-				applyBone(vertex, 1);
-			case VertexWeightMethod::BDEF1:
-				applyBone(vertex, 0);
-				break;
-			case VertexWeightMethod::SDEF:
-				{
-					applyFunction(vertex, model->GetBoneById(vertex->boneInfo.SDEF.boneIndexes[1]), 1);
-					applyFunction(vertex, model->GetBoneById(vertex->boneInfo.SDEF.boneIndexes[0]), 0);
-					break;
-				}
-			}
-		}
+		model->rootBone->flags |= (uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable | (uint16_t)BoneFlags::Rotatable;
+		model->rootBone->parent = -1;
 	}
 
 	return true;

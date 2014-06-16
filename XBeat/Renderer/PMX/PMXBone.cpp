@@ -51,6 +51,9 @@ void Bone::Reset()
 
 btMatrix3x3 Bone::GetLocalAxis()
 {
+	if (this->id == -1)
+		return btMatrix3x3::getIdentity();
+
 	if (!HasAnyFlag(BoneFlags::LocalAxis)) {
 		auto parent = GetParentBone();
 		return (parent && parent->id != this->id ? parent->GetLocalAxis() : btMatrix3x3::getIdentity());
@@ -168,7 +171,7 @@ void Bone::Rotate(const btVector3& axis, float angle, DeformationOrigin origin)
 
 	m_dirty = true;
 
-	auto local = DirectX::XMMatrixRotationAxis(axis.get128(), angle);
+	auto local = DirectX::XMMatrixRotationAxis(axis.get128(), angle) - DirectX::XMMatrixIdentity();
 
 	if (origin == DeformationOrigin::User)
 		m_userTransform += local;
@@ -183,7 +186,7 @@ void Bone::Rotate(const btVector3& angles, DeformationOrigin origin)
 
 	m_dirty = true;
 
-	auto local = DirectX::XMMatrixRotationRollPitchYawFromVector(angles.get128());
+	auto local = DirectX::XMMatrixRotationRollPitchYawFromVector(angles.get128()) - DirectX::XMMatrixIdentity();
 
 	if (origin == DeformationOrigin::User)
 		m_userTransform += local;
@@ -198,7 +201,7 @@ void Bone::Translate(const btVector3& offset, DeformationOrigin origin)
 
 	m_dirty = true;
 
-	auto local = DirectX::XMMatrixTranslationFromVector(offset.get128());
+	auto local = DirectX::XMMatrixTranslationFromVector(offset.get128()) - DirectX::XMMatrixIdentity();
 
 	if (origin == DeformationOrigin::User)
 		m_userTransform += local;
@@ -251,28 +254,6 @@ bool Bone::wasTouched()
 	bool ret = m_touched;
 	m_touched = false;
 	return ret;
-}
-
-float Bone::getVertexWeight(Vertex *vertex)
-{
-	int i;
-
-	switch (vertex->weightMethod) {
-	case VertexWeightMethod::SDEF:
-		if (vertex->boneInfo.SDEF.boneIndexes[0] == this->id)
-			return vertex->boneInfo.SDEF.weightBias;
-		else if (vertex->boneInfo.SDEF.boneIndexes[1] == this->id)
-			return 1.0f - vertex->boneInfo.SDEF.weightBias;
-		break;
-	default:
-		for (i = 0; i < 4; i++) {
-			if (vertex->boneInfo.BDEF.boneIndexes[i] == this->id)
-				return vertex->boneInfo.BDEF.weights[i];
-		}
-		break;
-	}
-
-	return 0.0f;
 }
 
 bool XM_CALLCONV Bone::Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection)

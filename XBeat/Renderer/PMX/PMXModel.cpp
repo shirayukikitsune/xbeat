@@ -41,6 +41,8 @@ PMX::Model::Model(void)
 	m_debugFlags = DebugFlags::None;
 
 	m_indexBuffer = m_vertexBuffer = m_materialBuffer = nullptr;
+
+	rootBone = new Bone(this, -1);
 }
 
 
@@ -323,10 +325,6 @@ bool PMX::Model::loadModel(istream &ifs)
 		delete loader;
 		return false;
 	}
-
-	// Lookup for the root bone
-	rootBone = GetBoneById(frames[0]->morphs[0].id);
-
 	return true;
 }
 
@@ -375,6 +373,10 @@ bool PMX::Model::updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *co
 bool PMX::Model::Update(float msec)
 {
 	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
+		if (rootBone->Update()) {
+			//rootBone->updateChildren();
+		}
+
 		for (auto &bone : bones) {
 			if (bone->Update()) {
 				bone->updateChildren();
@@ -443,7 +445,6 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 		DirectX::XMMATRIX v = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.view);
 		DirectX::XMMATRIX p = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.projection);
-
 		for (auto &bone : bones)
 			bone->Render(v, p);
 

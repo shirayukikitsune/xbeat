@@ -4,7 +4,6 @@
 #include "../D3DRenderer.h"
 #include "GeometricPrimitive.h" // From DirectX Toolkit
 #include <list>
-#include <deque>
 #include <vector>
 
 namespace Renderer {
@@ -65,16 +64,13 @@ public:
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
-	float getVertexWeight(Vertex *vertex);
-
 	bool m_dirty;
 
 	Model *model;
-	std::vector<std::pair<Vertex*, int>> vertices;
 
 	std::list<std::pair<Morph*,float>> appliedMorphs;
 
-	std::deque<Bone*> children;
+	std::vector<Bone*> children;
 
 	DirectX::XMMATRIX m_transform;
 	DirectX::XMMATRIX m_inheritTransform;
