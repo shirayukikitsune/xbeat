@@ -58,22 +58,6 @@ bool PMX::Model::LoadModel(const wstring &filename)
 
 	basePath = filename.substr(0, filename.find_last_of(L"\\/") + 1);
 
-	// Build the physics bodies
-	m_rigidBodies.resize(bodies.size());
-	btVector3 size;
-	for (uint32_t i = 0; i < bodies.size(); i++) {
-		m_rigidBodies[i].reset(new RigidBody);
-		m_rigidBodies[i]->Initialize(m_physics, this, bodies[i]);
-
-		// Free some memory, since we won't use the loader structure anymore
-		delete bodies[i];
-		bodies[i] = nullptr;
-	}
-
-	// Clear our vector size;
-	bodies.clear();
-	bodies.shrink_to_fit();
-
 	for (auto &body : softBodies)
 	{
 		body->Create(m_physics, this);
@@ -231,6 +215,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	}
 
 	// Initialize bone buffers
+	rootBone->Initialize(d3d);
 	for (auto &bone : bones) {
 		bone->Initialize(d3d);
 	}
@@ -250,6 +235,13 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (FAILED(result))
 		return false;
 
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
+
+	result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_tmpVertexBuffer);
+	if (FAILED(result))
+		return false;
+
 	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 	indexBufferDesc.ByteWidth = (UINT)(sizeof(UINT) * idx.size());
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -266,9 +258,25 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		return false;
 
 #ifdef DEBUG
+	m_tmpVertexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, 6, "PMX SO");
 	m_vertexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, 6, "PMX VB");
 	m_indexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, 6, "PMX IB");
 #endif
+
+	// Build the physics bodies
+	m_rigidBodies.resize(bodies.size());
+	for (uint32_t i = 0; i < bodies.size(); i++) {
+		m_rigidBodies[i].reset(new RigidBody);
+		m_rigidBodies[i]->Initialize(d3d->GetDeviceContext(), m_physics, this, bodies[i]);
+
+		// Free some memory, since we won't use the loader structure anymore
+		delete bodies[i];
+		bodies[i] = nullptr;
+	}
+
+	// Clear our vector size;
+	bodies.clear();
+	bodies.shrink_to_fit();
 
 	return true;
 }
@@ -278,6 +286,11 @@ void PMX::Model::ShutdownBuffers()
 	if (m_materialBuffer) {
 		m_materialBuffer->Release();
 		m_materialBuffer = nullptr;
+	}
+
+	if (m_tmpVertexBuffer) {
+		m_tmpVertexBuffer->Release();
+		m_tmpVertexBuffer = nullptr;
 	}
 
 	if (m_vertexBuffer) {
@@ -373,14 +386,13 @@ bool PMX::Model::updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *co
 bool PMX::Model::Update(float msec)
 {
 	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
-		if (rootBone->Update()) {
-			//rootBone->updateChildren();
-		}
+		rootBone->Update();
 
 		for (auto &bone : bones) {
-			if (bone->Update()) {
+			/*if (bone->Update()) {
 				bone->updateChildren();
-			}
+			}*/
+			bone->Update();
 		}
 	}
 
@@ -389,32 +401,43 @@ bool PMX::Model::Update(float msec)
 
 void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum)
 {
-	auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
-
-	bool update = false;
-	for (auto & bone : bones) {
-		if (bone->wasTouched()) {
-			auto &shaderBone = shader->GetBone(bone->GetId());
-			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMATRIX(bone->getLocalTransform()));
-			update = true;
-		}
-	}
-	if (update) shader->UpdateBoneBuffer(context);
-
 	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
 		unsigned int stride = sizeof(PMXShader::VertexType);
 
 		ID3D11ShaderResourceView *textures[3];
 
 		unsigned int vsOffset = 0;
-		// Set the vertex buffer to active in the input assembler so it can be rendered.
-		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
 
-		// Set the index buffer to active in the input assembler so it can be rendered.
 		context->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-		// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
+
+		bool update = false;
+		for (auto & bone : bones) {
+			if (bone->wasTouched()) {
+				auto &shaderBone = shader->GetBone(bone->GetId());
+				DirectX::XMMATRIX t = DirectX::XMMatrixTranspose(bone->getLocalTransform());
+				shaderBone.transform[0] = t.r[0];
+				shaderBone.transform[1] = t.r[1];
+				shaderBone.transform[2] = t.r[2];
+				shaderBone.position = bone->GetInitialPosition();
+				update = true;
+			}
+		}
+		if (update) {
+			context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
+
+			shader->UpdateBoneBuffer(context);
+
+			UINT offset = 0;
+			context->SOSetTargets(1, &m_tmpVertexBuffer, &offset);
+			shader->RenderGeometry(context, m_vertices.size(), 0);
+			ID3D11Buffer *b = nullptr;
+			context->SOSetTargets(1, &b, &offset);
+		}
+
+		context->IASetVertexBuffers(0, 1, &m_tmpVertexBuffer, &stride, &vsOffset);
 
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			if (!updateMaterialBuffer(i, context))
@@ -424,29 +447,43 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		shader->UpdateMaterialBuffer(context);
 		shader->PrepareRender(context);
 
-		context->RSSetState(m_d3d->GetRasterState(1));
 		m_d3d->EnableAlphaBlending();
-
+		
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
 			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
 			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
 
+			if ((materials[i]->flags & (uint8_t)MaterialFlags::DoubleSide) != 0 || rendermaterials[i].getAmbient(materials[i]).w < 1.0f) {
+				context->RSSetState(m_d3d->GetRasterState(1));
+			}
+			else context->RSSetState(m_d3d->GetRasterState(0));
+
 			context->PSSetShaderResources(0, 3, textures);
 			m_shader->Render(context, rendermaterials[i].indexCount, rendermaterials[i].startIndex);
 		}
+		
+		m_d3d->DisableAlphaBlending();
+	}
+
+	DirectX::XMMATRIX view = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.view);
+	DirectX::XMMATRIX projection = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.projection);
+
+	if (m_debugFlags & DebugFlags::RenderRigidBodies) {
+		context->RSSetState(m_d3d->GetRasterState(1));
+
+		for (auto &body : m_rigidBodies) {
+			body->Render(rootBone->getLocalTransform(), view, projection);
+		}
 
 		context->RSSetState(m_d3d->GetRasterState(0));
-		m_d3d->DisableAlphaBlending();
 	}
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
 		context->RSSetState(m_d3d->GetRasterState(1));
 
-		DirectX::XMMATRIX v = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.view);
-		DirectX::XMMATRIX p = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.projection);
 		for (auto &bone : bones)
-			bone->Render(v, p);
+			bone->Render(rootBone->getLocalTransform(), view, projection);
 
 		context->RSSetState(m_d3d->GetRasterState(0));
 	}

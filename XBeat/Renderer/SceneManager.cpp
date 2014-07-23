@@ -129,21 +129,28 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		m_models[0]->ApplyMorph(L"翼羽ばたき", value);
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { m_models[0]->GetBoneByName(L"全ての親")->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) {
-		auto bone = m_models[0]->GetBoneByName(L"右腕");
-		btVector3 a;
-		a.set128(bone->GetOffsetPosition());
-		bone->Rotate(a, 1.0f);
+		for (auto &model : m_models) {
+			auto bone = model->GetBoneByName(L"右ひじ");
+			DirectX::XMVECTOR direction = bone->GetEndPosition(false) - bone->GetPosition(false);
+			btVector3 v;
+			v.set128(direction);
+			bone->Rotate(v, 0.2f);
+		}
 	});
-	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) { model->GetBoneByName(L"右腕")->Rotate(btVector3(-1.0f, 0.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_C), [this](void* param) { for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F1), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F2), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F3), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F4), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::RenderSoftBodies); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F5), [this](void* param) { m_models[0]->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
+
+#ifdef _DEBUG
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F1), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F2), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F3), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F4), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderSoftBodies); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F5), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F6), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::DontUpdatePhysics); });
+#endif
 	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
 		static float rotation[2] = { 0.0f, 0.0f };
 		if (data->x != 0 || data->y != 0) {
@@ -204,8 +211,7 @@ bool SceneManager::LoadScene() {
 	m_models[1]->SetShader(m_pmxShader[1]);
 	m_models[1]->GetRootBone()->Translate(btVector3(7.5f, 0, 0));
 
-	//auto pos = model->GetBoneByName(L"頭")->GetPosition();
-	//camera->SetPosition(pos.x(), pos.y(), pos.z());
+	//camera->SetRotation(btVector3(0, 1, 0), DirectX::XMConvertToRadians(180));
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
 	lightShader->SetLightCount(1);
@@ -304,6 +310,7 @@ bool SceneManager::Frame(float frameTime)
 	}
 
 	camera->SetPosition(campos.x, campos.y, campos.z);
+	//camera->SetPosition(DirectX::XMVector3Transform(m_models[1]->GetBoneByName(L"頭")->GetPosition() + DirectX::XMVectorSet(0.0f, 1.0f, -1.75f, 0.0f), m_models[1]->GetRootBone()->getLocalTransform()));
 	camera->Update(frameTime);
 
 	if (!Render(frameTime))

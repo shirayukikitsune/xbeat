@@ -39,14 +39,14 @@ public:
 	};
 
 	struct BoneBufferType {
-		DirectX::XMMATRIX transform;
+		DirectX::XMVECTOR transform[3];
+		DirectX::XMVECTOR position;
 	};
 
 	struct VertexType {
 		DirectX::XMFLOAT3 position;
 		DirectX::XMFLOAT3 normal;
 		DirectX::XMFLOAT2 uv;
-		//DirectX::XMVECTOR uvEx[4];
 		DirectX::XMUINT4 boneIndices;
 		DirectX::XMFLOAT4 boneWeights;
 		UINT materialIndex;
@@ -58,6 +58,8 @@ public:
 	BoneBufferType& GetBone(int index) { return m_bones[index]; }
 	bool UpdateBoneBuffer(ID3D11DeviceContext *context);
 
+	void RenderGeometry(ID3D11DeviceContext *context, UINT indexCount, UINT offset);
+
 private:
 	ID3D11Buffer *m_materialBuffer, *m_tmpMatBuffer;
 	ID3D11ShaderResourceView *m_materialSrv;
@@ -65,6 +67,8 @@ private:
 	ID3D11ShaderResourceView *m_bonesSrv;
 	ID3D11VertexShader *m_vertexShader;
 	ID3D11PixelShader *m_pixelShader;
+	ID3D11GeometryShader *m_geoShader;
+	ID3D11VertexShader *m_passthruShader;
 	std::array<MaterialBufferType, Limits::Materials> m_materials;
 	std::array<BoneBufferType, Limits::Bones> m_bones;
 

@@ -215,6 +215,7 @@
     <FxCompile Include="Data\Shaders\PMX\PMXVertex.hlsl" />
     <FxCompile Include="Data\Shaders\PMX\PMXPixel.hlsl" />
     <FxCompile Include="Data\Shaders\PMX\PMXGeometry.hlsl" />
+    <FxCompile Include="Data\Shaders\PMX\Passthru.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\Models\cube.txt" />

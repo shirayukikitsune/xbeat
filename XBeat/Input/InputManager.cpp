@@ -123,8 +123,9 @@ bool Manager::ReadKeyboard()
 
 	result = keyboard->GetDeviceState(sizeof (keyState), (LPVOID)&keyState);
 	if (FAILED(result)) {
-		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED)
-			return !(FAILED(keyboard->Acquire()));
+		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED) {
+			keyboard->Acquire();
+		}
 		else
 			return false;
 	}
@@ -139,7 +140,7 @@ bool Manager::ReadMouse()
 	result = mouse->GetDeviceState(sizeof (DIMOUSESTATE2), (LPVOID)&currentMouseState);
 	if (FAILED(result)) {
 		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED)
-			return !(FAILED(mouse->Acquire()));
+			mouse->Acquire();
 		else
 			return false;
 	}

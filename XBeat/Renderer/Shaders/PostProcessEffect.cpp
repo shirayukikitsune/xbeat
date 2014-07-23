@@ -257,16 +257,18 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 
 			m_numPasses[g][n] = techniqueDesc.Passes;
 
-			// Only the first pass has a vertex shader
-			pass = technique->GetPassByIndex(0);
-			if (pass == NULL)
-				return false;
-			result = pass->GetDesc(&passDesc);
-			if (FAILED(result))
-				return false;
-			result = device->CreateInputLayout(layoutDesc, 2, passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &m_layout);
-			if (FAILED(result))
-				return false;
+			if (m_layout == nullptr) {
+				// Only the first pass has a vertex shader
+				pass = technique->GetPassByIndex(0);
+				if (pass == NULL)
+					return false;
+				result = pass->GetDesc(&passDesc);
+				if (FAILED(result))
+					return false;
+				result = device->CreateInputLayout(layoutDesc, 2, passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &m_layout);
+				if (FAILED(result))
+					return false;
+			}
 		}
 	}
 

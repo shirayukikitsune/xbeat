@@ -98,7 +98,7 @@ private:
 	bool updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *context);
 	bool m_dirtyBuffer;
 	ID3D11Buffer *m_materialBuffer;
-	ID3D11Buffer *m_vertexBuffer;
+	ID3D11Buffer *m_vertexBuffer, *m_tmpVertexBuffer;
 	ID3D11Buffer *m_indexBuffer;
 
 	uint32_t m_debugFlags;

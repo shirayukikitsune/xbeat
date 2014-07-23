@@ -5,14 +5,12 @@
 
 using namespace Renderer::PMX;
 
-btTransform DirectXMatrixToBtTransform(DirectX::XMMATRIX M)
+btTransform DirectXMatrixToBtTransform(DirectX::XMTRANSFORM M)
 {
-	DirectX::XMVECTOR position, rotation, unused;
-	DirectX::XMMatrixDecompose(&unused, &rotation, &position, M);
 	btQuaternion q;
-	q.set128(rotation);
+	q.set128(M.GetRotationQuaternion());
 	btVector3 p;
-	p.set128(position);
+	p.set128(M.GetOffset());
 	return btTransform(q, p);
 }
 
@@ -45,7 +43,7 @@ RigidBody::~RigidBody()
 {
 }
 
-void RigidBody::Initialize(std::shared_ptr<Physics::Environment> physics, Model *model, Loader::RigidBody *body)
+void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, Model *model, Loader::RigidBody *body)
 {
 	btVector3 inertia;
 	btTransform startTransform;
@@ -53,13 +51,16 @@ void RigidBody::Initialize(std::shared_ptr<Physics::Environment> physics, Model 
 	switch (body->shape) {
 	case RigidBodyShape::Box:
 		m_shape.reset(new btBoxShape(body->size));
+		m_primitive = DirectX::GeometricPrimitive::CreateCube(context);
 		break;
 	case RigidBodyShape::Sphere:
 		m_shape.reset(new btSphereShape(body->size.x()));
+		m_primitive = DirectX::GeometricPrimitive::CreateSphere(context, body->size.x());
 		break;
 	case RigidBodyShape::Capsule:
 		return;
 		m_shape.reset(new btCapsuleShape(body->size.y(), body->size.x()));
+		m_primitive = DirectX::GeometricPrimitive::CreateCylinder(context, body->size.y(), body->size.x());
 		break;
 	}
 
@@ -97,4 +98,18 @@ void RigidBody::Initialize(std::shared_ptr<Physics::Environment> physics, Model 
 	m_groupMask = body->groupMask;
 
 	physics->AddRigidBody(m_body, m_groupId, m_groupMask);
+}
+
+bool XM_CALLCONV RigidBody::Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection)
+{
+	DirectX::XMMATRIX w;
+
+	if (m_primitive)
+	{
+		w = world * m_bone->getLocalTransform();
+
+		m_primitive->Draw(world, view, projection);
+	}
+
+	return true;
 }

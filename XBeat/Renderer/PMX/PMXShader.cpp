@@ -53,26 +53,31 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 			{ "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			/*{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 4, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },*/
 			{ "BONES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "BONES", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "MATERIAL", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
+	D3D11_SO_DECLARATION_ENTRY outputs[] = {
+			{ 0, "SV_Position", 0, 0, 3, 0 },
+			{ 0, "NORMAL", 0, 0, 3, 0 },
+			{ 0, "TEXCOORD", 0, 0, 2, 0 },
+			{ 0, "BONES", 0, 0, 4, 0 },
+			{ 0, "BONES", 1, 0, 4, 0 },
+			{ 0, "MATERIAL", 0, 0, 1, 0 },
+	};
 	UINT numElements = sizeof(polygonLayout) / sizeof(polygonLayout[0]);
+	UINT numOutputs = sizeof(outputs) / sizeof(outputs[0]);
 	SIZE_T vsbufsize, psbufsize;
 
 	char *vsbuffer = getFileContents(L"./Data/Shaders/PMX/PMXVertex.cso", vsbufsize);
-	result = device->CreateVertexShader(vsbuffer, vsbufsize, NULL, &m_vertexShader);
+	result = device->CreateVertexShader(vsbuffer, vsbufsize, nullptr, &m_vertexShader);
 	if (FAILED(result)) {
 		delete[] vsbuffer;
 		return false;
 	}
 
 	char *psbuffer = getFileContents(L"./Data/Shaders/PMX/PMXPixel.cso", psbufsize);
-	result = device->CreatePixelShader(psbuffer, psbufsize, NULL, &m_pixelShader);
+	result = device->CreatePixelShader(psbuffer, psbufsize, nullptr, &m_pixelShader);
 	delete[] psbuffer;
 	if (FAILED(result)) {
 		return false;
@@ -82,6 +87,19 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 	delete[] vsbuffer;
 	if (FAILED(result))
 		return false;
+
+	vsbuffer = getFileContents(L"./Data/Shaders/PMX/Passthru.cso", vsbufsize);
+	result = device->CreateVertexShader(vsbuffer, vsbufsize, nullptr, &m_passthruShader);
+	delete[] vsbuffer;
+	if (FAILED(result)) {
+		return false;
+	}
+
+	vsbuffer = getFileContents(L"./Data/Shaders/PMX/PMXGeometry.cso", vsbufsize);
+	result = device->CreateGeometryShaderWithStreamOutput(vsbuffer, vsbufsize, outputs, numOutputs, nullptr, 0, 0, nullptr, &m_geoShader);
+	if (FAILED(result)) {
+		return false;
+	}
 
 	buffDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	buffDesc.ByteWidth = sizeof(MaterialBufferType) * Limits::Materials;
@@ -126,7 +144,7 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 	buffDesc.StructureByteStride = sizeof(BoneBufferType);
 	buffDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	std::for_each(m_bones.begin(), m_bones.end(), [](BoneBufferType& b) { b.transform = DirectX::XMMatrixIdentity(); });
+	std::for_each(m_bones.begin(), m_bones.end(), [](BoneBufferType& b) { b.transform[0] = DirectX::g_XMIdentityR0; b.transform[1] = DirectX::g_XMIdentityR1; b.transform[2] = DirectX::g_XMIdentityR2; b.position = DirectX::XMVectorZero(); });
 
 	data.pSysMem = m_bones.data();
 	data.SysMemPitch = sizeof(BoneBufferType);
@@ -175,6 +193,21 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 	return true;
 }
 
+void PMXShader::RenderGeometry(ID3D11DeviceContext *context, UINT indexCount, UINT offset)
+{
+	context->IASetInputLayout(m_layout);
+
+	context->VSSetShader(m_passthruShader, nullptr, 0);
+	context->PSSetShader(nullptr, nullptr, 0);
+	context->GSSetShader(m_geoShader, nullptr, 0);
+
+	context->GSSetShaderResources(0, 1, &m_bonesSrv);
+
+	context->Draw(indexCount, 0);
+
+	context->GSSetShader(nullptr, nullptr, 0);
+}
+
 void PMXShader::InternalPrepareRender(ID3D11DeviceContext *context)
 {
 	context->IASetInputLayout(m_layout);
@@ -183,7 +216,6 @@ void PMXShader::InternalPrepareRender(ID3D11DeviceContext *context)
 	context->PSSetShader(m_pixelShader, NULL, 0);
 
 	context->PSSetShaderResources(4, 1, &m_materialSrv);
-	context->VSSetShaderResources(0, 1, &m_bonesSrv);
 }
 
 bool PMXShader::InternalRender(ID3D11DeviceContext *context, UINT indexCount, UINT offset)
