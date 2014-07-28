@@ -139,10 +139,11 @@ bool Bone::Update(bool force)
 	m_inheritTranslation = translation;
 
 	DirectX::XMVECTOR origin = translation + GetOffsetPosition();
-	m_transform = DirectX::XMTRANSFORM(origin, rotation, translation);
+	m_transform = DirectX::XMTRANSFORM(origin, rotation , translation);
 	if (auto parent = GetParentBone()) {
 		m_transform.PrependTransform(parent->m_transform);
 	}
+	m_transform.PrependTransform(m_physicsTransform);
 
 	m_dirty = false;
 	m_touched = true;
@@ -209,6 +210,14 @@ void Bone::ResetTransform()
 	m_dirty = true;
 	m_userTranslation = DirectX::XMVectorZero();
 	m_userRotation = DirectX::XMQuaternionIdentity();
+
+	tagChildren();
+}
+
+void Bone::ApplyPhysicsTransform(DirectX::XMTRANSFORM &transform)
+{
+	m_physicsTransform = transform;
+	m_dirty = true;
 
 	tagChildren();
 }

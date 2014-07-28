@@ -141,6 +141,11 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		}
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_C), [this](void* param) { for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_V), [this](void* param) {
+		auto model = m_models[1];
+		auto bone = model->GetBoneByName(L"右腕捩");
+		if (bone) bone->Rotate(btVector3(0.0f, 0.0f, DirectX::XMConvertToRadians(90.0f)));
+	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
 
 #ifdef _DEBUG

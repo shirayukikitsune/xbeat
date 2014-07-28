@@ -52,8 +52,9 @@ public:
 	void Translate(const btVector3& offset, DeformationOrigin origin = DeformationOrigin::User);
 
 	void ResetTransform();
-
+	
 	void ApplyMorph(Morph *morph, float weight);
+	void ApplyPhysicsTransform(DirectX::XMTRANSFORM &transform);
 
 	DirectX::XMTRANSFORM XM_CALLCONV getLocalTransform() const;
 
@@ -77,7 +78,7 @@ private:
 
 	std::vector<Bone*> children;
 
-	DirectX::XMTRANSFORM m_transform, m_initialTransformInverse;
+	DirectX::XMTRANSFORM m_transform, m_initialTransformInverse, m_physicsTransform;
 	DirectX::XMVECTOR m_inheritRotation, m_inheritTranslation;
 	DirectX::XMVECTOR m_userRotation, m_userTranslation;
 	DirectX::XMVECTOR m_morphRotation, m_morphTranslation;

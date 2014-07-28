@@ -23,6 +23,10 @@ bool OBJModel::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	HRESULT result;
 	btVector3 normal, uv;
 
+	std::shared_ptr<btRigidBody> b;
+	b.reset(new btRigidBody(0.0f, new btDefaultMotionState(), new btStaticPlaneShape(btVector3(0.0f, 1.0f, 0.0f), 0)));
+	m_physics->AddRigidBody(b);
+
 	std::vector<Shaders::Light::VertexInput> vertices;
 	std::vector<UINT> indices;
 

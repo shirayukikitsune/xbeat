@@ -362,23 +362,6 @@ ATTRIBUTE_ALIGNED16(struct) Frame{
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-ATTRIBUTE_ALIGNED16(struct) Joint{
-	Name name;
-	JointType type;
-	struct {
-		uint32_t bodyA, bodyB;
-		vec3f position;
-		vec3f rotation;
-		vec3f lowerMovementRestrictions;
-		vec3f upperMovementRestrictions;
-		vec3f lowerRotationRestrictions;
-		vec3f upperRotationRestrictions;
-		vec3f movementSpringConstant;
-		vec3f rotationSpringConstant;
-	} data;
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
-};
 }
 }
 

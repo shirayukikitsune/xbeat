@@ -45,6 +45,9 @@ public:
 	void AddRigidBody(std::shared_ptr<btRigidBody> body, int16_t group = -1, int16_t mask = -1);
 	void RemoveRigidBody(std::shared_ptr<btRigidBody> body);
 
+	void AddConstraint(std::shared_ptr<btTypedConstraint> constraint);
+	void RemoveConstraint(std::shared_ptr<btTypedConstraint> constraint);
+
 	void AddCharacter(std::shared_ptr<btActionInterface> character);
 	void RemoveCharacter(std::shared_ptr<btActionInterface> character);
 
@@ -55,6 +58,7 @@ private:
 	std::set<std::shared_ptr<btSoftBody>> m_softBodies;
 	std::set<std::shared_ptr<btRigidBody>> m_rigidBodies;
 	std::set<std::shared_ptr<btActionInterface>> m_characters;
+	std::set<std::shared_ptr<btTypedConstraint>> m_constraints;
 	std::unique_ptr<btBroadphaseInterface> m_broadphase;
 	std::unique_ptr<btCollisionConfiguration> m_collisionConfiguration;
 	std::unique_ptr<btCollisionDispatcher> m_collisionDispatcher;

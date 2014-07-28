@@ -472,8 +472,7 @@ void Loader::loadJoints(Model *model, const char *&data)
 		readVector<btScalar>(joint->data.lowerRotationRestrictions.m_floats, 3, data);
 		readVector<btScalar>(joint->data.upperRotationRestrictions.m_floats, 3, data);
 
-		readVector<btScalar>(joint->data.movementSpringConstant.m_floats, 3, data);
-		readVector<btScalar>(joint->data.rotationSpringConstant.m_floats, 3, data);
+		readVector<btScalar>(joint->data.springConstant, 6, data);
 	}
 }
 

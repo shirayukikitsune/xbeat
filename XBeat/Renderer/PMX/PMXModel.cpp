@@ -63,6 +63,20 @@ bool PMX::Model::LoadModel(const wstring &filename)
 		body->Create(m_physics, this);
 	}
 
+	for (auto &bone : bones) {
+		if (bone->HasAnyFlag(BoneFlags::AfterPhysicalDeformation))
+			m_postPhysicsBones.push_back(bone);
+		else
+			m_prePhysicsBones.push_back(bone);
+	}
+
+	auto sortFn = [](Bone* a, Bone* b) {
+		return a->GetDeformationOrder() < b->GetDeformationOrder() || (a->GetDeformationOrder() == b->GetDeformationOrder() && a->GetId() < b->GetId());
+	};
+
+	std::sort(m_prePhysicsBones.begin(), m_prePhysicsBones.end(), sortFn);
+	std::sort(m_postPhysicsBones.begin(), m_postPhysicsBones.end(), sortFn);
+
 	return true;
 }
 
@@ -72,6 +86,7 @@ void PMX::Model::ReleaseModel()
 		delete vertices[i];
 		vertices[i] = nullptr;
 	}
+	vertices.clear();
 	vertices.shrink_to_fit();
 
 	verticesIndex.clear();
@@ -90,6 +105,8 @@ void PMX::Model::ReleaseModel()
 		bones[i] = nullptr;
 	}
 	bones.shrink_to_fit();
+	m_prePhysicsBones.clear();
+	m_postPhysicsBones.clear();
 
 	for (std::vector<PMX::Morph*>::size_type i = 0; i < morphs.size(); i++) {
 		delete morphs[i];
@@ -109,13 +126,13 @@ void PMX::Model::ReleaseModel()
 	}
 	bodies.shrink_to_fit();
 
-	for (std::vector<PMX::Joint*>::size_type i = 0; i < joints.size(); i++) {
-		delete joints[i];
-		joints[i] = nullptr;
+	for (auto &joint : m_joints) {
+		joint->Shutdown(m_physics);
 	}
-	joints.shrink_to_fit();
+	m_joints.clear();
+	m_joints.shrink_to_fit();
 
-	for (std::vector<PMX::Joint*>::size_type i = 0; i < softBodies.size(); i++) {
+	for (std::vector<PMX::SoftBody*>::size_type i = 0; i < softBodies.size(); i++) {
 		delete softBodies[i];
 		softBodies[i] = nullptr;
 	}
@@ -278,6 +295,19 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	bodies.clear();
 	bodies.shrink_to_fit();
 
+	// Add the joints
+	m_joints.resize(joints.size());
+	for (uint32_t i = 0; i < joints.size(); i++) {
+		m_joints[i].reset(new Joint);
+		if (!m_joints[i]->Initialize(m_physics, this, joints[i]))
+			return false;
+
+		delete joints[i];
+		joints[i] = nullptr;
+	}
+	joints.clear();
+	joints.shrink_to_fit();
+
 	return true;
 }
 
@@ -388,10 +418,15 @@ bool PMX::Model::Update(float msec)
 	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
 		rootBone->Update();
 
-		for (auto &bone : bones) {
-			/*if (bone->Update()) {
-				bone->updateChildren();
-			}*/
+		for (auto &bone : m_prePhysicsBones) {
+			bone->Update();
+		}
+
+		for (auto &body : m_rigidBodies) {
+			body->Update();
+		}
+
+		for (auto &bone : m_postPhysicsBones) {
 			bone->Update();
 		}
 	}
@@ -432,8 +467,14 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 			UINT offset = 0;
 			context->SOSetTargets(1, &m_tmpVertexBuffer, &offset);
+			ID3D11RenderTargetView *rtv; ID3D11DepthStencilView *dsv;
+			context->OMGetRenderTargets(1, &rtv, &dsv);
+			context->OMSetRenderTargets(0, nullptr, nullptr);
 			shader->RenderGeometry(context, m_vertices.size(), 0);
 			ID3D11Buffer *b = nullptr;
+			context->OMSetRenderTargets(1, &rtv, dsv);
+			dsv->Release();
+			rtv->Release();
 			context->SOSetTargets(1, &b, &offset);
 		}
 
@@ -590,6 +631,14 @@ PMX::RenderMaterial* PMX::Model::GetRenderMaterialById(uint32_t id)
 		return nullptr;
 
 	return &rendermaterials[id];
+}
+
+std::shared_ptr<PMX::RigidBody> PMX::Model::GetRigidBodyById(uint32_t id)
+{
+	if (id == -1 || id >= m_rigidBodies.size())
+		return nullptr;
+
+	return m_rigidBodies[id];
 }
 
 void PMX::Model::ApplyMorph(const std::wstring &nameJP, float weight)

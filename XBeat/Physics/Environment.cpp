@@ -90,7 +90,7 @@ bool Environment::Frame(float frameTimeMsec)
 	}
 
 	// Do our frame simulation
-	m_dynamicsWorld->stepSimulation(frameTimeMsec / 1000.f);
+	m_dynamicsWorld->stepSimulation(frameTimeMsec);
 
 	return true;
 }
@@ -127,6 +127,22 @@ void Environment::RemoveRigidBody(std::shared_ptr<btRigidBody> body)
 	}
 }
 
+void Environment::AddConstraint(std::shared_ptr<btTypedConstraint> constraint)
+{
+	m_constraints.insert(constraint);
+	m_dynamicsWorld->addConstraint(constraint.get(), true);
+}
+
+void Environment::RemoveConstraint(std::shared_ptr<btTypedConstraint> constraint)
+{
+	auto i = m_constraints.find(constraint);
+
+	if (i != m_constraints.end()) {
+		m_constraints.erase(i);
+		m_dynamicsWorld->removeConstraint(constraint.get());
+	}
+}
+
 void Environment::AddCharacter(std::shared_ptr<btActionInterface> character)
 {
 	m_characters.insert(character);
@@ -137,7 +153,7 @@ void Environment::RemoveCharacter(std::shared_ptr<btActionInterface> character)
 {
 	auto i = m_characters.find(character);
 
-	if (i == m_characters.end()) {
+	if (i != m_characters.end()) {
 		m_characters.erase(i);
 		m_dynamicsWorld->removeCharacter(character.get());
 	}

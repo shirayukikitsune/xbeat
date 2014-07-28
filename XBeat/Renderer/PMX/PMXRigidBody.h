@@ -41,18 +41,27 @@ public:
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
+	void Update();
+
+	operator btRigidBody*();
+	btRigidBody* getBody() { return (btRigidBody*)*this; }
+
 private:
 	Bone* m_bone;
-	btTransform m_transform;
+	btTransform m_transform, m_inverseTransform;
 	Name m_name;
 	uint16_t m_groupId;
 	uint16_t m_groupMask;
+	RigidBodyMode m_mode;
+	RigidBodyShape m_shapeType;
+	btVector3 m_size;
 
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
 	std::shared_ptr<btCollisionShape> m_shape;
 	std::shared_ptr<btRigidBody> m_body;
 	std::shared_ptr<btPairCachingGhostObject> m_ghost;
 	std::shared_ptr<btMotionState> m_motion;
+	std::shared_ptr<KinematicMotionState> m_kinematic;
 };
 }
 }

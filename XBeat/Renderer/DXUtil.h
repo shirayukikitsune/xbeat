@@ -4,6 +4,7 @@
 #include <D3D11.h>
 #include <DirectXMath.h>
 #include <utility>
+#include "LinearMath/btTransform.h" // Convert XMTRANSFORM to/from btTransform
 
 #define DX_DELETEIF(v) if (v) { v->Release(); v = nullptr; }
 
@@ -38,6 +39,11 @@ namespace DirectX
 			this->m_basis = std::move(basis);
 		}
 
+		explicit XMTRANSFORM(const btTransform &t)
+		{
+			this->m_basis = XMMatrixAffineTransformation(XMVectorSplatOne(), t.getOrigin().get128(), t.getRotation().get128(), DirectX::XMVectorZero());
+		}
+
 		XMTRANSFORM()
 		{
 			this->m_basis = XMMatrixIdentity();
@@ -50,6 +56,15 @@ namespace DirectX
 		//! Implicit convertion to XMMATRIX
 		operator XMMATRIX() const {
 			return m_basis;
+		}
+
+		//! Explicit convertion to btTransform
+		explicit operator btTransform() {
+			btQuaternion q;
+			q.set128(this->GetRotationQuaternion());
+			btVector3 p;
+			p.set128(this->GetOffset());
+			return btTransform(q, p);
 		}
 
 		//! Returns a new XMTRANSFORM that is the combinate of two XMTRANSFORM

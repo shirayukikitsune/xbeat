@@ -15,6 +15,7 @@
 #include "PMXLoader.h"
 #include "PMXSoftBody.h"
 #include "PMXRigidBody.h"
+#include "PMXJoint.h"
 #include "PMXShader.h"
 
 namespace Renderer {
@@ -60,6 +61,7 @@ public:
 
 	Material* GetMaterialById(uint32_t id);
 	RenderMaterial* GetRenderMaterialById(uint32_t id);
+	std::shared_ptr<RigidBody> GetRigidBodyById(uint32_t id);
 
 	virtual bool Update(float msec);
 	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum);
@@ -76,7 +78,7 @@ private:
 	std::vector<Morph*> morphs;
 	std::vector<Frame*> frames;
 	std::vector<Loader::RigidBody*> bodies;
-	std::vector<Joint*> joints;
+	std::vector<Loader::Joint*> joints;
 	std::vector<SoftBody*> softBodies;
 
 	Bone *rootBone;
@@ -92,6 +94,7 @@ private:
 	static std::vector<std::shared_ptr<Texture>> sharedToonTextures;
 
 	std::vector<std::shared_ptr<RigidBody>> m_rigidBodies;
+	std::vector<std::shared_ptr<Joint>> m_joints;
 
 	std::vector<PMXShader::VertexType> m_vertices;
 
@@ -102,6 +105,9 @@ private:
 	ID3D11Buffer *m_indexBuffer;
 
 	uint32_t m_debugFlags;
+
+	std::vector<Bone*> m_prePhysicsBones;
+	std::vector<Bone*> m_postPhysicsBones;
 
 protected:
 	virtual bool InitializeBuffers(std::shared_ptr<D3DRenderer> d3d);

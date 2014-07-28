@@ -177,6 +177,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Renderer\PMX\PMXJoint.cpp" />
     <ClCompile Include="Renderer\Shaders\GenericShader.cpp" />
     <ClCompile Include="Dispatcher.cpp" />
     <ClCompile Include="Renderer\PMX\PMXShader.cpp" />
@@ -207,6 +208,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Dispatcher.h" />
+    <ClInclude Include="Renderer\PMX\PMXJoint.h" />
     <ClInclude Include="Renderer\Shaders\GenericShader.h" />
     <ClInclude Include="Renderer\Entity.h" />
     <ClInclude Include="Renderer\PMX\PMXShader.h" />

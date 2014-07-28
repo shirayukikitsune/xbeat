@@ -62,6 +62,23 @@ public:
 		BT_DECLARE_ALIGNED_ALLOCATOR();
 	};
 
+	ATTRIBUTE_ALIGNED16(struct) Joint{
+		Name name;
+		JointType type;
+		struct {
+			uint32_t bodyA, bodyB;
+			vec3f position;
+			vec3f rotation;
+			vec3f lowerMovementRestrictions;
+			vec3f upperMovementRestrictions;
+			vec3f lowerRotationRestrictions;
+			vec3f upperRotationRestrictions;
+			btScalar springConstant[6];
+		} data;
+
+		BT_DECLARE_ALIGNED_ALLOCATOR();
+	};
+
 	bool FromFile(Model* model, const std::wstring &filename);
 	bool FromStream(Model* model, std::istream &in);
 	bool FromMemory(Model* model, const char *&data);

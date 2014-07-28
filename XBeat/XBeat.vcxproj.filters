@@ -31,6 +31,10 @@
     <Filter Include="Header Files\Renderer\Shaders">
       <UniqueIdentifier>{0b40bd99-6a07-4e5d-97f9-159fb0137b00}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shader Files">
+      <UniqueIdentifier>{9962b130-57aa-46a8-90e6-f88003384fde}</UniqueIdentifier>
+      <Extensions>hlsl;hlsli;fx</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -112,6 +116,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Renderer\Shaders\TextureShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer\PMX\PMXJoint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -203,26 +210,53 @@
     <ClInclude Include="Renderer\Shaders\Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Renderer\PMX\PMXJoint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Data\Shaders\LightPixel.hlsl" />
-    <FxCompile Include="Data\Shaders\LightVertex.hlsl" />
-    <FxCompile Include="Data\Shaders\SkyboxPixel.hlsl" />
-    <FxCompile Include="Data\Shaders\TexturePixel.hlsl" />
-    <FxCompile Include="Data\Shaders\TextureVertex.hlsl" />
-    <FxCompile Include="Data\Shaders\SkyboxVertex.hlsl" />
-    <FxCompile Include="Data\Shaders\PostProcess.fx" />
-    <FxCompile Include="Data\Shaders\PMX\PMXVertex.hlsl" />
-    <FxCompile Include="Data\Shaders\PMX\PMXPixel.hlsl" />
-    <FxCompile Include="Data\Shaders\PMX\PMXGeometry.hlsl" />
-    <FxCompile Include="Data\Shaders\PMX\Passthru.hlsl" />
+    <FxCompile Include="Data\Shaders\LightPixel.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\LightVertex.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\PMX\Passthru.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\PMX\PMXGeometry.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\PMX\PMXPixel.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\PMX\PMXVertex.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\SkyboxPixel.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\SkyboxVertex.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\TexturePixel.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\TextureVertex.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="Data\Shaders\PostProcess.fx">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\Models\cube.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Data\Shaders\PMX\Classes.hlsli" />
+    <None Include="Data\Shaders\PMX\Classes.hlsli">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\Textures\Sky\miramar.dds" />
