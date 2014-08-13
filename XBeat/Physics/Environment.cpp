@@ -47,13 +47,21 @@ bool Environment::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (!m_dynamicsWorld)
 		return false;
 
-	m_dynamicsWorld->setGravity(btVector3(0, -10, 0));
+	m_dynamicsWorld->setGravity(btVector3(0, -98.f, 0)); // We multiply the gravity force by 10 due the approximation that 10u in PMD/PMX models = 1m
 
 	return true;
 }
 
 void Environment::Shutdown()
 {
+	for (auto i = m_softBodies.begin(); !m_softBodies.empty(); i = m_softBodies.begin()) {
+		m_dynamicsWorld->removeSoftBody(i->get());
+		m_softBodies.erase(i);
+	}
+	for (auto i = m_constraints.begin(); !m_constraints.empty(); i = m_constraints.begin()) {
+		m_dynamicsWorld->removeConstraint(i->get());
+		m_constraints.erase(i);
+	}
 	for (auto i = m_rigidBodies.begin(); !m_rigidBodies.empty(); i = m_rigidBodies.begin()) {
 		m_dynamicsWorld->removeRigidBody(i->get());
 		m_rigidBodies.erase(i);

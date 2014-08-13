@@ -106,7 +106,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)Library_DirectXTex\DirectXTex;$(SolutionDir)Library_FX11\inc;$(SolutionDir)Library_Bullet_Physics\include;$(SolutionDir)Library_DirectXTK\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;DEBUG;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;_DEBUG;DEBUG;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
       <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>

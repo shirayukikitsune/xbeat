@@ -70,20 +70,6 @@ bool Loader::FromMemory(Model* model, const char *&data)
 	if (m_header->fVersion >= 2.1f)
 		loadSoftBodies(model, data);
 
-	{
-		// Build the bone parent->child lookup tree and initialize the transformations
-		Bone *parent;
-		for (auto &bone : model->bones) {
-			parent = bone->GetParentBone();
-			parent->children.push_back(bone);
-
-			bone->Update();
-		}
-
-		model->rootBone->flags |= (uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable | (uint16_t)BoneFlags::Rotatable;
-		model->rootBone->parent = -1;
-	}
-
 	return true;
 }
 
@@ -267,48 +253,49 @@ void Loader::loadBones(Model *model, const char *&data)
 
 	for (auto &bone : model->bones)
 	{
-		bone = new Bone(model, id++);
-		readName(bone->name, data);
+		auto b = new detail::BoneImpl(model, id++);
+		bone = b;
+		readName(b->name, data);
 
-		readVector<btScalar>(bone->startPosition.m_floats, 3, data);
-		bone->parent = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
-		bone->deformationOrder = readInfo<int>(data);
+		readVector<btScalar>(b->startPosition.m_floats, 3, data);
+		b->m_parentId = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
+		b->m_deformationOrder = readInfo<int>(data);
 
-		bone->flags = readInfo<uint16_t>(data);
+		b->m_flags = readInfo<uint16_t>(data);
 
-		if (bone->flags & (uint16_t)BoneFlags::Attached)
-			bone->size.attachTo = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
-		else readVector<btScalar>(bone->size.length, 3, data);
+		if (b->m_flags & (uint16_t)BoneFlags::Attached)
+			b->size.attachTo = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
+		else readVector<btScalar>(b->size.length, 3, data);
 
-		if (bone->flags & ((uint16_t)BoneFlags::InheritRotation | (uint16_t)BoneFlags::InheritTranslation)) {
-			bone->inherit.from = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
-			bone->inherit.rate = readInfo<float>(data);
+		if (b->m_flags & ((uint16_t)BoneFlags::InheritRotation | (uint16_t)BoneFlags::InheritTranslation)) {
+			b->inherit.from = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
+			b->inherit.rate = readInfo<float>(data);
 		}
 		else {
-			bone->inherit.from = 0xFFFFFFFFU;
-			bone->inherit.rate = 1.0f;
+			b->inherit.from = 0xFFFFFFFFU;
+			b->inherit.rate = 1.0f;
 		}
 
-		if (bone->flags & (uint16_t)BoneFlags::TranslateAxis) {
-			readVector<btScalar>(bone->axisTranslation.m_floats, 3, data);
+		if (b->m_flags & (uint16_t)BoneFlags::TranslateAxis) {
+			readVector<btScalar>(b->axisTranslation.m_floats, 3, data);
 		}
 
-		if (bone->flags & (uint16_t)BoneFlags::LocalAxis) {
-			readVector<btScalar>(bone->localAxes.xDirection.m_floats, 3, data);
-			readVector<btScalar>(bone->localAxes.zDirection.m_floats, 3, data);
+		if (b->m_flags & (uint16_t)BoneFlags::LocalAxis) {
+			readVector<btScalar>(b->localAxes.xDirection.m_floats, 3, data);
+			readVector<btScalar>(b->localAxes.zDirection.m_floats, 3, data);
 		}
 
-		if (bone->flags & (uint16_t)BoneFlags::ExternalParentDeformation) {
-			bone->externalDeformationKey = readInfo<int>(data);
+		if (b->m_flags & (uint16_t)BoneFlags::ExternalParentDeformation) {
+			b->externalDeformationKey = readInfo<int>(data);
 		}
 
-		if (bone->flags & (uint16_t)BoneFlags::IK) {
-			bone->ik.begin = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
-			bone->ik.loopCount = readInfo<int>(data);
-			bone->ik.angleLimit = readInfo<float>(data);
+		if (b->m_flags & (uint16_t)BoneFlags::IK) {
+			b->ik.begin = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
+			b->ik.loopCount = readInfo<int>(data);
+			b->ik.angleLimit = readInfo<float>(data);
 
-			bone->ik.links.resize(readInfo<int>(data));
-			for (auto &link : bone->ik.links) {
+			b->ik.links.resize(readInfo<int>(data));
+			for (auto &link : b->ik.links) {
 				link.bone = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 				link.limitAngle = readInfo<bool>(data);
 				if (link.limitAngle) {

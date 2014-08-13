@@ -39,8 +39,7 @@ public:
 	};
 
 	struct BoneBufferType {
-		DirectX::XMVECTOR transform[3];
-		DirectX::XMVECTOR position;
+		DirectX::XMMATRIX transform;
 	};
 
 	struct VertexType {

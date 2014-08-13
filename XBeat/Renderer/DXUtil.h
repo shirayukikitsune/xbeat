@@ -11,174 +11,176 @@
 namespace DirectX
 {
 	class XMTRANSFORM {
-		XMMATRIX m_basis;
+		XMVECTOR m_translation;
+		XMVECTOR m_rotation;
+		XMVECTOR m_offset;
 
 	public:
 		XMTRANSFORM(const XMTRANSFORM &other)
 		{
-			this->m_basis = other.m_basis;
+			this->m_translation = other.m_translation;
+			this->m_rotation = other.m_rotation;
+			this->m_offset = other.m_offset;
 		}
 
 		XMTRANSFORM(XMTRANSFORM && other)
 		{
-			this->m_basis = std::move(other.m_basis);
+			this->m_translation = std::move(other.m_translation);
+			this->m_rotation = std::move(other.m_rotation);
+			this->m_offset = std::move(other.m_offset);
 		}
 
-		XMTRANSFORM(FXMVECTOR origin, FXMVECTOR rotation, FXMVECTOR translation)
+		XMTRANSFORM(FXMVECTOR rotation, FXMVECTOR translation, FXMVECTOR offset)
 		{
-			this->m_basis = XMMatrixAffineTransformation(XMVectorSplatOne(), origin, rotation, translation);
+			this->m_translation = translation;
+			this->m_rotation = rotation;
+			this->m_offset = offset;
 		}
 
-		XMTRANSFORM(const XMMATRIX &basis)
+		XMTRANSFORM(FXMMATRIX basis)
 		{
-			this->m_basis = basis;
-		}
-
-		XMTRANSFORM(XMMATRIX && basis)
-		{
-			this->m_basis = std::move(basis);
+			this->m_rotation = XMQuaternionRotationMatrix(basis);
+			this->m_translation = basis.r[3];
+			this->m_offset = XMVectorZero();
 		}
 
 		explicit XMTRANSFORM(const btTransform &t)
 		{
-			this->m_basis = XMMatrixAffineTransformation(XMVectorSplatOne(), t.getOrigin().get128(), t.getRotation().get128(), DirectX::XMVectorZero());
+			this->m_rotation = t.getRotation().get128();
+			this->m_translation = t.getOrigin().get128();
+			this->m_offset = XMVectorZero();
 		}
 
 		XMTRANSFORM()
 		{
-			this->m_basis = XMMatrixIdentity();
+			this->m_rotation = XMQuaternionIdentity();
+			this->m_translation = XMVectorZero();
+			this->m_offset = XMVectorZero();
 		}
 
 		//! Implicit convertion to XMMATRIX
 		operator XMMATRIX() {
-			return m_basis;
+			return XMMatrixAffineTransformation(XMVectorSplatOne(), m_offset, m_rotation, m_translation);
 		}
 		//! Implicit convertion to XMMATRIX
 		operator XMMATRIX() const {
-			return m_basis;
+			return XMMatrixAffineTransformation(XMVectorSplatOne(), m_offset, m_rotation, m_translation);
 		}
 
 		//! Explicit convertion to btTransform
 		explicit operator btTransform() {
 			btQuaternion q;
-			q.set128(this->GetRotationQuaternion());
+			q.set128(m_rotation);
 			btVector3 p;
-			p.set128(this->GetOffset());
+			p.set128(m_translation);
 			return btTransform(q, p);
 		}
 
 		//! Returns a new XMTRANSFORM that is the combinate of two XMTRANSFORM
 		XMTRANSFORM operator * (const XMTRANSFORM &other) const
 		{
-			return this->m_basis * other.m_basis;
+			return XMTRANSFORM(XMQuaternionNormalize(XMQuaternionMultiply(this->m_rotation, other.m_rotation)), this->PointTransform(other.m_translation), this->PointTransform(other.m_offset));
+		}
+
+		//! Combine this transform with another one
+		XMTRANSFORM operator *= (const XMTRANSFORM &other)
+		{
+			XMTRANSFORM t = *this * other;
+			m_translation = t.m_translation;
+			m_rotation = t.m_rotation;
+			m_offset = t.m_offset;
+			return *this;
 		}
 
 		//! Rotate and translate a point/vector
-		XMVECTOR XM_CALLCONV PointTransform(FXMVECTOR in)
+		XMVECTOR XM_CALLCONV PointTransform(FXMVECTOR in) const
 		{
-			// We set the W to 1.0, so the translation part of the matrix affects this vector
-			XMVECTOR v = XMVectorSetW(in, 1.0f);
-
-			return XMVector4Transform(v, this->m_basis);
+			return XMVectorAdd(VectorTransform(in), m_translation);
 		}
 
 		//! Rotate a point/vector
-		XMVECTOR XM_CALLCONV VectorTransform(FXMVECTOR in)
+		XMVECTOR XM_CALLCONV VectorTransform(FXMVECTOR in) const
 		{
-			// We set the W to 0.0, so the translation part of the matrix doesn't affect this vector
-			XMVECTOR v = XMVectorSetW(in, 0.0f);
-
-			return XMVector4Transform(v, this->m_basis);
+			return XMVector3Rotate(in, m_rotation);
 		}
 
 #pragma region Append
-		void XM_CALLCONV AppendTranslation(FXMVECTOR translation)
+		XMTRANSFORM& XM_CALLCONV AppendTranslation(FXMVECTOR translation)
 		{
-			AppendTransform(XMMatrixTranslationFromVector(translation));
+			m_translation = XMVectorAdd(m_translation, translation);
+			return *this;
 		}
 
-		void XM_CALLCONV AppendRotation(FXMVECTOR quaternion)
+		XMTRANSFORM& XM_CALLCONV AppendRotation(FXMVECTOR quaternion)
 		{
-			AppendTransform(XMMatrixRotationQuaternion(quaternion));
+			m_rotation = XMQuaternionNormalize(XMQuaternionMultiply(m_rotation, quaternion));
+			return *this;
 		}
 
-		void XM_CALLCONV AppendTransform(const XMTRANSFORM &other)
+		XMTRANSFORM& XM_CALLCONV AppendTransform(const XMTRANSFORM &other)
 		{
-			AppendTransform(other.m_basis);
-		}
-
-		void XM_CALLCONV AppendTransform(FXMMATRIX transform)
-		{
-			this->m_basis = XMMatrixMultiply(this->m_basis, transform);
+			return AppendRotation(other.m_rotation).AppendTranslation(other.m_translation);
 		}
 #pragma endregion
 
 #pragma region Prepend
-		void XM_CALLCONV PrependTranslation(FXMVECTOR translation)
+		XMTRANSFORM& XM_CALLCONV PrependTranslation(FXMVECTOR translation)
 		{
-			PrependTransform(XMMatrixTranslationFromVector(translation));
+			m_translation = XMVectorAdd(translation, m_translation);
+			return *this;
 		}
 
-		void XM_CALLCONV PrependRotation(FXMVECTOR quaternion)
+		XMTRANSFORM& XM_CALLCONV PrependRotation(FXMVECTOR quaternion)
 		{
-			PrependTransform(XMMatrixRotationQuaternion(quaternion));
+			m_rotation = XMQuaternionNormalize(XMQuaternionMultiply(quaternion, m_rotation));
+			return *this;
 		}
 
-		void XM_CALLCONV PrependTransform(const XMTRANSFORM &other)
+		XMTRANSFORM& XM_CALLCONV PrependTransform(const XMTRANSFORM &other)
 		{
-			PrependTransform(other.m_basis);
-		}
-
-		void XM_CALLCONV PrependTransform(FXMMATRIX transform)
-		{
-			this->m_basis = XMMatrixMultiply(transform, this->m_basis);
+			return PrependRotation(other.m_rotation).PrependTranslation(other.m_translation);
 		}
 #pragma endregion
 
 		//! Returns the rotation as a quaternion
 		XMVECTOR XM_CALLCONV GetRotationQuaternion()
 		{
-			return XMQuaternionRotationMatrix(this->m_basis);
-		}
-
-		//! Returns the rotation as a matrix
-		XMMATRIX XM_CALLCONV GetRotationMatrix()
-		{
-			return XMMatrixRotationQuaternion(GetRotationQuaternion());
+			return m_rotation;
 		}
 
 		//! Returns the translation component
 		XMVECTOR XM_CALLCONV GetTranslation()
 		{
-			return XMVectorSet(XMVectorGetW(this->m_basis.r[0]), XMVectorGetW(this->m_basis.r[1]), XMVectorGetW(this->m_basis.r[2]), 0.0f);
+			return m_translation;
 		}
 
-		//! Returns the offset for rotation
+		//! Returns the offset component
 		XMVECTOR XM_CALLCONV GetOffset()
 		{
-			return this->m_basis.r[3];
+			return m_offset;
 		}
 
-		void XM_CALLCONV SetRotationQuaternion(FXMVECTOR in)
+		XMTRANSFORM& XM_CALLCONV SetRotationQuaternion(FXMVECTOR in)
 		{
-			this->m_basis = XMMatrixAffineTransformation(XMVectorSplatOne(), GetOffset(), in, GetTranslation());
+			m_rotation = in;
+			return *this;
 		}
 
-		void XM_CALLCONV SetTranslation(FXMVECTOR in)
+		XMTRANSFORM& XM_CALLCONV SetTranslation(FXMVECTOR in)
 		{
-			this->m_basis.r[0] = XMVectorSetW(this->m_basis.r[0], XMVectorGetX(in));
-			this->m_basis.r[1] = XMVectorSetW(this->m_basis.r[1], XMVectorGetY(in));
-			this->m_basis.r[2] = XMVectorSetW(this->m_basis.r[2], XMVectorGetZ(in));
+			m_translation = in;
+			return *this;
 		}
 
-		void XM_CALLCONV SetOffset(FXMVECTOR in)
+		XMTRANSFORM& XM_CALLCONV SetOffset(FXMVECTOR in)
 		{
-			this->m_basis.r[3] = XMVectorSetW(in, 1.0f);
+			m_offset = in;
+			return *this;
 		}
 
-		void XM_CALLCONV SetTransform(FXMMATRIX in)
+		XMTRANSFORM XM_CALLCONV Inverse()
 		{
-			this->m_basis = in;
+			return XMTRANSFORM(DirectX::XMQuaternionConjugate(m_rotation), DirectX::XMVectorNegate(m_translation), DirectX::XMVectorNegate(m_offset));
 		}
 	};
 }

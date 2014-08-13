@@ -129,22 +129,25 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		m_models[0]->ApplyMorph(L"翼羽ばたき", value);
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(0.0f, 1.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(1.0f, 0.0f, 0.0f)); });
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) {
 		for (auto &model : m_models) {
 			auto bone = model->GetBoneByName(L"右ひじ");
-			DirectX::XMVECTOR direction = bone->GetEndPosition(false) - bone->GetPosition(false);
+			DirectX::XMVECTOR direction = dynamic_cast<PMX::detail::BoneImpl*>(bone)->GetOffsetPosition();
 			btVector3 v;
 			v.set128(direction);
 			bone->Rotate(v, 0.2f);
 		}
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_C), [this](void* param) { for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_C), [this](void* param) {
+		for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f);
+	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_V), [this](void* param) {
-		auto model = m_models[1];
-		auto bone = model->GetBoneByName(L"右腕捩");
-		if (bone) bone->Rotate(btVector3(0.0f, 0.0f, DirectX::XMConvertToRadians(90.0f)));
+		for (auto model : m_models) {
+			auto bone = model->GetBoneByName(L"右腕捩");
+			if (bone) bone->Rotate(btVector3(0.0f, 0.0f, DirectX::XMConvertToRadians(90.0f)));
+		}
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
 
@@ -191,10 +194,11 @@ bool SceneManager::LoadScene() {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda式改変GUMI フェリシア風 Ver101 配布用/Tda式改変GUMI デフォ服 Ver101.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/2013RacingMikuMMD/2013RacingMiku.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/TDA IA Amulet/TDA IA Amulet.pmx", physics, m_dispatcher)) {
-	if (!m_models.back()->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
+	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/銀獅式波音リツ_レクイエム_ver1.20/銀獅式波音リツ_レクイエム_ver1.20.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/SeeU 3.5/SeeU 3.5.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/Tda China IA by SapphireRose-chan/Tda China IA v2.pmx", physics, m_dispatcher)) {
 	//if (!m_models.back()->Initialize(d3d, L"./Data/Models/(_RXNXD Macne_)/Macnee.pmx", physics, m_dispatcher)) {
+	if (!m_models.back()->Initialize(d3d, L"./Data/Models/flowerMMDmodel/flower.pmx", physics, m_dispatcher)) {
 		MessageBox(wnd, L"Could not initialize the model object", L"Error", MB_OK);
 		return false;
 	}
@@ -204,6 +208,7 @@ bool SceneManager::LoadScene() {
 		return false;
 	}
 	m_models[0]->SetShader(m_pmxShader[0]);
+#if 0
 	m_models[0]->GetRootBone()->Translate(btVector3(-7.5f, 0, 0));
 
 	m_models.emplace_back(new PMX::Model);
@@ -215,8 +220,13 @@ bool SceneManager::LoadScene() {
 	}
 	m_models[1]->SetShader(m_pmxShader[1]);
 	m_models[1]->GetRootBone()->Translate(btVector3(7.5f, 0, 0));
+#endif
 
-	//camera->SetRotation(btVector3(0, 1, 0), DirectX::XMConvertToRadians(180));
+	for (auto model : m_models) {
+		model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies);
+		model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints);
+	}
+
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
 	lightShader->SetLightCount(1);
@@ -315,7 +325,7 @@ bool SceneManager::Frame(float frameTime)
 	}
 
 	camera->SetPosition(campos.x, campos.y, campos.z);
-	//camera->SetPosition(DirectX::XMVector3Transform(m_models[1]->GetBoneByName(L"頭")->GetPosition() + DirectX::XMVectorSet(0.0f, 1.0f, -1.75f, 0.0f), m_models[1]->GetRootBone()->getLocalTransform()));
+	//camera->SetPosition(DirectX::XMVector3Transform(m_models[0]->GetBoneByName(L"頭")->GetPosition() + DirectX::XMVectorSet(0.0f, 1.0f, -1.75f, 0.0f), m_models[0]->GetRootBone()->getTransform()));
 	camera->Update(frameTime);
 
 	if (!Render(frameTime))
@@ -381,7 +391,7 @@ bool SceneManager::RenderScene(float frameTime)
 	for (auto model : m_models) {
 		auto shader = std::dynamic_pointer_cast<PMX::PMXShader>(model->GetShader());
 		shader->SetEyePosition(camera->GetPosition());
-		shader->SetMatrices(model->GetRootBone()->getLocalTransform(), view, projection);
+		shader->SetMatrices(model->GetRootBone()->GetTransform(), view, projection);
 		if (!shader->Update(frameTime, d3d->GetDeviceContext()))
 			return false;
 		if (!model->Update(frameTime))

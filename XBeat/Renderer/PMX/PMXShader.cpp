@@ -144,7 +144,7 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 	buffDesc.StructureByteStride = sizeof(BoneBufferType);
 	buffDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	std::for_each(m_bones.begin(), m_bones.end(), [](BoneBufferType& b) { b.transform[0] = DirectX::g_XMIdentityR0; b.transform[1] = DirectX::g_XMIdentityR1; b.transform[2] = DirectX::g_XMIdentityR2; b.position = DirectX::XMVectorZero(); });
+	std::for_each(m_bones.begin(), m_bones.end(), [](BoneBufferType& b) { b.transform = DirectX::XMMatrixIdentity(); });
 
 	data.pSysMem = m_bones.data();
 	data.SysMemPitch = sizeof(BoneBufferType);
@@ -195,6 +195,11 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 
 void PMXShader::RenderGeometry(ID3D11DeviceContext *context, UINT indexCount, UINT offset)
 {
+	// Disable the output merger, or else some screen artifacts would occur
+	ID3D11RenderTargetView *rtv; ID3D11DepthStencilView *dsv;
+	context->OMGetRenderTargets(1, &rtv, &dsv);
+	context->OMSetRenderTargets(0, nullptr, nullptr);
+
 	context->IASetInputLayout(m_layout);
 
 	context->VSSetShader(m_passthruShader, nullptr, 0);
@@ -206,6 +211,10 @@ void PMXShader::RenderGeometry(ID3D11DeviceContext *context, UINT indexCount, UI
 	context->Draw(indexCount, 0);
 
 	context->GSSetShader(nullptr, nullptr, 0);
+
+	context->OMSetRenderTargets(1, &rtv, dsv);
+	dsv->Release();
+	rtv->Release();
 }
 
 void PMXShader::InternalPrepareRender(ID3D11DeviceContext *context)

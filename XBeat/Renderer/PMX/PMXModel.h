@@ -17,6 +17,7 @@
 #include "PMXRigidBody.h"
 #include "PMXJoint.h"
 #include "PMXShader.h"
+#include "PMXBone.h"
 
 namespace Renderer {
 namespace PMX {
@@ -108,6 +109,8 @@ private:
 
 	std::vector<Bone*> m_prePhysicsBones;
 	std::vector<Bone*> m_postPhysicsBones;
+
+	friend detail::RootBone;
 
 protected:
 	virtual bool InitializeBuffers(std::shared_ptr<D3DRenderer> d3d);

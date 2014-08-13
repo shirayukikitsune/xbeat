@@ -68,7 +68,7 @@ bool Texture::Initialize(ID3D11Device *device, const std::wstring &file)
 	char s[1024];
 	size_t len;
 	wcstombs_s<1024>(&len, s, file.c_str(), 1024);
-	texture->SetPrivateData(WKPDID_D3DDebugObjectName, len, s);
+	texture->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)len, s);
 #endif
 
 	return true;

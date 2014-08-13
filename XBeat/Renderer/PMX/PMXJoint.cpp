@@ -12,7 +12,7 @@ Joint::~Joint()
 {
 }
 
-bool Joint::Initialize(std::shared_ptr<Physics::Environment> physics, Model *model, Loader::Joint *joint)
+bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, Model *model, Loader::Joint *joint)
 {
 	auto pmxBodyA = model->GetRigidBodyById(joint->data.bodyA);
 	auto pmxBodyB = model->GetRigidBodyById(joint->data.bodyB);
@@ -26,8 +26,8 @@ bool Joint::Initialize(std::shared_ptr<Physics::Environment> physics, Model *mod
 	bm.setEulerZYX(joint->data.rotation.x(), joint->data.rotation.y(), joint->data.rotation.z());
 	tr.setBasis(bm);
 	tr.setOrigin(joint->data.position);
-	trA = pmxBodyA->getBody()->getWorldTransform().inverse() * tr;
-	trB = pmxBodyB->getBody()->getWorldTransform().inverse() * tr;
+	trA = tr.inverseTimes(pmxBodyA->getBody()->getWorldTransform());
+	trB = tr.inverseTimes(pmxBodyB->getBody()->getWorldTransform());
 
 	switch (joint->type) {
 	case JointType::Spring6DoF:
@@ -127,6 +127,9 @@ bool Joint::Initialize(std::shared_ptr<Physics::Environment> physics, Model *mod
 
 	physics->AddConstraint(m_constraint);
 
+	m_primitive = DirectX::GeometricPrimitive::CreateCube(context, 0.5f);
+	m_type = joint->type;
+
 	return true;
 }
 
@@ -136,3 +139,15 @@ void Joint::Shutdown(std::shared_ptr<Physics::Environment> physics)
 	m_constraint.reset();
 }
 
+void Joint::Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection)
+{
+	DirectX::XMMATRIX world;
+	if (m_type == JointType::Spring6DoF) {
+		auto constraint = std::dynamic_pointer_cast<btGeneric6DofSpringConstraint>(m_constraint);
+		btVector3 pos = constraint->getCalculatedTransformA().getOrigin() + constraint->getCalculatedTransformB().getOrigin();
+		pos *= 0.5f;
+		btQuaternion q = constraint->getCalculatedTransformA().getRotation().slerp(constraint->getCalculatedTransformB().getRotation(), 0.5f);
+		world = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), DirectX::XMVectorZero(), q.get128(), pos.get128());
+		m_primitive->Draw(world, view, projection, DirectX::Colors::Bisque);
+	}
+}

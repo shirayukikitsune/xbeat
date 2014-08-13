@@ -11,7 +11,7 @@ class Model;
 ATTRIBUTE_ALIGNED16(class) KinematicMotionState : public btMotionState
 {
 public:
-	KinematicMotionState(const btTransform &startTrans, const btTransform &boneTrans, Bone *bone);
+	KinematicMotionState(const btTransform &boneTrans, Bone *bone);
 
 	virtual ~KinematicMotionState();
 
@@ -55,6 +55,7 @@ private:
 	RigidBodyMode m_mode;
 	RigidBodyShape m_shapeType;
 	btVector3 m_size;
+	DirectX::XMVECTOR m_color;
 
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
 	std::shared_ptr<btCollisionShape> m_shape;

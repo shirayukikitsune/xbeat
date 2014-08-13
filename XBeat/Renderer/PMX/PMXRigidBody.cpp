@@ -5,17 +5,7 @@
 
 using namespace Renderer::PMX;
 
-btTransform DirectXMatrixToBtTransform(DirectX::XMTRANSFORM M)
-{
-	btQuaternion q;
-	q.set128(M.GetRotationQuaternion());
-	btVector3 p;
-	p.set128(M.GetOffset());
-	return btTransform(q, p);
-}
-
-
-KinematicMotionState::KinematicMotionState(const btTransform &startTrans, const btTransform &boneTrans, Bone *bone)
+KinematicMotionState::KinematicMotionState(const btTransform &boneTrans, Bone *bone)
 {
 	m_bone = bone;
 	m_transform = boneTrans;
@@ -27,7 +17,7 @@ KinematicMotionState::~KinematicMotionState()
 
 void KinematicMotionState::getWorldTransform(btTransform &worldTrans) const
 {
-	worldTrans = DirectXMatrixToBtTransform(m_bone->getLocalTransform()) * m_transform;
+	worldTrans = (m_bone ? m_transform * (btTransform)m_bone->GetTransform() : m_transform);
 }
 
 void KinematicMotionState::setWorldTransform(const btTransform &transform)
@@ -46,7 +36,6 @@ RigidBody::~RigidBody()
 void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, Model *model, Loader::RigidBody *body)
 {
 	btVector3 inertia;
-	btTransform startTransform;
 
 	switch (body->shape) {
 	case RigidBodyShape::Box:
@@ -63,6 +52,25 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 		break;
 	}
 
+	switch (body->group) {
+	case 0: m_color = DirectX::Colors::White; break;
+	case 1: m_color = DirectX::Colors::Blue; break;
+	case 2: m_color = DirectX::Colors::Red; break;
+	case 3: m_color = DirectX::Colors::Green; break;
+	case 4: m_color = DirectX::Colors::Yellow; break;
+	case 5: m_color = DirectX::Colors::Orange; break;
+	case 6: m_color = DirectX::Colors::Black; break;
+	case 7: m_color = DirectX::Colors::Magenta; break;
+	case 8: m_color = DirectX::Colors::Cyan; break;
+	case 9: m_color = DirectX::Colors::Gray; break;
+	case 10: m_color = DirectX::Colors::LightBlue; break;
+	case 11: m_color = DirectX::Colors::LightPink; break;
+	case 12: m_color = DirectX::Colors::LightGreen; break;
+	case 13: m_color = DirectX::Colors::LightYellow; break;
+	case 14: m_color = DirectX::Colors::LightSalmon; break;
+	case 15: m_color = DirectX::Colors::LightCoral; break;
+	}
+
 	if (body->mode != RigidBodyMode::Static)
 		m_shape->calculateLocalInertia(body->mass, inertia);
 	else inertia.setZero();
@@ -77,18 +85,12 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	m_transform.setOrigin(body->position);
 	m_inverseTransform = m_transform.inverse();
 
-	startTransform.setIdentity();
-	btVector3 offset;
-	offset.set128(m_bone->GetPosition(false));
-	startTransform.setOrigin(offset);
-	startTransform *= m_transform;
-
 	if (body->mode == RigidBodyMode::Static) {
-		m_motion.reset(new KinematicMotionState(startTransform, m_transform, m_bone));
+		m_motion.reset(new KinematicMotionState(m_transform, m_bone));
 	}
 	else {
-		m_motion.reset(new btDefaultMotionState(startTransform));
-		m_kinematic.reset(new KinematicMotionState(startTransform, m_transform, m_bone));
+		m_motion.reset(new btDefaultMotionState(m_transform));
+		//m_kinematic.reset(new KinematicMotionState(m_transform, m_bone));
 	}
 
 	btRigidBody::btRigidBodyConstructionInfo ci(body->mass, m_motion.get(), m_shape.get(), inertia);
@@ -97,6 +99,7 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	ci.m_restitution = body->restitution;
 	ci.m_angularDamping = body->angularDamping;
 	ci.m_linearDamping = body->linearDamping;
+	ci.m_additionalDamping = true;
 
 	m_body.reset(new btRigidBody(ci));
 	m_name = body->name;
@@ -133,10 +136,11 @@ bool XM_CALLCONV RigidBody::Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX 
 			scale = DirectX::XMVectorSet(m_size.x(), m_size.y(), m_size.x(), 1.0f);
 			break;
 		}
+		auto tr = m_body->getCenterOfMassTransform();
 		
-		w = DirectX::XMMatrixAffineTransformation(scale, m_body->getCenterOfMassTransform().getOrigin().get128(), m_body->getCenterOfMassTransform().getRotation().get128(), m_body->getCenterOfMassPosition().get128());
+		w = DirectX::XMMatrixAffineTransformation(scale, DirectX::XMVectorZero(), tr.getRotation().get128(), tr.getOrigin().get128());
 
-		m_primitive->Draw(world, view, projection);
+		m_primitive->Draw(w, view, projection, m_color);
 	}
 
 	return true;
@@ -150,10 +154,7 @@ void RigidBody::Update()
 	btTransform tr = m_body->getCenterOfMassTransform();
 	tr *= m_inverseTransform;
 	if (m_mode == RigidBodyMode::AlignedDynamic) {
-		btVector3 v;
-		m_bone->Update();
-		v.set128(m_bone->getLocalTransform().GetOffset());
-		tr.setOrigin(v);
+		tr.setOrigin(btVector3(0, 0, 0));
 	}
 	m_bone->ApplyPhysicsTransform((DirectX::XMTRANSFORM)tr);
 }
