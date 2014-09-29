@@ -33,8 +33,8 @@ public:
 		Name comment;
 	} description;
 
-	Position GetBonePosition(const std::wstring &JPname);
-	Position GetBoneEndPosition(const std::wstring &JPname);
+	DirectX::XMVECTOR GetBonePosition(const std::wstring &JPname);
+	DirectX::XMVECTOR GetBoneEndPosition(const std::wstring &JPname);
 	Bone* GetBoneByName(const std::wstring &JPname);
 	Bone* GetBoneByENName(const std::wstring &ENname);
 	Bone* GetBoneById(uint32_t id);
@@ -63,6 +63,7 @@ public:
 	Material* GetMaterialById(uint32_t id);
 	RenderMaterial* GetRenderMaterialById(uint32_t id);
 	std::shared_ptr<RigidBody> GetRigidBodyById(uint32_t id);
+	std::shared_ptr<RigidBody> GetRigidBodyByName(const std::wstring &JPname);
 
 	virtual bool Update(float msec);
 	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum);

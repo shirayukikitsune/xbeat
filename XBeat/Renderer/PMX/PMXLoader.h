@@ -43,40 +43,36 @@ public:
 		}
 	};
 
-	ATTRIBUTE_ALIGNED16(struct) RigidBody{
+	struct RigidBody{
 		Name name;
 		uint32_t targetBone;
 		uint8_t group;
 		uint16_t groupMask;
 		PMX::RigidBodyShape shape;
-		vec3f size;
-		vec3f position;
-		vec3f rotation;
+		DirectX::XMFLOAT3 size;
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT3 rotation;
 		float mass;
 		float linearDamping;
 		float angularDamping;
 		float restitution;
 		float friction;
 		PMX::RigidBodyMode mode;
-
-		BT_DECLARE_ALIGNED_ALLOCATOR();
 	};
 
-	ATTRIBUTE_ALIGNED16(struct) Joint{
+	struct Joint{
 		Name name;
 		JointType type;
 		struct {
 			uint32_t bodyA, bodyB;
-			vec3f position;
-			vec3f rotation;
-			vec3f lowerMovementRestrictions;
-			vec3f upperMovementRestrictions;
-			vec3f lowerRotationRestrictions;
-			vec3f upperRotationRestrictions;
-			btScalar springConstant[6];
+			DirectX::XMFLOAT3 position;
+			DirectX::XMFLOAT3 rotation;
+			DirectX::XMFLOAT3 lowerMovementRestrictions;
+			DirectX::XMFLOAT3 upperMovementRestrictions;
+			DirectX::XMFLOAT3 lowerRotationRestrictions;
+			DirectX::XMFLOAT3 upperRotationRestrictions;
+			float springConstant[6];
 		} data;
-
-		BT_DECLARE_ALIGNED_ALLOCATOR();
 	};
 
 	bool FromFile(Model* model, const std::wstring &filename);

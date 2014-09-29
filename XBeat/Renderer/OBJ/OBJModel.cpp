@@ -21,38 +21,40 @@ bool OBJModel::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
 	D3D11_SUBRESOURCE_DATA vertexData, indexData;
 	HRESULT result;
-	btVector3 normal, uv;
-
-	std::shared_ptr<btRigidBody> b;
-	b.reset(new btRigidBody(0.0f, new btDefaultMotionState(), new btStaticPlaneShape(btVector3(0.0f, 1.0f, 0.0f), 0)));
-	m_physics->AddRigidBody(b);
+	DirectX::XMVECTOR normal, uv;
 
 	std::vector<Shaders::Light::VertexInput> vertices;
 	std::vector<UINT> indices;
 
 	vertices.resize(m_vertexCount, Shaders::Light::VertexInput{ DirectX::XMFLOAT3(NAN, NAN, NAN), DirectX::XMFLOAT3(0, 0, 0), DirectX::XMFLOAT2(0, 0) });
+
 	for (auto &face : m_faces) {
 		for (size_t i = 0; i < face->vertices.size(); i++) {
 			uint32_t index = face->vertices[i] - 1;
-			normal.mVec128 = DirectX::XMLoadFloat3(&vertices[index].normal);
+			normal = DirectX::XMLoadFloat3(&vertices[index].normal);
 			if (i < face->normals.size() && face->normals[i] > 0U) {
-				normal += m_normals[face->normals[i] - 1];
-				normal.normalize();
+				normal = DirectX::XMVector3Normalize(DirectX::XMVectorAdd(normal, m_normals[face->normals[i] - 1]));
 			}
 
 			if (!DirectX::XMVector3IsNaN(DirectX::XMLoadFloat3(&vertices[index].position))) {
-				DirectX::XMStoreFloat3(&vertices[index].normal, normal.get128());
+				DirectX::XMStoreFloat3(&vertices[index].normal, normal);
 			}
 			else {
-				uv.mVec128 = DirectX::XMLoadFloat2(&vertices[index].uv);
+				uv = DirectX::XMLoadFloat2(&vertices[index].uv);
 				if (i < face->uvs.size() && face->uvs[i] > 0U) uv = m_uvs[face->uvs[i] - 1];
-				DirectX::XMStoreFloat3(&vertices[index].position, m_vertices[index].get128());
-				DirectX::XMStoreFloat3(&vertices[index].normal, normal.get128());
-				DirectX::XMStoreFloat2(&vertices[index].uv, uv.get128());
+				DirectX::XMStoreFloat3(&vertices[index].position, m_vertices[index]);
+				DirectX::XMStoreFloat3(&vertices[index].normal, normal);
+				DirectX::XMStoreFloat2(&vertices[index].uv, uv);
 			}
 			indices.emplace_back(index);
 		}
 	}
+
+	//m_mesh.reset(new btTriangleIndexVertexArray((int)indices.size() / 3, (int*)indices.data(), sizeof(UINT), (int)vertices.size(), &vertices[0].position.x, sizeof(Shaders::Light::VertexInput)));
+	//m_shape.reset(new btBvhTriangleMeshShape(m_mesh.get(), true));
+	m_shape.reset(new btStaticPlaneShape(btVector3(0, 1, 0), 0));
+	m_body.reset(new btRigidBody(0, new btDefaultMotionState(), m_shape.get()));
+	m_physics->AddRigidBody(m_body);
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	vertexBufferDesc.ByteWidth = (UINT)(sizeof(Shaders::Light::VertexInput) * vertices.size());
@@ -204,19 +206,19 @@ bool OBJModel::LoadModel(const std::wstring &filename)
 		if (fields.empty()) continue;
 		if (fields[0].compare("v") == 0) {
 			// Vertex definition
-			float W = 1.0f;
+			float W = 0.0f;
 			if (fields.size() > 4) W = std::stof(fields[4]);
-			m_vertices.emplace_back(std::stof(fields[1]), std::stof(fields[2]), std::stof(fields[3]), W);
+			m_vertices.emplace_back(DirectX::XMVectorSet(std::stof(fields[1]), std::stof(fields[2]), std::stof(fields[3]), W));
 		}
 		else if (fields[0].compare("vt") == 0) {
 			// Vertex UV definition
 			float Z = 0.0f;
 			if (fields.size() > 3) Z = std::stof(fields[3]);
-			m_uvs.emplace_back(std::stof(fields[1]), std::stof(fields[2]), Z);
+			m_uvs.emplace_back(DirectX::XMVectorSet(std::stof(fields[1]), std::stof(fields[2]), Z, 0.0f));
 		}
 		else if (fields[0].compare("vn") == 0) {
 			// Vertex normal definition
-			m_normals.emplace_back(std::stof(fields[1]), std::stof(fields[2]), std::stof(fields[3]));
+			m_normals.emplace_back(DirectX::XMVectorSet(std::stof(fields[1]), std::stof(fields[2]), std::stof(fields[3]), 0.0f));
 		}
 		else if (fields[0].compare("f") == 0) {
 			// Faces definitions

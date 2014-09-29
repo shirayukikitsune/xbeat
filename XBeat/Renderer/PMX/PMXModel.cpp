@@ -208,8 +208,8 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 				break;
 			}
 			m_vertices.emplace_back(PMXShader::VertexType{
-				DirectX::XMFLOAT3(vertex->position.x(), vertex->position.y(), vertex->position.z()),
-				DirectX::XMFLOAT3(vertex->normal.x(), vertex->normal.y(), vertex->normal.z()),
+				DirectX::XMFLOAT3(vertex->position.x, vertex->position.y, vertex->position.z),
+				DirectX::XMFLOAT3(vertex->normal.x, vertex->normal.y, vertex->normal.z),
 				DirectX::XMFLOAT2(vertex->uv[0], vertex->uv[1]),
 				/*{
 					vertex->uvEx[0].get128(),
@@ -450,7 +450,8 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		bool update = false;
 		for (auto & bone : bones) {
 			auto &shaderBone = shader->GetBone(bone->GetId());
-			shaderBone.transform = DirectX::XMMatrixTranspose(bone->GetLocalTransform());
+			auto t = bone->GetLocalTransform();
+			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition(), t.GetRotationQuaternion(), t.GetTranslation()));
 		}
 		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
 
@@ -459,7 +460,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		UINT offset = 0;
 		ID3D11Buffer *b = nullptr;
 		context->SOSetTargets(1, &m_tmpVertexBuffer, &offset);
-		shader->RenderGeometry(context, m_vertices.size(), 0);
+		shader->RenderGeometry(context, (int)m_vertices.size(), 0);
 		context->SOSetTargets(1, &b, &offset);
 
 		context->IASetVertexBuffers(0, 1, &m_tmpVertexBuffer, &stride, &vsOffset);
@@ -473,21 +474,23 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		shader->PrepareRender(context);
 
 		m_d3d->EnableAlphaBlending();
+		context->RSSetState(m_d3d->GetRasterState(1));
 		
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
 			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
 			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
 
-			if ((materials[i]->flags & (uint8_t)MaterialFlags::DoubleSide) != 0 || rendermaterials[i].getAmbient(materials[i]).w < 1.0f) {
-				context->RSSetState(m_d3d->GetRasterState(1));
-			}
-			else context->RSSetState(m_d3d->GetRasterState(0));
+			//if ((materials[i]->flags & (uint8_t)MaterialFlags::DoubleSide) != 0 || rendermaterials[i].getAmbient(materials[i]).w < 1.0f) {
+				
+			//}
+			//else context->RSSetState(m_d3d->GetRasterState(0));
 
 			context->PSSetShaderResources(0, 3, textures);
 			m_shader->Render(context, rendermaterials[i].indexCount, rendermaterials[i].startIndex);
 		}
 		
+		context->RSSetState(m_d3d->GetRasterState(0));
 		m_d3d->DisableAlphaBlending();
 	}
 
@@ -503,13 +506,13 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 	if (m_debugFlags & DebugFlags::RenderRigidBodies) {
 		for (auto &body : m_rigidBodies) {
-			body->Render(rootBone->GetTransform(), view, projection);
+			body->Render((DirectX::XMMATRIX)rootBone->GetTransform(), view, projection);
 		}
 	}
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
 		for (auto &bone : bones)
-			dynamic_cast<detail::BoneImpl*>(bone)->Render(rootBone->GetTransform(), view, projection);
+			dynamic_cast<detail::BoneImpl*>(bone)->Render((DirectX::XMMATRIX)rootBone->GetTransform(), view, projection);
 	}
 	context->RSSetState(m_d3d->GetRasterState(0));
 }
@@ -625,6 +628,16 @@ std::shared_ptr<PMX::RigidBody> PMX::Model::GetRigidBodyById(uint32_t id)
 	return m_rigidBodies[id];
 }
 
+std::shared_ptr<PMX::RigidBody> PMX::Model::GetRigidBodyByName(const std::wstring &JPname)
+{
+	for (auto body : m_rigidBodies) {
+		if (body->GetName().japanese.compare(JPname) == 0)
+			return body;
+	}
+
+	return nullptr;
+}
+
 void PMX::Model::ApplyMorph(const std::wstring &nameJP, float weight)
 {
 	for (auto morph : morphs) {
@@ -702,7 +715,7 @@ void PMX::Model::applyVertexMorph(Morph *morph, float weight)
 				(*it)->weight = weight;
 		}
 
-		v->morphOffset.setZero();
+		/*v->morphOffset.setZero();
 		for (auto &m : v->morphs) {
 			v->morphOffset.setX(v->morphOffset.x() + m->type->vertex.offset[0] * m->weight);
 			v->morphOffset.setY(v->morphOffset.y() + m->type->vertex.offset[1] * m->weight);
@@ -711,7 +724,7 @@ void PMX::Model::applyVertexMorph(Morph *morph, float weight)
 
 		// Mark the material for update next frame
 		for (auto &m : v->materials)
-			m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
+			m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;*/
 		//v->material->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
 	}
 }
@@ -720,8 +733,7 @@ void PMX::Model::applyBoneMorph(Morph *morph, float weight)
 {
 	for (auto i : morph->data) {
 		Bone *bone = bones[i.bone.index];
-		//bone->ApplyMorph(morph, weight);
-		m_dispatcher->AddTask([bone, morph, weight]() { dynamic_cast<detail::BoneImpl*>(bone)->ApplyMorph(morph, weight); });
+		dynamic_cast<detail::BoneImpl*>(bone)->ApplyMorph(morph, weight);
 	}
 }
 

@@ -8,7 +8,7 @@ namespace Renderer {
 namespace PMX {
 class Model;
 
-ATTRIBUTE_ALIGNED16(class) KinematicMotionState : public btMotionState
+class KinematicMotionState : public btMotionState
 {
 public:
 	KinematicMotionState(const btTransform &boneTrans, Bone *bone);
@@ -19,27 +19,25 @@ public:
 
 	virtual void setWorldTransform(const btTransform &worldTrans);
 
-	BT_DECLARE_ALIGNED_ALLOCATOR();
-
 private:
 	Bone *m_bone;
 	btTransform m_transform;
 };
 
-ATTRIBUTE_ALIGNED16(class) RigidBody
+class RigidBody
 {
 public:
 	RigidBody();
 	~RigidBody();
+
+	const Name& GetName() const { return m_name; }
 
 	void Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, PMX::Model *model, Loader::RigidBody* body);
 	void Shutdown();
 
 	bool XM_CALLCONV Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
 
-	__forceinline Bone* getAssociatedBone() { return m_bone; }
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
+	Bone* getAssociatedBone() { return m_bone; }
 
 	void Update();
 
@@ -48,7 +46,7 @@ public:
 
 private:
 	Bone* m_bone;
-	btTransform m_transform, m_inverseTransform;
+	btTransform m_transform;
 	Name m_name;
 	uint16_t m_groupId;
 	uint16_t m_groupMask;
@@ -58,11 +56,11 @@ private:
 	DirectX::XMVECTOR m_color;
 
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
-	std::shared_ptr<btCollisionShape> m_shape;
+	std::unique_ptr<btCollisionShape> m_shape;
 	std::shared_ptr<btRigidBody> m_body;
-	std::shared_ptr<btPairCachingGhostObject> m_ghost;
-	std::shared_ptr<btMotionState> m_motion;
-	std::shared_ptr<KinematicMotionState> m_kinematic;
+	std::unique_ptr<btPairCachingGhostObject> m_ghost;
+	std::unique_ptr<btMotionState> m_motion;
+	std::unique_ptr<KinematicMotionState> m_kinematic;
 };
 }
 }

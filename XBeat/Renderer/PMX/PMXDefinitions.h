@@ -19,10 +19,6 @@ class Texture;
 namespace PMX {
 
 #pragma region Basic Types
-typedef btVector3 vec3f;
-typedef btVector3 Position;
-typedef btVector4 vec4f;
-
 // Forward declarations here
 class RenderMaterial;
 class Bone;
@@ -163,7 +159,7 @@ enum struct FrameMorphTarget : uint8_t {
 };
 #pragma endregion
 
-ATTRIBUTE_ALIGNED16(struct) MaterialMorph{
+struct MaterialMorph{
 	uint32_t index;
 	MaterialMorphMethod method;
 	Color4 diffuse;
@@ -198,23 +194,21 @@ ATTRIBUTE_ALIGNED16(struct) MaterialMorph{
 		this->sphereCoefficient *= other.sphereCoefficient;
 		this->toonCoefficient *= other.toonCoefficient;
 	}
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
 union MorphType {
 	struct {
 		uint32_t index;
-		btScalar offset[3];
+		float offset[3];
 	} vertex;
 	struct {
 		uint32_t index;
-		btScalar offset[4];
+		float offset[4];
 	} uv;
 	struct {
 		uint32_t index;
-		btScalar movement[3];
-		btScalar rotation[4];
+		float movement[3];
+		float rotation[4];
 	} bone;
 	MaterialMorph material;
 	struct {
@@ -224,8 +218,8 @@ union MorphType {
 	struct {
 		uint32_t index; // Rigid Body index
 		uint8_t localFlag;
-		btScalar velocity[3];
-		btScalar rotationTorque[3]; // If all 0, stop all rotation
+		float velocity[3];
+		float rotationTorque[3]; // If all 0, stop all rotation
 	} impulse;
 
 	// Just for organization, so we must use MorphType::Group for example, it is not used in the union itself
@@ -244,11 +238,11 @@ union MorphType {
 	};
 };
 
-ATTRIBUTE_ALIGNED16(struct) Vertex {
-	Position position;
-	Position normal;
+struct Vertex {
+	DirectX::XMFLOAT3 position;
+	DirectX::XMFLOAT3 normal;
 	float uv[2];
-	vec4f uvEx[4];
+	DirectX::XMFLOAT4 uvEx[4];
 	VertexWeightMethod weightMethod;
 	union {
 		struct {
@@ -258,17 +252,15 @@ ATTRIBUTE_ALIGNED16(struct) Vertex {
 		struct {
 			uint32_t boneIndexes[2];
 			float weightBias;
-			btScalar C[3];
-			btScalar R0[4];
-			btScalar R1[4];
+			float C[3];
+			float R0[3];
+			float R1[3];
 		} SDEF;
 	} boneInfo;
 	float edgeWeight;
 
 	Bone *bones[4];
 	std::list<std::pair<RenderMaterial*, UINT>> materials;
-	Position boneOffset[4], morphOffset;
-	btQuaternion boneRotation[4];
 	struct MorphData {
 		Morph *morph;
 		MorphType *type;
@@ -277,21 +269,9 @@ ATTRIBUTE_ALIGNED16(struct) Vertex {
 	std::list<MorphData*> morphs;
 
 	uint32_t index;
-
-	inline Position GetFinalPosition() {
-		return position + morphOffset;
-	}
-	inline Position GetNormal() {
-		return normal;
-	}
-
-	DirectX::XMFLOAT3 dxPos, dxNormal;
-	DirectX::XMFLOAT2 dxUV;
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-ATTRIBUTE_ALIGNED16(struct) Material{
+struct Material{
 	Name name;
 	Color4 diffuse;
 	Color specular;
@@ -310,17 +290,15 @@ ATTRIBUTE_ALIGNED16(struct) Material{
 	} toonTexture;
 	std::wstring freeField;
 	int indexCount;
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-ATTRIBUTE_ALIGNED16(struct) IK{
+struct IK{
 	struct Node {
 		uint32_t bone;
 		bool limitAngle;
 		struct {
-			Position lower;
-			Position upper;
+			DirectX::XMVECTOR lower;
+			DirectX::XMVECTOR upper;
 		} limits;
 	};
 
@@ -328,11 +306,9 @@ ATTRIBUTE_ALIGNED16(struct) IK{
 	int loopCount;
 	float angleLimit;
 	std::vector<Node> links;
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-ATTRIBUTE_ALIGNED16(struct) Morph{
+struct Morph{
 	Morph() {
 		appliedWeight = 0.0f;
 	};
@@ -343,23 +319,17 @@ ATTRIBUTE_ALIGNED16(struct) Morph{
 	std::vector<MorphType> data;
 
 	float appliedWeight;
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-ATTRIBUTE_ALIGNED16(struct) FrameMorphs{
+struct FrameMorphs{
 	FrameMorphTarget target;
 	uint32_t id;
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
-ATTRIBUTE_ALIGNED16(struct) Frame{
+struct Frame{
 	Name name;
 	uint8_t type;
 	std::vector<FrameMorphs> morphs;
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 };
 
 }

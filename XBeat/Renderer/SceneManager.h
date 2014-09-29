@@ -28,7 +28,7 @@ const bool VSYNC_ENABLED = false;
 const float SCREEN_DEPTH = 500.0f;
 const float SCREEN_NEAR = 0.25f;
 
-ATTRIBUTE_ALIGNED16(class) SceneManager
+class SceneManager
 {
 public:
 	SceneManager();
@@ -41,9 +41,7 @@ public:
 
 	void LoadModel(std::wstring filename);
 
-	__forceinline std::shared_ptr<D3DRenderer> GetRenderer() { return d3d; }
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
+	std::shared_ptr<D3DRenderer> GetRenderer() { return d3d; }
 
 private:
 	bool Render(float frameTime);

@@ -10,61 +10,60 @@
 
 namespace DirectX
 {
+	inline static btVector3 XMFloat3ToBtVector3(const XMFLOAT3 &in) {
+		return btVector3(in.x, in.y, in.z);
+	}
+
+	//! DirectX port of btTransform
 	class XMTRANSFORM {
 		XMVECTOR m_translation;
 		XMVECTOR m_rotation;
-		XMVECTOR m_offset;
 
 	public:
 		XMTRANSFORM(const XMTRANSFORM &other)
 		{
 			this->m_translation = other.m_translation;
 			this->m_rotation = other.m_rotation;
-			this->m_offset = other.m_offset;
 		}
 
 		XMTRANSFORM(XMTRANSFORM && other)
 		{
 			this->m_translation = std::move(other.m_translation);
 			this->m_rotation = std::move(other.m_rotation);
-			this->m_offset = std::move(other.m_offset);
 		}
 
-		XMTRANSFORM(FXMVECTOR rotation, FXMVECTOR translation, FXMVECTOR offset)
+		XMTRANSFORM(FXMVECTOR rotation, FXMVECTOR translation)
 		{
 			this->m_translation = translation;
 			this->m_rotation = rotation;
-			this->m_offset = offset;
 		}
 
 		XMTRANSFORM(FXMMATRIX basis)
 		{
 			this->m_rotation = XMQuaternionRotationMatrix(basis);
 			this->m_translation = basis.r[3];
-			this->m_offset = XMVectorZero();
 		}
 
 		explicit XMTRANSFORM(const btTransform &t)
 		{
 			this->m_rotation = t.getRotation().get128();
 			this->m_translation = t.getOrigin().get128();
-			this->m_offset = XMVectorZero();
 		}
 
 		XMTRANSFORM()
 		{
-			this->m_rotation = XMQuaternionIdentity();
-			this->m_translation = XMVectorZero();
-			this->m_offset = XMVectorZero();
+			Reset();
 		}
 
-		//! Implicit convertion to XMMATRIX
-		operator XMMATRIX() {
-			return XMMatrixAffineTransformation(XMVectorSplatOne(), m_offset, m_rotation, m_translation);
+		void Reset()
+		{
+			this->m_rotation = XMQuaternionIdentity();
+			this->m_translation = XMVectorZero();
 		}
-		//! Implicit convertion to XMMATRIX
-		operator XMMATRIX() const {
-			return XMMatrixAffineTransformation(XMVectorSplatOne(), m_offset, m_rotation, m_translation);
+
+		//! Explicit convertion to XMMATRIX
+		explicit operator XMMATRIX() {
+			return XMMatrixAffineTransformation(XMVectorSplatOne(), XMVectorZero(), m_rotation, m_translation);
 		}
 
 		//! Explicit convertion to btTransform
@@ -76,10 +75,11 @@ namespace DirectX
 			return btTransform(q, p);
 		}
 
+
 		//! Returns a new XMTRANSFORM that is the combinate of two XMTRANSFORM
 		XMTRANSFORM operator * (const XMTRANSFORM &other) const
 		{
-			return XMTRANSFORM(XMQuaternionNormalize(XMQuaternionMultiply(this->m_rotation, other.m_rotation)), this->PointTransform(other.m_translation), this->PointTransform(other.m_offset));
+			return XMTRANSFORM(XMQuaternionNormalize(XMQuaternionMultiply(this->m_rotation, other.m_rotation)), this->PointTransform(other.m_translation));
 		}
 
 		//! Combine this transform with another one
@@ -88,7 +88,6 @@ namespace DirectX
 			XMTRANSFORM t = *this * other;
 			m_translation = t.m_translation;
 			m_rotation = t.m_rotation;
-			m_offset = t.m_offset;
 			return *this;
 		}
 
@@ -148,16 +147,22 @@ namespace DirectX
 			return m_rotation;
 		}
 
+		//! Returns the rotation as a quaternion
+		XMVECTOR XM_CALLCONV GetRotationQuaternion() const
+		{
+			return m_rotation;
+		}
+
 		//! Returns the translation component
 		XMVECTOR XM_CALLCONV GetTranslation()
 		{
 			return m_translation;
 		}
 
-		//! Returns the offset component
-		XMVECTOR XM_CALLCONV GetOffset()
+		//! Returns the translation component
+		XMVECTOR XM_CALLCONV GetTranslation() const
 		{
-			return m_offset;
+			return m_translation;
 		}
 
 		XMTRANSFORM& XM_CALLCONV SetRotationQuaternion(FXMVECTOR in)
@@ -172,15 +177,10 @@ namespace DirectX
 			return *this;
 		}
 
-		XMTRANSFORM& XM_CALLCONV SetOffset(FXMVECTOR in)
-		{
-			m_offset = in;
-			return *this;
-		}
-
 		XMTRANSFORM XM_CALLCONV Inverse()
 		{
-			return XMTRANSFORM(DirectX::XMQuaternionConjugate(m_rotation), DirectX::XMVectorNegate(m_translation), DirectX::XMVectorNegate(m_offset));
+			XMVECTOR q = XMQuaternionInverse(m_rotation);
+			return XMTRANSFORM(q, XMVector3Rotate(XMVectorNegate(m_translation), q));
 		}
 	};
 }

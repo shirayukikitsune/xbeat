@@ -3,7 +3,7 @@
 #include "../../Physics/Environment.h"
 
 namespace Renderer {
-ATTRIBUTE_ALIGNED16(class) OBJModel :
+class OBJModel :
 	public Model
 {
 public:
@@ -21,19 +21,18 @@ public:
 
 	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum);
 
-	BT_DECLARE_ALIGNED_ALLOCATOR();
-
 private:
-	std::vector<btVector4> m_vertices;
-	std::vector<btVector3> m_uvs;
-	std::vector<btVector3> m_normals;
+	std::vector<DirectX::XMVECTOR> m_vertices;
+	std::vector<DirectX::XMVECTOR> m_uvs;
+	std::vector<DirectX::XMVECTOR> m_normals;
 	std::vector<std::shared_ptr<Face>> m_faces;
 	
 	std::shared_ptr<Texture> m_texture;
 
 	ID3D11Buffer *m_vertexBuffer, *m_indexBuffer;
-	btCollisionShape *m_shape;
-	btTriangleMesh *m_mesh;
+	std::shared_ptr<btCollisionShape> m_shape;
+	std::shared_ptr<btTriangleIndexVertexArray> m_mesh;
+	std::shared_ptr<btRigidBody> m_body;
 	int m_indexCount;
 	int m_vertexCount;
 

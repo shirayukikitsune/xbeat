@@ -9,12 +9,11 @@ namespace PMX {
 
 class Model;
 
-ATTRIBUTE_ALIGNED16(class) Joint
+class Joint
 {
 public:
 	Joint();
 	~Joint();
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 	bool Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, PMX::Model *model, Loader::Joint *joint);
 	void Shutdown(std::shared_ptr<Physics::Environment> physics);

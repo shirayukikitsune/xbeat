@@ -135,10 +135,10 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 	for (auto &vertex : model->vertices)
 	{
 		vertex = new Vertex;
-		readVector<btScalar>(vertex->position.m_floats, 3, data);
-		readVector<btScalar>(vertex->normal.m_floats, 3, data);
+		readVector<float>(&vertex->position.x, 3, data);
+		readVector<float>(&vertex->normal.x, 3, data);
 		readVector<float>(vertex->uv, 2, data);
-		readVector<vec4f>(vertex->uvEx, m_sizeInfo->cbUVVectorSize, data);
+		readVector<float>(&vertex->uvEx[0].x, m_sizeInfo->cbUVVectorSize, data);
 		vertex->weightMethod = readInfo<VertexWeightMethod>(data);
 		std::memset(&vertex->boneInfo, 0, sizeof(vertex->boneInfo));
 		switch (vertex->weightMethod)
@@ -166,9 +166,9 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 			vertex->boneInfo.SDEF.boneIndexes[0] = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 			vertex->boneInfo.SDEF.boneIndexes[1] = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 			vertex->boneInfo.SDEF.weightBias = readInfo<float>(data);
-			readVector<btScalar>(vertex->boneInfo.SDEF.C, 3, data);
-			readVector<btScalar>(vertex->boneInfo.SDEF.R0, 3, data);
-			readVector<btScalar>(vertex->boneInfo.SDEF.R1, 3, data);
+			readVector<float>(vertex->boneInfo.SDEF.C, 3, data);
+			readVector<float>(vertex->boneInfo.SDEF.R0, 3, data);
+			readVector<float>(vertex->boneInfo.SDEF.R1, 3, data);
 			break;
 		default:
 			throw Exception("Invalid value for vertex weight method");
@@ -178,11 +178,8 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 
 		// Set some defaults
 		for (int i = 0; i < 4; i++) {
-			vertex->boneOffset[i].setZero();
 			vertex->bones[i] = nullptr;
-			vertex->boneRotation[i] = btQuaternion::getIdentity();
 		}
-		vertex->morphOffset.setZero();
 	}
 }
 
@@ -257,7 +254,7 @@ void Loader::loadBones(Model *model, const char *&data)
 		bone = b;
 		readName(b->name, data);
 
-		readVector<btScalar>(b->startPosition.m_floats, 3, data);
+		readVector<float>(b->startPosition.m128_f32, 3, data);
 		b->m_parentId = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 		b->m_deformationOrder = readInfo<int>(data);
 
@@ -265,7 +262,7 @@ void Loader::loadBones(Model *model, const char *&data)
 
 		if (b->m_flags & (uint16_t)BoneFlags::Attached)
 			b->size.attachTo = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
-		else readVector<btScalar>(b->size.length, 3, data);
+		else readVector<float>(b->size.length, 3, data);
 
 		if (b->m_flags & ((uint16_t)BoneFlags::InheritRotation | (uint16_t)BoneFlags::InheritTranslation)) {
 			b->inherit.from = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
@@ -277,12 +274,12 @@ void Loader::loadBones(Model *model, const char *&data)
 		}
 
 		if (b->m_flags & (uint16_t)BoneFlags::TranslateAxis) {
-			readVector<btScalar>(b->axisTranslation.m_floats, 3, data);
+			readVector<float>(b->axisTranslation.m128_f32, 3, data);
 		}
 
 		if (b->m_flags & (uint16_t)BoneFlags::LocalAxis) {
-			readVector<btScalar>(b->localAxes.xDirection.m_floats, 3, data);
-			readVector<btScalar>(b->localAxes.zDirection.m_floats, 3, data);
+			readVector<float>(b->localAxes.xDirection.m128_f32, 3, data);
+			readVector<float>(b->localAxes.zDirection.m128_f32, 3, data);
 		}
 
 		if (b->m_flags & (uint16_t)BoneFlags::ExternalParentDeformation) {
@@ -299,8 +296,8 @@ void Loader::loadBones(Model *model, const char *&data)
 				link.bone = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 				link.limitAngle = readInfo<bool>(data);
 				if (link.limitAngle) {
-					readVector<btScalar>(link.limits.lower.m_floats, 3, data);
-					readVector<btScalar>(link.limits.upper.m_floats, 3, data);
+					readVector<float>(link.limits.lower.m128_f32, 3, data);
+					readVector<float>(link.limits.upper.m128_f32, 3, data);
 				}
 			}
 		}
@@ -333,12 +330,12 @@ void Loader::loadMorphs(Model *model, const char *&data)
 				break;
 			case MorphType::Vertex:
 				mdata.vertex.index = readAsU32(m_sizeInfo->cbVertexIndexSize, data);
-				readVector<btScalar>(mdata.vertex.offset, 3, data);
+				readVector<float>(mdata.vertex.offset, 3, data);
 				break;
 			case MorphType::Bone:
 				mdata.bone.index = readAsU32(m_sizeInfo->cbVertexIndexSize, data);
-				readVector<btScalar>(mdata.bone.movement, 3, data);
-				readVector<btScalar>(mdata.bone.rotation, 4, data);
+				readVector<float>(mdata.bone.movement, 3, data);
+				readVector<float>(mdata.bone.rotation, 4, data);
 				break;
 			case MorphType::UV:
 			case MorphType::UV1:
@@ -346,7 +343,7 @@ void Loader::loadMorphs(Model *model, const char *&data)
 			case MorphType::UV3:
 			case MorphType::UV4:
 				mdata.uv.index = readAsU32(m_sizeInfo->cbVertexIndexSize, data);
-				readVector<btScalar>(mdata.uv.offset, 4, data);
+				readVector<float>(mdata.uv.offset, 4, data);
 				break;
 			case MorphType::Material:
 				mdata.material.index = readAsU32(m_sizeInfo->cbMaterialIndexSize, data);
@@ -367,8 +364,8 @@ void Loader::loadMorphs(Model *model, const char *&data)
 
 				mdata.impulse.index = readAsU32(m_sizeInfo->cbRigidBodyIndexSize, data);
 				mdata.impulse.localFlag = readInfo<uint8_t>(data);
-				readVector<btScalar>(mdata.impulse.velocity, 3, data);
-				readVector<btScalar>(mdata.impulse.rotationTorque, 3, data);
+				readVector<float>(mdata.impulse.velocity, 3, data);
+				readVector<float>(mdata.impulse.rotationTorque, 3, data);
 				break;
 			default:
 				throw Exception("Invalid morph type");
@@ -418,10 +415,10 @@ void Loader::loadRigidBodies(Model *model, const char *&data)
 		body->groupMask = readInfo<uint16_t>(data);
 
 		body->shape = readInfo<PMX::RigidBodyShape>(data);
-		readVector<btScalar>(body->size.m_floats, 3, data);
+		readVector<float>(&body->size.x, 3, data);
 
-		readVector<btScalar>(body->position.m_floats, 3, data);
-		readVector<btScalar>(body->rotation.m_floats, 3, data);
+		readVector<float>(&body->position.x, 3, data);
+		readVector<float>(&body->rotation.x, 3, data);
 
 		body->mass = readInfo<float>(data);
 
@@ -451,15 +448,15 @@ void Loader::loadJoints(Model *model, const char *&data)
 		joint->data.bodyA = readAsU32(m_sizeInfo->cbRigidBodyIndexSize, data);
 		joint->data.bodyB = readAsU32(m_sizeInfo->cbRigidBodyIndexSize, data);
 
-		readVector<btScalar>(joint->data.position.m_floats, 3, data);
-		readVector<btScalar>(joint->data.rotation.m_floats, 3, data);
+		readVector<float>(&joint->data.position.x, 3, data);
+		readVector<float>(&joint->data.rotation.x, 3, data);
 
-		readVector<btScalar>(joint->data.lowerMovementRestrictions.m_floats, 3, data);
-		readVector<btScalar>(joint->data.upperMovementRestrictions.m_floats, 3, data);
-		readVector<btScalar>(joint->data.lowerRotationRestrictions.m_floats, 3, data);
-		readVector<btScalar>(joint->data.upperRotationRestrictions.m_floats, 3, data);
+		readVector<float>(&joint->data.lowerMovementRestrictions.x, 3, data);
+		readVector<float>(&joint->data.upperMovementRestrictions.x, 3, data);
+		readVector<float>(&joint->data.lowerRotationRestrictions.x, 3, data);
+		readVector<float>(&joint->data.upperRotationRestrictions.x, 3, data);
 
-		readVector<btScalar>(joint->data.springConstant, 6, data);
+		readVector<float>(joint->data.springConstant, 6, data);
 	}
 }
 

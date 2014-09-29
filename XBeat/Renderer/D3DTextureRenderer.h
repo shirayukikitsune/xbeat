@@ -5,7 +5,7 @@
 
 namespace Renderer {
 
-ATTRIBUTE_ALIGNED16(class) D3DTextureRenderer
+class D3DTextureRenderer
 {
 public:
 	D3DTextureRenderer();
@@ -25,8 +25,6 @@ public:
 
 	int GetTextureWidth();
 	int GetTextureHeight();
-
-	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 private:
 	ID3D11Texture2D *m_renderTargetTexture;

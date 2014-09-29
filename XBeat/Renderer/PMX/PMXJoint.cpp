@@ -23,11 +23,11 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 	btTransform tr, trA, trB;
 	btMatrix3x3 bm;
 	tr.setIdentity();
-	bm.setEulerZYX(joint->data.rotation.x(), joint->data.rotation.y(), joint->data.rotation.z());
+	bm.setEulerZYX(DirectX::XMConvertToRadians(joint->data.rotation.x), DirectX::XMConvertToRadians(joint->data.rotation.y), DirectX::XMConvertToRadians(joint->data.rotation.z));
+	tr.setOrigin(DirectX::XMFloat3ToBtVector3(joint->data.position));
 	tr.setBasis(bm);
-	tr.setOrigin(joint->data.position);
-	trA = tr.inverseTimes(pmxBodyA->getBody()->getWorldTransform());
-	trB = tr.inverseTimes(pmxBodyB->getBody()->getWorldTransform());
+	trA = pmxBodyA->getBody()->getWorldTransform().inverseTimes(tr);
+	trB = pmxBodyB->getBody()->getWorldTransform().inverseTimes(tr);
 
 	switch (joint->type) {
 	case JointType::Spring6DoF:
@@ -35,10 +35,15 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 		auto constraint = new btGeneric6DofSpringConstraint(*pmxBodyA->getBody(), *pmxBodyB->getBody(), trA, trB, true);
 		m_constraint.reset(constraint);
 
-		constraint->setLinearLowerLimit(joint->data.lowerMovementRestrictions);
-		constraint->setLinearUpperLimit(joint->data.upperMovementRestrictions);
-		constraint->setAngularLowerLimit(joint->data.lowerRotationRestrictions);
-		constraint->setAngularUpperLimit(joint->data.upperRotationRestrictions);
+		constraint->setLinearLowerLimit(DirectX::XMFloat3ToBtVector3(joint->data.lowerMovementRestrictions));
+		constraint->setLinearUpperLimit(DirectX::XMFloat3ToBtVector3(joint->data.upperMovementRestrictions));
+#if 0
+		constraint->setAngularLowerLimit(btVector3(DirectX::XMConvertToRadians(joint->data.lowerRotationRestrictions.x), DirectX::XMConvertToRadians(joint->data.lowerRotationRestrictions.y), DirectX::XMConvertToRadians(joint->data.lowerRotationRestrictions.z)));
+		constraint->setAngularUpperLimit(btVector3(DirectX::XMConvertToRadians(joint->data.upperMovementRestrictions.x), DirectX::XMConvertToRadians(joint->data.upperMovementRestrictions.y), DirectX::XMConvertToRadians(joint->data.upperMovementRestrictions.z)));
+#else
+		constraint->setAngularLowerLimit(DirectX::XMFloat3ToBtVector3(joint->data.lowerRotationRestrictions));
+		constraint->setAngularUpperLimit(DirectX::XMFloat3ToBtVector3(joint->data.upperRotationRestrictions));
+#endif
 
 		for (int i = 0; i < 6; i++) {
 			if (i >= 3 || joint->data.springConstant[i] != 0.0f) {
@@ -54,10 +59,10 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 		auto constraint = new btGeneric6DofConstraint(*pmxBodyA->getBody(), *pmxBodyB->getBody(), trA, trB, true);
 		m_constraint.reset(constraint);
 
-		constraint->setLinearLowerLimit(joint->data.lowerMovementRestrictions);
-		constraint->setLinearUpperLimit(joint->data.upperMovementRestrictions);
-		constraint->setAngularLowerLimit(joint->data.lowerRotationRestrictions);
-		constraint->setAngularUpperLimit(joint->data.upperRotationRestrictions);
+		constraint->setLinearLowerLimit(DirectX::XMFloat3ToBtVector3(joint->data.lowerMovementRestrictions));
+		constraint->setLinearUpperLimit(DirectX::XMFloat3ToBtVector3(joint->data.upperMovementRestrictions));
+		constraint->setAngularLowerLimit(DirectX::XMFloat3ToBtVector3(joint->data.lowerRotationRestrictions));
+		constraint->setAngularUpperLimit(DirectX::XMFloat3ToBtVector3(joint->data.upperRotationRestrictions));
 		break;
 	}
 	case JointType::PointToPoint:
@@ -68,14 +73,14 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 		auto constraint = new btConeTwistConstraint(*pmxBodyA->getBody(), *pmxBodyB->getBody(), trA, trB);
 		m_constraint.reset(constraint);
 
-		constraint->setLimit(joint->data.lowerRotationRestrictions.z(), joint->data.lowerRotationRestrictions.y(), joint->data.lowerRotationRestrictions.x(), joint->data.springConstant[0], joint->data.springConstant[1], joint->data.springConstant[2]);
-		constraint->setDamping(joint->data.lowerMovementRestrictions.x());
-		constraint->setFixThresh(joint->data.upperMovementRestrictions.x());
+		constraint->setLimit(joint->data.lowerRotationRestrictions.z, joint->data.lowerRotationRestrictions.y, joint->data.lowerRotationRestrictions.x, joint->data.springConstant[0], joint->data.springConstant[1], joint->data.springConstant[2]);
+		constraint->setDamping(joint->data.lowerMovementRestrictions.x);
+		constraint->setFixThresh(joint->data.upperMovementRestrictions.x);
 
-		bool enableMotor = joint->data.lowerMovementRestrictions.z() != 0.0f;
+		bool enableMotor = joint->data.lowerMovementRestrictions.z != 0.0f;
 		constraint->enableMotor(enableMotor);
 		if (enableMotor) {
-			constraint->setMaxMotorImpulse(joint->data.upperMovementRestrictions.z());
+			constraint->setMaxMotorImpulse(joint->data.upperMovementRestrictions.z);
 			btQuaternion q;
 			q.setEulerZYX(joint->data.springConstant[4], joint->data.springConstant[5], joint->data.springConstant[6]);
 			constraint->setMotorTargetInConstraintSpace(q);
@@ -88,10 +93,10 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 		auto constraint = new btSliderConstraint(*pmxBodyA->getBody(), *pmxBodyB->getBody(), trA, trB, true);
 		m_constraint.reset(constraint);
 
-		constraint->setLowerLinLimit(joint->data.lowerMovementRestrictions.x());
-		constraint->setUpperLinLimit(joint->data.upperMovementRestrictions.x());
-		constraint->setLowerAngLimit(joint->data.lowerRotationRestrictions.x());
-		constraint->setUpperAngLimit(joint->data.upperRotationRestrictions.x());
+		constraint->setLowerLinLimit(joint->data.lowerMovementRestrictions.x);
+		constraint->setUpperLinLimit(joint->data.upperMovementRestrictions.x);
+		constraint->setLowerAngLimit(joint->data.lowerRotationRestrictions.x);
+		constraint->setUpperAngLimit(joint->data.upperRotationRestrictions.x);
 
 		bool poweredLinearMotor = joint->data.springConstant[0] != 0.0f;
 		constraint->setPoweredLinMotor(poweredLinearMotor);
@@ -113,7 +118,7 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 		auto constraint = new btHingeConstraint(*pmxBodyA->getBody(), *pmxBodyB->getBody(), trA, trB, true);
 		m_constraint.reset(constraint);
 
-		constraint->setLimit(joint->data.lowerRotationRestrictions.x(), joint->data.upperRotationRestrictions.x(), joint->data.springConstant[0], joint->data.springConstant[1], joint->data.springConstant[2]);
+		constraint->setLimit(joint->data.lowerRotationRestrictions.x, joint->data.upperRotationRestrictions.x, joint->data.springConstant[0], joint->data.springConstant[1], joint->data.springConstant[2]);
 
 		bool motor = joint->data.springConstant[3] != 0.0f;
 		constraint->enableMotor(motor);

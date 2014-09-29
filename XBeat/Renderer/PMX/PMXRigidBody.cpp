@@ -17,7 +17,7 @@ KinematicMotionState::~KinematicMotionState()
 
 void KinematicMotionState::getWorldTransform(btTransform &worldTrans) const
 {
-	worldTrans = (m_bone ? m_transform * (btTransform)m_bone->GetTransform() : m_transform);
+	worldTrans = (m_bone ? m_transform * (btTransform)m_bone->GetLocalTransform() : m_transform);
 }
 
 void KinematicMotionState::setWorldTransform(const btTransform &transform)
@@ -37,17 +37,19 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 {
 	btVector3 inertia;
 
+	m_size = DirectX::XMFloat3ToBtVector3(body->size);
+
 	switch (body->shape) {
 	case RigidBodyShape::Box:
-		m_shape.reset(new btBoxShape(body->size));
+		m_shape.reset(new btBoxShape(m_size));
 		m_primitive = DirectX::GeometricPrimitive::CreateCube(context);
 		break;
 	case RigidBodyShape::Sphere:
-		m_shape.reset(new btSphereShape(body->size.x()));
+		m_shape.reset(new btSphereShape(body->size.x));
 		m_primitive = DirectX::GeometricPrimitive::CreateSphere(context);
 		break;
 	case RigidBodyShape::Capsule:
-		m_shape.reset(new btCapsuleShape(body->size.y(), body->size.x()));
+		m_shape.reset(new btCapsuleShape(body->size.x, body->size.y));
 		m_primitive = DirectX::GeometricPrimitive::CreateCylinder(context);
 		break;
 	}
@@ -80,10 +82,9 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	else m_bone = nullptr;
 
 	btMatrix3x3 bm;
-	bm.setEulerZYX(body->rotation.x(), body->rotation.y(), body->rotation.z());
+	bm.setEulerZYX(DirectX::XMConvertToRadians(body->rotation.x), DirectX::XMConvertToRadians(body->rotation.y), DirectX::XMConvertToRadians(body->rotation.z));
+	m_transform.setOrigin(DirectX::XMFloat3ToBtVector3(body->position));
 	m_transform.setBasis(bm);
-	m_transform.setOrigin(body->position);
-	m_inverseTransform = m_transform.inverse();
 
 	if (body->mode == RigidBodyMode::Static) {
 		m_motion.reset(new KinematicMotionState(m_transform, m_bone));
@@ -112,7 +113,6 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	m_groupId = 1 << body->group;
 	m_groupMask = body->groupMask;
 	m_mode = body->mode;
-	m_size = body->size;
 	m_shapeType = body->shape;
 
 	physics->AddRigidBody(m_body, m_groupId, m_groupMask);
@@ -121,24 +121,12 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 bool XM_CALLCONV RigidBody::Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection)
 {
 	DirectX::XMMATRIX w;
-	DirectX::XMVECTOR scale;
 
 	if (m_primitive)
 	{
-		switch (m_shapeType) {
-		case RigidBodyShape::Box:
-			scale = DirectX::XMVectorSet(m_size.x(), m_size.y(), m_size.z(), 1.0f);
-			break;
-		case RigidBodyShape::Sphere:
-			scale = DirectX::XMVectorSet(m_size.x(), m_size.x(), m_size.x(), 1.0f);
-			break;
-		case RigidBodyShape::Capsule:
-			scale = DirectX::XMVectorSet(m_size.x(), m_size.y(), m_size.x(), 1.0f);
-			break;
-		}
 		auto tr = m_body->getCenterOfMassTransform();
 		
-		w = DirectX::XMMatrixAffineTransformation(scale, DirectX::XMVectorZero(), tr.getRotation().get128(), tr.getOrigin().get128());
+		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), DirectX::XMVectorZero(), tr.getRotation().get128(), tr.getOrigin().get128());
 
 		m_primitive->Draw(w, view, projection, m_color);
 	}
@@ -152,9 +140,10 @@ void RigidBody::Update()
 		return;
 
 	btTransform tr = m_body->getCenterOfMassTransform();
-	tr *= m_inverseTransform;
 	if (m_mode == RigidBodyMode::AlignedDynamic) {
-		tr.setOrigin(btVector3(0, 0, 0));
+		btVector3 p;
+		p.set128(m_bone->GetStartPosition());
+		tr.setOrigin(p);
 	}
 	m_bone->ApplyPhysicsTransform((DirectX::XMTRANSFORM)tr);
 }
