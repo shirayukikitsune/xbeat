@@ -175,3 +175,6 @@ XBeat/Data/Models/
 *.jpg
 *.jpeg
 Library_Bullet_Physics/
+Library_JPEG/
+Library_libpng/
+Library_zlib/
