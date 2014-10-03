@@ -216,7 +216,7 @@ bool SceneManager::LoadScene() {
 	}
 	stage->SetShader(lightShader);
 
-	auto model = m_modelManager->LoadModel(L"2013 Racing Miku");
+	auto model = m_modelManager->LoadModel(L"Tda式ミクAP改変 フェリシア風 Ver1.06");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the first model", L"Error", MB_OK);
 		return false;

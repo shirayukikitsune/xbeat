@@ -8,6 +8,7 @@ void main(
 	inout TriangleStream< GeometryIO > output
 )
 {
+	[unroll]
 	for (uint i = 0; i < 3; i++)
 	{
 		GeometryIO element;

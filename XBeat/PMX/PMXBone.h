@@ -111,11 +111,11 @@ class RootBone
 public:
 	RootBone(Model *model) : Bone(model, -1) {
 		m_flags = (uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable | (uint16_t)BoneFlags::Rotatable;
-		m_touched = false;
 	}
 
 	virtual bool IsRootBone() { return true; }
-	// We do not override the GetRootBone, or else GetTransform would enter an infinite loop
+
+	virtual Bone* GetRootBone() { return this; }
 
 	//! Gets the global transformation
 	virtual DirectX::XMTRANSFORM GetTransform() { return m_transform; }
@@ -127,6 +127,7 @@ public:
 	// Nothing to do with these
 	virtual void Initialize() {};
 	virtual void Terminate() {};
+	virtual void Update() {};
 
 	virtual void Transform(DirectX::FXMVECTOR angles, DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User);
 	virtual void Transform(const DirectX::XMTRANSFORM& transform, DeformationOrigin origin = DeformationOrigin::User);
@@ -134,11 +135,6 @@ public:
 	virtual void Rotate(DirectX::FXMVECTOR angles, DeformationOrigin origin = DeformationOrigin::User);
 	virtual void Translate(DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User);
 	virtual void ResetTransform();
-
-	virtual void Update();
-
-private:
-	bool m_touched;
 };
 
 class BoneImpl

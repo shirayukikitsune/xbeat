@@ -120,12 +120,16 @@ void RigidBody::Update()
 	if (m_mode == RigidBodyMode::Static || m_bone == nullptr)
 		return;
 
-	btTransform tr = m_body->getCenterOfMassTransform();
-	if (m_mode == RigidBodyMode::AlignedDynamic) {
+	btTransform tr = m_body->getCenterOfMassTransform() * m_inverse;
+	switch (m_mode) {
+	case RigidBodyMode::AlignedDynamic: {
 		btVector3 p;
-		p.set128(m_bone->GetPosition());
-		tr.setOrigin(p);
+		p.set128( m_bone->GetTransform().GetTranslation());
+		//tr.setOrigin(p);
+		break;
 	}
+	}
+
 	m_bone->ApplyPhysicsTransform((DirectX::XMTRANSFORM)tr);
 }
 
