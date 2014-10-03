@@ -5,7 +5,7 @@
 #include <list>
 #include <D3D11.h>
 #include <DirectXMath.h>
-#include "../../Physics/Environment.h"
+#include "../Physics/Environment.h"
 
 #ifdef PMX_TEST
 namespace PMXTest {
@@ -13,8 +13,7 @@ namespace PMXTest {
 }
 #endif
 
-namespace Renderer {
-class Texture;
+namespace Renderer { class Texture; }
 
 namespace PMX {
 
@@ -73,6 +72,11 @@ struct Name {
 	std::wstring japanese;
 	std::wstring english;
 };
+
+struct ModelDescription {
+	Name name;
+	Name comment;
+};
 #pragma endregion
 
 #pragma region Enums
@@ -106,13 +110,13 @@ enum struct BoneFlags : uint16_t {
 	View = 0x0008,
 	Manipulable = 0x0010,
 	IK = 0x0020,
-	LocalInheritance = 0x0080,
-	InheritRotation = 0x0100,
-	InheritTranslation = 0x0200,
-	TranslateAxis = 0x0400,
+	LocallyAttached = 0x0080,
+	RotationAttached = 0x0100,
+	TranslationAttached = 0x0200,
+	FixedAxis = 0x0400,
 	LocalAxis = 0x0800,
-	AfterPhysicalDeformation = 0x1000,
-	ExternalParentDeformation = 0x2000
+	PostPhysicsDeformation = 0x1000,
+	OuterParentDeformation = 0x2000
 };
 
 enum struct DeformationOrigin {
@@ -332,6 +336,5 @@ struct Frame{
 	std::vector<FrameMorphs> morphs;
 };
 
-}
 }
 

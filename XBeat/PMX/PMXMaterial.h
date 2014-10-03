@@ -4,7 +4,6 @@
 
 #include <list>
 
-namespace Renderer {
 namespace PMX {
 
 class RenderMaterial
@@ -29,9 +28,9 @@ public:
 	DirectX::XMFLOAT4 getSpecular(Material *m);
 	float getSpecularCoefficient(Material *m);
 
-	std::shared_ptr<Texture> baseTexture;
-	std::shared_ptr<Texture> sphereTexture;
-	std::shared_ptr<Texture> toonTexture;
+	std::shared_ptr<Renderer::Texture> baseTexture;
+	std::shared_ptr<Renderer::Texture> sphereTexture;
+	std::shared_ptr<Renderer::Texture> toonTexture;
 
 	uint32_t materialIndex, startIndex;
 	int indexCount;
@@ -54,6 +53,5 @@ private:
 	float weight;
 };
 }
-}
 
-Renderer::PMX::MaterialMorph operator* (const Renderer::PMX::MaterialMorph& morph, float weight);
+PMX::MaterialMorph operator* (const PMX::MaterialMorph& morph, float weight);

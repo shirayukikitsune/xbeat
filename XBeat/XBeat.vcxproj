@@ -66,16 +66,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>c:\disco g\dev\include;$(IncludePath);$(DXSDK_DIR)Include</IncludePath>
-    <LibraryPath>c:\disco g\dev\lib;$(LibraryPath);$(DXSDK_DIR)Lib\x86</LibraryPath>
+    <IncludePath>c:\disco g\dev\include;$(IncludePath)</IncludePath>
+    <LibraryPath>c:\disco g\dev\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>c:\disco g\dev\include\;$(IncludePath)</IncludePath>
     <LibraryPath>c:\disco g\dev\lib\x64\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>c:\disco g\dev\include;$(IncludePath);$(DXSDK_DIR)Include</IncludePath>
-    <LibraryPath>c:\disco g\dev\lib;$(LibraryPath);$(DXSDK_DIR)Lib\x86</LibraryPath>
+    <IncludePath>c:\disco g\dev\include;$(IncludePath)</IncludePath>
+    <LibraryPath>c:\disco g\dev\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>c:\disco g\dev\include\;$(IncludePath)</IncludePath>
@@ -113,7 +113,6 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -177,18 +176,20 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Renderer\PMX\PMXJoint.cpp" />
+    <ClCompile Include="ModelManager.cpp" />
+    <ClCompile Include="Physics\PMXMotionState.cpp" />
+    <ClCompile Include="PMX\PMXBone.cpp" />
+    <ClCompile Include="PMX\PMXJoint.cpp" />
+    <ClCompile Include="PMX\PMXLoader.cpp" />
+    <ClCompile Include="PMX\PMXMaterial.cpp" />
+    <ClCompile Include="PMX\PMXModel.cpp" />
+    <ClCompile Include="PMX\PMXRigidBody.cpp" />
+    <ClCompile Include="PMX\PMXShader.cpp" />
+    <ClCompile Include="PMX\PMXSoftBody.cpp" />
     <ClCompile Include="Renderer\Shaders\GenericShader.cpp" />
     <ClCompile Include="Dispatcher.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXShader.cpp" />
     <ClCompile Include="Renderer\OBJ\OBJModel.cpp" />
     <ClCompile Include="Physics\Environment.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXModel.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXRigidBody.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXMaterial.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXBone.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXLoader.cpp" />
-    <ClCompile Include="Renderer\PMX\PMXSoftBody.cpp" />
     <ClCompile Include="Renderer\OrthoWindowClass.cpp" />
     <ClCompile Include="Renderer\D3DTextureRenderer.cpp" />
     <ClCompile Include="Input\InputManager.cpp" />
@@ -208,6 +209,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Dispatcher.h" />
+    <ClInclude Include="ModelManager.h" />
+    <ClInclude Include="Physics\PMXMotionState.h" />
+    <ClInclude Include="PMX\PMXBone.h" />
+    <ClInclude Include="PMX\PMXDefinitions.h" />
+    <ClInclude Include="PMX\PMXJoint.h" />
+    <ClInclude Include="PMX\PMXLoader.h" />
+    <ClInclude Include="PMX\PMXMaterial.h" />
+    <ClInclude Include="PMX\PMXModel.h" />
+    <ClInclude Include="PMX\PMXRigidBody.h" />
+    <ClInclude Include="PMX\PMXShader.h" />
+    <ClInclude Include="PMX\PMXSoftBody.h" />
     <ClInclude Include="Renderer\PMX\PMXJoint.h" />
     <ClInclude Include="Renderer\Shaders\GenericShader.h" />
     <ClInclude Include="Renderer\Entity.h" />

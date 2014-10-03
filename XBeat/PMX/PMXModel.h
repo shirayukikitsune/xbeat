@@ -8,8 +8,8 @@
 
 #include <DirectXMath.h>
 
-#include "../Model.h"
-#include "../../Physics/Environment.h"
+#include "../Renderer/Model.h"
+#include "../Physics/Environment.h"
 
 #include "PMXDefinitions.h"
 #include "PMXLoader.h"
@@ -19,7 +19,6 @@
 #include "PMXShader.h"
 #include "PMXBone.h"
 
-namespace Renderer {
 namespace PMX {
 
 class Model : public Renderer::Model
@@ -28,10 +27,7 @@ public:
 	Model(void);
 	virtual ~Model(void);
 
-	struct {
-		Name name;
-		Name comment;
-	} description;
+	ModelDescription description;
 
 	DirectX::XMVECTOR GetBonePosition(const std::wstring &JPname);
 	DirectX::XMVECTOR GetBoneEndPosition(const std::wstring &JPname);
@@ -66,9 +62,11 @@ public:
 	std::shared_ptr<RigidBody> GetRigidBodyByName(const std::wstring &JPname);
 
 	virtual bool Update(float msec);
-	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum);
+	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<Renderer::ViewFrustum> frustum);
 
-	std::shared_ptr<D3DRenderer> m_d3d;
+	std::shared_ptr<Renderer::D3DRenderer> m_d3d;
+
+	virtual bool LoadModel(const std::wstring &filename);
 
 private:
 	std::vector<Vertex*> vertices;
@@ -89,11 +87,11 @@ private:
 
 	uint64_t lastpos;
 
-	std::vector<std::shared_ptr<Texture>> renderTextures;
+	std::vector<std::shared_ptr<Renderer::Texture>> renderTextures;
 
 	std::wstring basePath;
 
-	static std::vector<std::shared_ptr<Texture>> sharedToonTextures;
+	static std::vector<std::shared_ptr<Renderer::Texture>> sharedToonTextures;
 
 	std::vector<std::shared_ptr<RigidBody>> m_rigidBodies;
 	std::vector<std::shared_ptr<Joint>> m_joints;
@@ -114,10 +112,9 @@ private:
 	friend detail::RootBone;
 
 protected:
-	virtual bool InitializeBuffers(std::shared_ptr<D3DRenderer> d3d);
+	virtual bool InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d);
 	virtual void ShutdownBuffers();
 
-	virtual bool LoadModel(const std::wstring &filename);
 	virtual void ReleaseModel();
 
 	virtual bool LoadTexture(ID3D11Device *device);
@@ -140,5 +137,4 @@ private:
 #endif
 };
 
-}
 }

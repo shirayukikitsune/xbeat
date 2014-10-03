@@ -4,25 +4,10 @@
 #include "PMXLoader.h"
 #include "GeometricPrimitive.h"
 
-namespace Renderer {
 namespace PMX {
 class Model;
 
-class KinematicMotionState : public btMotionState
-{
-public:
-	KinematicMotionState(const btTransform &boneTrans, Bone *bone);
-
-	virtual ~KinematicMotionState();
-
-	virtual void getWorldTransform(btTransform &worldTrans) const;
-
-	virtual void setWorldTransform(const btTransform &worldTrans);
-
-private:
-	Bone *m_bone;
-	btTransform m_transform;
-};
+class PMXMotionState;
 
 class RigidBody
 {
@@ -46,7 +31,7 @@ public:
 
 private:
 	Bone* m_bone;
-	btTransform m_transform;
+	btTransform m_transform, m_inverse;
 	Name m_name;
 	uint16_t m_groupId;
 	uint16_t m_groupMask;
@@ -60,8 +45,7 @@ private:
 	std::shared_ptr<btRigidBody> m_body;
 	std::unique_ptr<btPairCachingGhostObject> m_ghost;
 	std::unique_ptr<btMotionState> m_motion;
-	std::unique_ptr<KinematicMotionState> m_kinematic;
+	std::unique_ptr<PMXMotionState> m_kinematic;
 };
-}
 }
 

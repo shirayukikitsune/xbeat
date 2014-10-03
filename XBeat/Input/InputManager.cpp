@@ -152,6 +152,7 @@ void Manager::ProcessInput()
 {
 	DIDEVICEOBJECTDATA keyChanges[keyboardBufferSize];
 	DWORD items = keyboardBufferSize;
+	XINPUT_STATE gamepad;
 	HRESULT result;
 	result = keyboard->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), keyChanges, &items, 0);
 	auto v = bindings.end();
@@ -201,6 +202,70 @@ void Manager::ProcessInput()
 		}
 	}
 	lastMouseState = currentMouseState;
+
+	DWORD gamepadResult = XInputGetState(0, &gamepad);
+	if (gamepadResult == ERROR_SUCCESS) {
+		v = bindings.end();
+		for (DWORD i = XINPUT_GAMEPAD_DPAD_UP; i <= XINPUT_GAMEPAD_Y; i <<= 1) {
+			if (lastGamepadState.Gamepad.wButtons & i) {
+				if (gamepad.Gamepad.wButtons & i) v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadPress, i));
+				else v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadUp, i));
+			}
+			else if (gamepad.Gamepad.wButtons & i) v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadDown, i));
+
+			if (v != bindings.end()) {
+				this->dispatcher->AddTask(std::bind(v->second, v->first.param));
+				v = bindings.end();
+			}
+		}
+
+		auto normalizeStick = [](float valueX, float valueY, int deadzone) {
+			//determine how far the controller is pushed
+			float magnitude = sqrt(valueX*valueX + valueY*valueY);
+
+			//determine the direction the controller is pushed
+			float normalizedLX = valueX / magnitude;
+			float normalizedLY = valueY / magnitude;
+
+			float normalizedMagnitude = 0;
+
+			//check if the controller is outside a circular dead zone
+			if (magnitude > deadzone)
+			{
+				//clip the magnitude at its expected maximum value
+				if (magnitude > 32767) magnitude = 32767;
+
+				//adjust magnitude relative to the end of the dead zone
+				magnitude -= deadzone;
+
+				//optionally normalize the magnitude with respect to its expected range
+				//giving a magnitude value of 0.0 to 1.0
+				normalizedMagnitude = magnitude / (32767 - deadzone);
+			}
+			else //if the controller is in the deadzone zero out the magnitude
+			{
+				magnitude = 0.0;
+				normalizedMagnitude = 0.0;
+			}
+
+			return new ThumbMovement{ normalizedLX * normalizedMagnitude, normalizedLY * normalizedMagnitude };
+		};
+
+		v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadLeftThumb));
+		if (v != bindings.end()) {
+			this->dispatcher->AddTask(std::bind(v->second, normalizeStick(gamepad.Gamepad.sThumbLX, gamepad.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)));
+			v = bindings.end();
+		}
+
+		v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadRightThumb));
+		if (v != bindings.end()) {
+			this->dispatcher->AddTask(std::bind(v->second, normalizeStick(gamepad.Gamepad.sThumbRX, gamepad.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)));
+			v = bindings.end();
+		}
+
+		std::memcpy(&lastGamepadState, &gamepad, sizeof XINPUT_STATE);
+	}
+	else std::memset(&lastGamepadState, 0, sizeof XINPUT_STATE);
 }
 
 bool Manager::IsEscapePressed()

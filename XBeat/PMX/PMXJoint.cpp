@@ -1,7 +1,7 @@
 #include "PMXJoint.h"
 #include "PMXModel.h"
 
-using namespace Renderer::PMX;
+using namespace PMX;
 
 Joint::Joint()
 {

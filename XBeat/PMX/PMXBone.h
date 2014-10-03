@@ -1,11 +1,10 @@
 #pragma once
 
 #include "PMXDefinitions.h"
-#include "../D3DRenderer.h"
+#include "../Renderer/D3DRenderer.h"
 #include "GeometricPrimitive.h" // From DirectX Toolkit
 #include <list>
 
-namespace Renderer {
 namespace PMX {
 
 class Loader;
@@ -75,6 +74,8 @@ public:
 
 	//! Returns the physical deformation order
 	int32_t GetDeformationOrder() const { return m_deformationOrder; }
+
+	std::vector<Bone*> m_children;
 
 private:
 	const uint32_t m_id;
@@ -155,7 +156,7 @@ public:
 	const DirectX::XMVECTOR& GetAxisTranslation() const { return axisTranslation; }
 
 	virtual void Initialize();
-	void InitializeDebug(std::shared_ptr<D3DRenderer> d3d);
+	void InitializeDebug(std::shared_ptr<Renderer::D3DRenderer> d3d);
 	virtual void Terminate();
 
 	DirectX::XMMATRIX XM_CALLCONV GetLocalAxis();
@@ -201,7 +202,6 @@ private:
 
 	Name name;
 	DirectX::XMVECTOR startPosition;
-	uint32_t parent;
 	union {
 		float length[3];
 		uint32_t attachTo;
@@ -226,6 +226,5 @@ private:
 #endif
 };
 
-}
 }
 }

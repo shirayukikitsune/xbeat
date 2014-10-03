@@ -1,6 +1,6 @@
 #include "PMXMaterial.h"
 
-using namespace Renderer::PMX;
+using namespace PMX;
 
 RenderMaterial::RenderMaterial()
 {
@@ -166,9 +166,9 @@ void RenderMaterial::initializeMultiplicativeMaterialMorph(MaterialMorph &morph)
 	morph.toonCoefficient.red = morph.toonCoefficient.green = morph.toonCoefficient.blue = morph.toonCoefficient.alpha = 1.0f;
 }
 
-Renderer::PMX::MaterialMorph operator* (const Renderer::PMX::MaterialMorph& morph, float weight)
+MaterialMorph operator* (const MaterialMorph& morph, float weight)
 {
-	Renderer::PMX::MaterialMorph m = morph;
+	MaterialMorph m = morph;
 
 	m.ambient *= weight;
 	m.diffuse *= weight;

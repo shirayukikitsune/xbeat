@@ -3,7 +3,7 @@
 
 #include "BulletSoftBody/btSoftBodyHelpers.h"
 
-using namespace Renderer::PMX;
+using namespace PMX;
 
 SoftBody::SoftBody(void)
 {

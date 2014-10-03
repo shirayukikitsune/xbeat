@@ -7,7 +7,6 @@
 
 #include "PMXDefinitions.h"
 
-namespace Renderer {
 namespace PMX {
 
 class Model;
@@ -78,11 +77,12 @@ public:
 	bool FromFile(Model* model, const std::wstring &filename);
 	bool FromStream(Model* model, std::istream &in);
 	bool FromMemory(Model* model, const char *&data);
+	ModelDescription GetDescription(const std::wstring &filename);
 
 private:
 	Header* loadHeader(const char *&data);
 	SizeInfo* loadSizeInfo(const char *&data);
-	void loadDescription(Model* model, const char *&data);
+	void loadDescription(ModelDescription &desc, const char *&data);
 	void loadVertexData(Model* model, const char *&data);
 	void loadIndexData(Model* model, const char *&data);
 	void loadTextures(Model* model, const char *&data);
@@ -99,5 +99,4 @@ private:
 	uint32_t readAsU32(uint8_t size, const char *&data);
 };
 
-}
 }

@@ -4,7 +4,6 @@
 #include "PMXLoader.h"
 #include "GeometricPrimitive.h"
 
-namespace Renderer {
 namespace PMX {
 
 class Model;
@@ -28,6 +27,5 @@ private:
 	JointType m_type;
 };
 
-}
 }
 

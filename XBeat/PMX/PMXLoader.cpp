@@ -4,7 +4,7 @@
 #include <codecvt>
 
 using namespace std;
-using namespace Renderer::PMX;
+using namespace PMX;
 
 bool Loader::FromFile(Model* model, const std::wstring &filename)
 {
@@ -47,7 +47,7 @@ bool Loader::FromMemory(Model* model, const char *&data)
 
 	m_sizeInfo = loadSizeInfo(data);
 
-	loadDescription(model, data);
+	loadDescription(model->description, data);
 
 	loadVertexData(model, data);
 
@@ -71,6 +71,34 @@ bool Loader::FromMemory(Model* model, const char *&data)
 		loadSoftBodies(model, data);
 
 	return true;
+}
+
+ModelDescription Loader::GetDescription(const std::wstring &filename)
+{
+	std::ifstream ifile;
+	ifile.open(filename, std::ios::binary);
+	if (!ifile.good())
+		throw Exception("Unable to open the requested filename");
+
+	ifile.seekg(0, ifile.end);
+	std::istream::pos_type len = ifile.tellg();
+	ifile.seekg(0, ifile.beg);
+
+	char *data = new char[len];
+	const char *cursor = data;
+
+	ifile.read(data, len);
+
+	auto header = loadHeader(cursor);
+	if (header == nullptr) throw Exception("Unrecognized file format");
+	m_sizeInfo = loadSizeInfo(cursor);
+	ModelDescription output;
+	loadDescription(output, cursor);
+
+	delete[] data;
+	ifile.close();
+
+	return output;
 }
 
 template <class T>
@@ -120,10 +148,10 @@ Loader::SizeInfo* Loader::loadSizeInfo(const char *&data)
 	return sizeInfo;
 }
 
-void Loader::loadDescription(Model *model, const char *&data)
+void Loader::loadDescription(ModelDescription &desc, const char *&data)
 {
-	readName(model->description.name, data);
-	readName(model->description.comment, data);
+	readName(desc.name, data);
+	readName(desc.comment, data);
 }
 
 void Loader::loadVertexData(Model *model, const char*& data) {
@@ -264,7 +292,7 @@ void Loader::loadBones(Model *model, const char *&data)
 			b->size.attachTo = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 		else readVector<float>(b->size.length, 3, data);
 
-		if (b->m_flags & ((uint16_t)BoneFlags::InheritRotation | (uint16_t)BoneFlags::InheritTranslation)) {
+		if (b->m_flags & ((uint16_t)BoneFlags::RotationAttached | (uint16_t)BoneFlags::TranslationAttached)) {
 			b->inherit.from = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 			b->inherit.rate = readInfo<float>(data);
 		}
@@ -273,7 +301,7 @@ void Loader::loadBones(Model *model, const char *&data)
 			b->inherit.rate = 1.0f;
 		}
 
-		if (b->m_flags & (uint16_t)BoneFlags::TranslateAxis) {
+		if (b->m_flags & (uint16_t)BoneFlags::FixedAxis) {
 			readVector<float>(b->axisTranslation.m128_f32, 3, data);
 		}
 
@@ -282,7 +310,7 @@ void Loader::loadBones(Model *model, const char *&data)
 			readVector<float>(b->localAxes.zDirection.m128_f32, 3, data);
 		}
 
-		if (b->m_flags & (uint16_t)BoneFlags::ExternalParentDeformation) {
+		if (b->m_flags & (uint16_t)BoneFlags::OuterParentDeformation) {
 			b->externalDeformationKey = readInfo<int>(data);
 		}
 

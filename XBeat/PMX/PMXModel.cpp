@@ -1,18 +1,18 @@
-﻿#include "../Camera.h"
-#include "../Shaders/LightShader.h"
-#include "../Light.h"
+﻿#include "../Renderer/Camera.h"
+#include "../Renderer/Shaders/LightShader.h"
+#include "../Renderer/Light.h"
 #include "PMXModel.h"
 #include "PMXBone.h"
 #include "PMXMaterial.h"
 #include "PMXShader.h"
-#include "../D3DRenderer.h"
+#include "../Renderer/D3DRenderer.h"
 
 #include <fstream>
 #include <cstring>
 #include <algorithm>
 #include <cfloat> // FLT_MIN, FLT_MAX
 
-#include "../Model.h"
+#include "../Renderer/Model.h"
 
 using namespace std;
 
@@ -66,7 +66,7 @@ bool PMX::Model::LoadModel(const wstring &filename)
 	rootBone->Initialize();
 	for (auto &bone : bones) {
 		bone->Initialize();
-		if (bone->HasAnyFlag(BoneFlags::AfterPhysicalDeformation))
+		if (bone->HasAnyFlag(BoneFlags::PostPhysicsDeformation))
 			m_postPhysicsBones.push_back(bone);
 		else
 			m_prePhysicsBones.push_back(bone);
@@ -416,7 +416,7 @@ bool PMX::Model::updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *co
 
 bool PMX::Model::Update(float msec)
 {
-	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
+	//if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
 		for (auto &bone : m_prePhysicsBones) {
 			bone->Update();
 		}
@@ -428,7 +428,7 @@ bool PMX::Model::Update(float msec)
 		for (auto &bone : m_postPhysicsBones) {
 			bone->Update();
 		}
-	}
+	//}
 
 	return true;
 }
@@ -447,10 +447,9 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 		auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
 
-		bool update = false;
 		for (auto & bone : bones) {
 			auto &shaderBone = shader->GetBone(bone->GetId());
-			auto t = bone->GetLocalTransform();
+			auto t = bone->GetTransform();
 			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition(), t.GetRotationQuaternion(), t.GetTranslation()));
 		}
 		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
@@ -480,11 +479,6 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 			textures[0] = rendermaterials[i].baseTexture ? rendermaterials[i].baseTexture->GetTexture() : nullptr;
 			textures[1] = rendermaterials[i].sphereTexture ? rendermaterials[i].sphereTexture->GetTexture() : nullptr;
 			textures[2] = rendermaterials[i].toonTexture ? rendermaterials[i].toonTexture->GetTexture() : nullptr;
-
-			//if ((materials[i]->flags & (uint8_t)MaterialFlags::DoubleSide) != 0 || rendermaterials[i].getAmbient(materials[i]).w < 1.0f) {
-				
-			//}
-			//else context->RSSetState(m_d3d->GetRasterState(0));
 
 			context->PSSetShaderResources(0, 3, textures);
 			m_shader->Render(context, rendermaterials[i].indexCount, rendermaterials[i].startIndex);

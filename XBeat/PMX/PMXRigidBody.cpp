@@ -2,27 +2,9 @@
 #include "PMXModel.h"
 #include "PMXLoader.h"
 #include "PMXBone.h"
+#include "../Physics/PMXMotionState.h"
 
-using namespace Renderer::PMX;
-
-KinematicMotionState::KinematicMotionState(const btTransform &boneTrans, Bone *bone)
-{
-	m_bone = bone;
-	m_transform = boneTrans;
-}
-
-KinematicMotionState::~KinematicMotionState()
-{
-}
-
-void KinematicMotionState::getWorldTransform(btTransform &worldTrans) const
-{
-	worldTrans = (m_bone ? m_transform * (btTransform)m_bone->GetLocalTransform() : m_transform);
-}
-
-void KinematicMotionState::setWorldTransform(const btTransform &transform)
-{
-}
+using namespace PMX;
 
 RigidBody::RigidBody()
 {
@@ -87,20 +69,18 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	m_transform.setBasis(bm);
 
 	if (body->mode == RigidBodyMode::Static) {
-		m_motion.reset(new KinematicMotionState(m_transform, m_bone));
+		if (m_bone) m_motion.reset(new PMXMotionState(m_bone, m_transform));
 	}
 	else {
 		m_motion.reset(new btDefaultMotionState(m_transform));
-		//m_kinematic.reset(new KinematicMotionState(m_transform, m_bone));
 	}
 
-	btRigidBody::btRigidBodyConstructionInfo ci(body->mass, m_motion.get(), m_shape.get(), inertia);
+	btRigidBody::btRigidBodyConstructionInfo ci(body->mode == RigidBodyMode::Static ? 0.0f : body->mass, m_motion.get(), m_shape.get(), inertia);
 	ci.m_friction = body->friction;
-	ci.m_mass = (body->mode == RigidBodyMode::Static ? 0.0f : body->mass);
 	ci.m_restitution = body->restitution;
 	ci.m_angularDamping = body->angularDamping;
 	ci.m_linearDamping = body->linearDamping;
-	ci.m_additionalDamping = true;
+	//ci.m_startWorldTransform = m_transform;
 
 	m_body.reset(new btRigidBody(ci));
 	m_name = body->name;
@@ -114,6 +94,7 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	m_groupMask = body->groupMask;
 	m_mode = body->mode;
 	m_shapeType = body->shape;
+	m_inverse = m_transform.inverse();
 
 	physics->AddRigidBody(m_body, m_groupId, m_groupMask);
 }
@@ -142,7 +123,7 @@ void RigidBody::Update()
 	btTransform tr = m_body->getCenterOfMassTransform();
 	if (m_mode == RigidBodyMode::AlignedDynamic) {
 		btVector3 p;
-		p.set128(m_bone->GetStartPosition());
+		p.set128(m_bone->GetPosition());
 		tr.setOrigin(p);
 	}
 	m_bone->ApplyPhysicsTransform((DirectX::XMTRANSFORM)tr);

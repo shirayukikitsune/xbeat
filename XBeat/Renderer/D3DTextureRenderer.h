@@ -1,6 +1,5 @@
 #pragma once
 
-#include "PMX/PMXDefinitions.h"
 #include "DXUtil.h"
 
 namespace Renderer {

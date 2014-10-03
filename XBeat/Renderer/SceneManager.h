@@ -5,7 +5,7 @@
 
 #include "D3DRenderer.h"
 #include "Camera.h"
-#include "PMX/PMXModel.h"
+#include "../PMX/PMXModel.h"
 #include "Model.h"
 #include "Shaders/LightShader.h"
 #include "Light.h"
@@ -19,7 +19,8 @@
 #include "SkyBox.h"
 #include "../Dispatcher.h"
 #include "SpriteFont.h"
-#include "PMX/PMXShader.h"
+#include "../PMX/PMXShader.h"
+#include "../ModelManager.h"
 
 namespace Renderer {
 
@@ -56,6 +57,7 @@ private:
 
 	std::unique_ptr<DirectX::SpriteFont> m_font;
 	std::unique_ptr<DirectX::SpriteBatch> m_batch;
+	std::unique_ptr<ModelManager> m_modelManager;
 	std::shared_ptr<ViewFrustum> frustum;
 	std::shared_ptr<D3DRenderer> d3d;
 	std::shared_ptr<SkyBox> sky;

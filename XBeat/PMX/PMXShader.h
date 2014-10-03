@@ -1,16 +1,15 @@
 #pragma once
 
 #include "PMXDefinitions.h"
-#include "../Shaders/GenericShader.h"
+#include "../Renderer/Shaders/GenericShader.h"
 #include <d3dx11effect.h>
 #include <array>
 #include <map>
 
-namespace Renderer {
 namespace PMX {
 
 class PMXShader
-	: public Shaders::Generic
+	: public Renderer::Shaders::Generic
 {
 public:
 	struct Limits {
@@ -78,5 +77,4 @@ protected:
 	virtual void InternalPrepareRender(ID3D11DeviceContext *context);
 };
 
-}
 }

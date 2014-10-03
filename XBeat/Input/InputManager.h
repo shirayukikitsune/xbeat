@@ -10,9 +10,11 @@
 
 #pragma comment (lib, "dinput8.lib")
 #pragma comment (lib, "dxguid.lib")
+#pragma comment (lib, "xinput.lib")
 
 #include <dinput.h>
 #include "../Dispatcher.h"
+#include <Xinput.h>
 
 namespace Input {
 
@@ -20,6 +22,12 @@ struct MouseMovement
 {
 	long x;
 	long y;
+};
+
+struct ThumbMovement
+{
+	float dx;
+	float dy;
 };
 
 enum struct MouseButton {
@@ -43,12 +51,19 @@ struct CallbackInfo
 		OnMouseDown,
 		OnMouseUp,
 		OnMousePress,
+		OnGamepadDown,
+		OnGamepadUp,
+		OnGamepadPress,
+		OnGamepadLeftThumb,
+		OnGamepadRightThumb,
+		OnGamepadLeftTrigger,
+		OnGamepadRightTrigger,
 	};
 	Event eventType;
-	uint8_t button;
+	uint16_t button;
 	void *param;
 
-	CallbackInfo(Event event, uint8_t btn = 0, void *prm = nullptr) : eventType(event), button(btn), param(prm) {};
+	CallbackInfo(Event event, uint16_t btn = 0, void *prm = nullptr) : eventType(event), button(btn), param(prm) {};
 
 };
 bool operator< (const CallbackInfo& one, const CallbackInfo& other);
@@ -80,11 +95,13 @@ public:
 private:
 	bool ReadKeyboard();
 	bool ReadMouse();
+
 	void ProcessInput();
 
 	IDirectInput8 *dinput;
 	IDirectInputDevice8 *keyboard;
 	IDirectInputDevice8 *mouse;
+	XINPUT_STATE lastGamepadState;
 
 	int screenWidth, screenHeight;
 

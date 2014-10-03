@@ -19,13 +19,9 @@ Model::~Model(void)
 }
 
 
-bool Model::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d, const std::wstring &modelfile, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher)
+bool Model::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d, std::shared_ptr<Physics::Environment> physics)
 {
 	m_physics = physics;
-	m_dispatcher = dispatcher;
-
-	if (!LoadModel(modelfile))
-		return false;
 
 	if (!InitializeBuffers(d3d))
 		return false;

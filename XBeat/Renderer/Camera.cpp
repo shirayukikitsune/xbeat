@@ -8,32 +8,6 @@ Camera::Camera(void)
 }
 
 
-void XM_CALLCONV Camera::SetRotation(float x, float y, float z)
-{
-	float yaw, pitch, roll;
-
-	pitch = DirectX::XMConvertToRadians(x);
-	yaw = DirectX::XMConvertToRadians(y);
-	roll = DirectX::XMConvertToRadians(z);
-
-	m_rotation = DirectX::XMQuaternionRotationRollPitchYaw(pitch, yaw, roll);
-}
-
-void XM_CALLCONV Camera::SetRotation(DirectX::XMFLOAT3& axis, float angle)
-{
-	m_rotation = DirectX::XMQuaternionRotationAxis(DirectX::XMLoadFloat3(&axis), angle);
-}
-
-void XM_CALLCONV Camera::SetRotation(DirectX::FXMVECTOR quaternion)
-{
-	m_rotation = quaternion;
-}
-
-DirectX::XMVECTOR Camera::GetRotation()
-{
-	return m_rotation;
-}
-
 bool Camera::Update(float msec)
 {
 	DirectX::XMVECTOR up, lookAt;

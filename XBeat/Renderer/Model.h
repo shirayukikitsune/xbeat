@@ -23,7 +23,8 @@ public:
 	Model(void);
 	virtual ~Model(void);
 
-	bool Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d, const std::wstring &modelfile, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher);
+	virtual bool LoadModel(const std::wstring &modelfile);
+	bool Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d, std::shared_ptr<Physics::Environment> physics);
 	void Shutdown();
 	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum);
 
@@ -35,10 +36,7 @@ protected:
 	virtual bool LoadTexture(ID3D11Device *device);
 	virtual void ReleaseTexture();
 
-	virtual bool LoadModel(const std::wstring &modelfile);
 	virtual void ReleaseModel();
-
-	std::shared_ptr<Dispatcher> m_dispatcher;
 };
 
 }

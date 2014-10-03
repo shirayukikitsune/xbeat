@@ -141,9 +141,6 @@
     <ClCompile Include="VectorTest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Library_Bullet_Physics\Library_Bullet_Physics.vcxproj">
-      <Project>{0446af84-8c4a-4db5-889c-440447944665}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\Library_DirectXTK\DirectXTK_Desktop_2013.vcxproj">
       <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
     </ProjectReference>

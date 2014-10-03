@@ -1,10 +1,10 @@
 #include "PMXShader.h"
 #include <d3dcompiler.h>
-#include "../Entity.h"
+#include "../Renderer/Entity.h"
 
 using namespace DirectX;
 using namespace Renderer;
-using Renderer::PMX::PMXShader;
+using PMX::PMXShader;
 
 bool PMXShader::UpdateMaterialBuffer(ID3D11DeviceContext *context)
 {

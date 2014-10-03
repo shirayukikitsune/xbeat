@@ -4,10 +4,8 @@
 #include <cstdint>
 
 #include "PMXDefinitions.h"
-#include "../../Physics/Environment.h"
 #include "BulletSoftBody/btSoftBody.h"
 
-namespace Renderer {
 namespace PMX {
 
 class Model;
@@ -102,5 +100,4 @@ public:
 	void Create(std::shared_ptr<Physics::Environment> physics, Model* model);
 };
 
-}
 }

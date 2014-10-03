@@ -1,6 +1,5 @@
 #pragma once
 
-#include "PMX/PMXDefinitions.h"
 #include <DirectXMath.h>
 
 namespace Renderer {
