@@ -12,7 +12,7 @@ void main(
 	for (uint i = 0; i < 3; i++)
 	{
 		GeometryIO element;
-		element.position = input[i].position;
+		element.position = 0;
 		element.position.w = 1.0f;
 		element.tex = input[i].tex;
 		element.normal = input[i].normal;
@@ -25,8 +25,10 @@ void main(
 		[unroll]
 		for (uint j = 0; j < 4; j++) {
 			skinning += bones[element.boneIndices[j]].transform * element.boneWeights[j];
-		}
-		element.position = mul(element.position, skinning);
+			element.position += element.boneWeights[j] * mul(input[i].position, bones[element.boneIndices[j]].transform);
+			//element.position += (mul(input[i].position - bones[element.boneIndices[j]].position, bones[element.boneIndices[j]].transform) + bones[element.boneIndices[j]].position) * element.boneWeights[j];
+ 		}
+		//element.position = mul(element.position, skinning);
 		element.normal = normalize(mul(element.normal, (float3x3)skinning));
 
 		output.Append(element);

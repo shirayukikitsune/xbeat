@@ -449,7 +449,9 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 		for (auto & bone : bones) {
 			auto &shaderBone = shader->GetBone(bone->GetId());
-			shaderBone.transform = DirectX::XMMatrixTranspose((DirectX::XMMATRIX)bone->GetTransform());
+			shaderBone.position = bone->GetStartPosition();
+			//shaderBone.transform = DirectX::XMMatrixTranspose((DirectX::XMMATRIX)bone->GetTransform());
+			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition(), bone->GetTransform().GetRotationQuaternion(), bone->GetTransform().GetTranslation()));
 		}
 		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
 

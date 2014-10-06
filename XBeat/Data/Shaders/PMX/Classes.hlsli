@@ -40,7 +40,7 @@ struct MaterialBufferType
 struct BoneBufferType
 {
 	float4x4 transform;
-	//float4 position;
+	float4 position;
 };
 
 struct VertexInput

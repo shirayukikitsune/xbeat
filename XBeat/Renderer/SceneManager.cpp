@@ -173,8 +173,10 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		camera->Move(value->dx, 0.0f, value->dy);
 		delete v;
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadRightThumb), [this](void *v) {
-		static float rotation[2] = { 0.0f, 0.0f };
+
+	float rotation[2] = { 0.0f, 0.0f };
+
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadRightThumb), [this, &rotation](void *v) {
 		Input::ThumbMovement *value = (Input::ThumbMovement*)v;
 		rotation[0] += value->dx / 10.f;
 		rotation[1] += value->dy / 10.f;
@@ -183,8 +185,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		delete v;
 	});
 
-	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
-		static float rotation[2] = { 0.0f, 0.0f };
+	input->SetMouseBinding([this, &rotation](std::shared_ptr<Input::MouseMovement> data) {
 		if (data->x != 0 || data->y != 0) {
 			rotation[0] += data->x / 1000.f;
 			rotation[1] += data->y / 1000.f;
@@ -216,7 +217,7 @@ bool SceneManager::LoadScene() {
 	}
 	stage->SetShader(lightShader);
 
-	auto model = m_modelManager->LoadModel(L"Tda式ミクAP改変 フェリシア風 Ver1.06");
+	auto model = m_modelManager->LoadModel(L"北乃カムイv0.9");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the first model", L"Error", MB_OK);
 		return false;

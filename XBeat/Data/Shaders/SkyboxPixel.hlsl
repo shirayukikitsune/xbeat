@@ -1,13 +1,6 @@
 TextureCube SkyMap;
 SamplerState SampleType;
 
-cbuffer MatrixBuffer
-{
-    matrix worldMatrix;
-    matrix viewMatrix;
-    matrix projectionMatrix;
-};
-
 struct SkyboxVsOutput	//output structure for skymap vertex shader
 {
 	float4 Pos : SV_POSITION;

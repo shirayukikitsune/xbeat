@@ -144,7 +144,7 @@ bool PMXShader::InternalInitializeBuffers(ID3D11Device *device, HWND hwnd)
 	buffDesc.StructureByteStride = sizeof(BoneBufferType);
 	buffDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	std::for_each(m_bones.begin(), m_bones.end(), [](BoneBufferType& b) { b.transform = DirectX::XMMatrixIdentity(); });
+	std::for_each(m_bones.begin(), m_bones.end(), [](BoneBufferType& b) { b.transform = DirectX::XMMatrixIdentity(); b.position = DirectX::XMVectorZero(); });
 
 	data.pSysMem = m_bones.data();
 	data.SysMemPitch = sizeof(BoneBufferType);

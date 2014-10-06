@@ -74,6 +74,7 @@ bool SkyBox::SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRI
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType *buffer;
 	UINT bufferNumber;
+	static std::vector<ID3D11Buffer*> empty = { nullptr, nullptr, nullptr, nullptr, nullptr };
 
 	result = context->Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result))
@@ -89,6 +90,7 @@ bool SkyBox::SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRI
 	bufferNumber = 0;
 	
 	context->VSSetConstantBuffers(bufferNumber, 1, &matrixBuffer);
+	context->PSSetConstantBuffers(0, 5, empty.data());
 
 	context->PSSetShaderResources(0, 1, &texture);
 	context->PSSetSamplers(0, 1, &sampleState);
