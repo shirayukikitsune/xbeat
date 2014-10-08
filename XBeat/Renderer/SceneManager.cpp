@@ -132,22 +132,22 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		m_models[0]->ApplyMorph(L"翼羽ばたき", value);
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(1.0f, 0.0f, 0.0f)); });
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) {
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) {
 		for (auto &model : m_models) {
-			auto bone = model->GetBoneByName(L"左肩");
-			DirectX::XMVECTOR direction = dynamic_cast<PMX::detail::BoneImpl*>(bone)->GetOffsetPosition();
-			bone->Rotate(direction, 0.2f);
+			auto bone = model->GetBoneByName(L"右腕");
+			DirectX::XMVECTOR direction = dynamic_cast<PMX::detail::BoneImpl*>(bone)->GetOffsetPosition().get128();
+			bone->Rotate(btVector3(0, 0, 1), DirectX::XMConvertToRadians(30.0f));
 		}
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_C), [this](void* param) {
-		for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.3f);
+		for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f);
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_V), [this](void* param) {
 		for (auto model : m_models) {
 			auto bone = model->GetBoneByName(L"右腕");
-			if (bone) bone->Rotate(DirectX::XMVectorSet(0.0f, 0.0f, DirectX::XMConvertToRadians(90.0f), 0.0f));
+			if (bone) bone->Rotate(btVector3(0.0f, 0.0f, DirectX::XMConvertToRadians(90.0f)));
 		}
 	});
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
@@ -167,25 +167,25 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F7), [this](void* param) { this->physics->Pause(); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F8), [this](void* param) { this->physics->Unpause(); });
 
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadDown, XINPUT_GAMEPAD_A), [this](void* param) {for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.3f); });
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadDown, XINPUT_GAMEPAD_A), [this](void* param) {for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f); });
 	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadLeftThumb), [this](void* v) {
 		Input::ThumbMovement *value = (Input::ThumbMovement*)v;
 		camera->Move(value->dx, 0.0f, value->dy);
 		delete v;
 	});
 
-	float rotation[2] = { 0.0f, 0.0f };
+	static float rotation[2] = { 0.0f, 0.0f };
 
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadRightThumb), [this, &rotation](void *v) {
+	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadRightThumb), [this](void *v) {
 		Input::ThumbMovement *value = (Input::ThumbMovement*)v;
-		rotation[0] += value->dx / 10.f;
-		rotation[1] += value->dy / 10.f;
+		rotation[0] += value->dx / 50.f;
+		rotation[1] -= value->dy / 50.f;
 		auto rot = DirectX::XMQuaternionRotationRollPitchYaw(rotation[1], rotation[0], 0.0f);
 		camera->SetRotation(rot);
 		delete v;
 	});
 
-	input->SetMouseBinding([this, &rotation](std::shared_ptr<Input::MouseMovement> data) {
+	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
 		if (data->x != 0 || data->y != 0) {
 			rotation[0] += data->x / 1000.f;
 			rotation[1] += data->y / 1000.f;
@@ -234,7 +234,7 @@ bool SceneManager::LoadScene() {
 	}
 	model->SetShader(m_pmxShader[0]);
 #if 1
-	m_models[0]->GetRootBone()->Translate(DirectX::XMVectorSet(-7.5f, 0, 0, 0));
+	m_models[0]->GetRootBone()->Translate(btVector3(-7.5f, 0, 0));
 
 	model = m_modelManager->LoadModel(L"門を開く者 アリス");
 	if (!model) {
@@ -254,7 +254,7 @@ bool SceneManager::LoadScene() {
 		return false;
 	}
 	model->SetShader(m_pmxShader[1]);
-	m_models[1]->GetRootBone()->Translate(DirectX::XMVectorSet(7.5f, 0, 0, 0));
+	m_models[1]->GetRootBone()->Translate(btVector3(7.5f, 0, 0));
 #endif
 
 	camera->SetPosition(0.0f, 10.0f, -30.f);
@@ -359,9 +359,6 @@ bool SceneManager::Render(float frameTime)
 	if (!RenderToTexture(frameTime))
 		return false;
 
-	/*if (!RenderScene())
-		return false;*/
-
 	if (!RenderEffects(frameTime))
 		return false;
 
@@ -411,7 +408,7 @@ bool SceneManager::RenderScene(float frameTime)
 	for (auto model : m_models) {
 		auto shader = std::dynamic_pointer_cast<PMX::PMXShader>(model->GetShader());
 		shader->SetEyePosition(camera->GetPosition());
-		shader->SetMatrices((DirectX::XMMATRIX)model->GetRootBone()->GetTransform(), view, projection);
+		shader->SetMatrices(world, view, projection);
 		if (!shader->Update(frameTime, d3d->GetDeviceContext()))
 			return false;
 		if (!model->Update(frameTime))

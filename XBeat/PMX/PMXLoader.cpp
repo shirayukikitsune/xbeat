@@ -282,7 +282,7 @@ void Loader::loadBones(Model *model, const char *&data)
 		bone = b;
 		readName(b->name, data);
 
-		readVector<float>(b->startPosition.m128_f32, 3, data);
+		readVector<float>(b->startPosition, 3, data);
 		b->m_parentId = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 		b->m_deformationOrder = readInfo<int>(data);
 

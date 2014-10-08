@@ -6,60 +6,72 @@
 
 using namespace PMX;
 
-void detail::RootBone::Transform(DirectX::FXMVECTOR angles, DirectX::FXMVECTOR offset, DeformationOrigin origin)
+void detail::RootBone::Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin)
 {
-	m_transform.AppendRotation(DirectX::XMQuaternionRotationRollPitchYawFromVector(angles));
-	m_transform.AppendTranslation(offset);
+	btQuaternion q;
+	q.setEulerZYX(angles.x(), angles.y(), angles.z());
+	m_transform.setRotation(q * m_transform.getRotation());
+	m_transform.setOrigin(m_transform.getOrigin() + offset);
 
-	m_inverse = DirectX::XMMatrixInverse(nullptr, (DirectX::XMMATRIX)m_transform);
+	m_inverse = m_transform.inverse();
 }
 
-void detail::RootBone::Transform(const DirectX::XMTRANSFORM& transform, DeformationOrigin origin)
+void detail::RootBone::Transform(const btTransform& transform, DeformationOrigin origin)
 {
 	m_transform *= transform;
-	m_inverse = DirectX::XMMatrixInverse(nullptr, (DirectX::XMMATRIX)m_transform);
+
+	m_inverse = m_transform.inverse();
 }
 
-void detail::RootBone::Rotate(DirectX::FXMVECTOR axis, float angle, DeformationOrigin origin)
+void detail::RootBone::Rotate(btVector3 axis, float angle, DeformationOrigin origin)
 {
-	m_transform.AppendRotation(DirectX::XMQuaternionRotationAxis(axis, angle));
-	m_inverse = DirectX::XMMatrixInverse(nullptr, (DirectX::XMMATRIX)m_transform);
+	btQuaternion q;
+	q.setRotation(axis, angle);
+	m_transform.setRotation(q * m_transform.getRotation());
+
+	m_inverse = m_transform.inverse();
 }
 
-void detail::RootBone::Rotate(DirectX::FXMVECTOR angles, DeformationOrigin origin)
+void detail::RootBone::Rotate(btVector3 angles, DeformationOrigin origin)
 {
-	m_transform.AppendRotation(DirectX::XMQuaternionRotationRollPitchYawFromVector(angles));
-	m_inverse = DirectX::XMMatrixInverse(nullptr, (DirectX::XMMATRIX)m_transform);
+	btQuaternion q;
+	q.setEulerZYX(angles.x(), angles.y(), angles.z());
+	m_transform.setRotation(q * m_transform.getRotation());
+
+	m_inverse = m_transform.inverse();
 }
 
-void detail::RootBone::Translate(DirectX::FXMVECTOR offset, DeformationOrigin origin)
+void detail::RootBone::Translate(btVector3 offset, DeformationOrigin origin)
 {
-	m_transform.AppendTranslation(offset);
-	m_inverse = DirectX::XMMatrixInverse(nullptr, (DirectX::XMMATRIX)m_transform);
+	m_transform.setOrigin(m_transform.getOrigin() + offset);
+
+	m_inverse = m_transform.inverse();
 }
 
 void detail::RootBone::ResetTransform()
 {
-	m_transform.Reset();
-	m_inverse.Reset();
+	m_transform.setIdentity();
+	m_inverse.setIdentity();
 }
 
 void detail::BoneImpl::Initialize()
 {
-	m_inheritRotation = m_userRotation = m_morphRotation = DirectX::XMQuaternionIdentity();
-	m_inheritTranslation = m_userTranslation = m_morphTranslation = DirectX::XMVectorZero();
+	m_inheritRotation = m_userRotation = m_morphRotation = btQuaternion::getIdentity();
+	m_inheritTranslation = m_userTranslation = m_morphTranslation = btVector3(0, 0, 0);
 
-	m_inverse.SetTranslation(DirectX::XMVectorNegate(startPosition));
-
-	DirectX::XMVECTOR up, axis, direction;
-	up = DirectX::XMVectorSet(0, 1, 0, 0);
+	btVector3 up, axis, direction;
+	up = btVector3(0, 1, 0);
 	direction = GetEndPosition() - GetPosition();
-	axis = DirectX::XMVector3Cross(direction, up);
-	if (DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(axis)) > 0) {
+	axis = up.cross(direction);
+	if (axis.length2() > 0) {
 		// cosO = a.b/||a||*||b||
-		m_debugRotation = DirectX::XMQuaternionRotationAxis(axis, DirectX::XMScalarACos(DirectX::XMVectorGetX(DirectX::XMVector3Dot(up, direction)) / DirectX::XMVectorGetX(DirectX::XMVector3Length(direction))));
+		m_debugRotation.setRotation(axis, acosf(up.dot(direction) / direction.length()));
 	}
-	else m_debugRotation = DirectX::XMQuaternionIdentity();
+	else m_debugRotation = btQuaternion::getIdentity();
+
+	//m_inverse.SetRotationQuaternion(DirectX::XMQuaternionInverse(m_debugRotation));
+	m_inverse.setOrigin(-startPosition);
+	m_transform.setOrigin(startPosition);
 	
 	m_parent = m_model->GetBoneById(m_parentId);
 	m_parent->m_children.push_back(this);
@@ -97,7 +109,7 @@ DirectX::XMMATRIX XM_CALLCONV detail::BoneImpl::GetLocalAxis()
 	return m_localAxis;
 }
 
-DirectX::XMVECTOR XM_CALLCONV detail::BoneImpl::GetOffsetPosition()
+btVector3 detail::BoneImpl::GetOffsetPosition()
 {
 	detail::BoneImpl* parent = dynamic_cast<detail::BoneImpl*>(GetParent());
 	if (!parent) return startPosition;
@@ -105,160 +117,139 @@ DirectX::XMVECTOR XM_CALLCONV detail::BoneImpl::GetOffsetPosition()
 	return startPosition - parent->startPosition;
 }
 
-DirectX::XMVECTOR XM_CALLCONV detail::BoneImpl::GetEndPosition()
+btVector3 detail::BoneImpl::GetEndPosition()
 {
-	DirectX::XMVECTOR p;
+	btVector3 p;
 
 	if (HasAnyFlag(BoneFlags::Attached)) {
 		auto other = m_model->GetBoneById(this->size.attachTo);
 		p = other->GetPosition();
 	}
 	else {
-		p = GetTransform().PointTransform(DirectX::XMVectorSet(this->size.length[0], this->size.length[1], this->size.length[2], 1.0f));
+		p = GetTransform()(btVector3(this->size.length[0], this->size.length[1], this->size.length[2]));
 	}
 
 	return p;
 }
 
-DirectX::XMVECTOR detail::BoneImpl::GetPosition()
+btVector3 detail::BoneImpl::GetPosition()
 {
-	return (GetRootBone()->GetTransform() * GetTransform()).PointTransform(startPosition);
+	return GetTransform() * startPosition;
 }
 
-DirectX::XMVECTOR XM_CALLCONV detail::BoneImpl::GetStartPosition()
+btVector3 detail::BoneImpl::GetStartPosition()
 {
 	return startPosition;
 }
 
-DirectX::XMTRANSFORM detail::BoneImpl::GetTransform()
-{
-	return m_transform;
-}
-
-DirectX::XMTRANSFORM detail::BoneImpl::GetLocalTransform()
-{
-	return m_transform;
-}
-
 void detail::BoneImpl::Update()
 {
-	DirectX::XMVECTOR translation = DirectX::XMVectorZero();
-	DirectX::XMVECTOR rotation = DirectX::XMQuaternionIdentity();
+	btVector3 translation(0, 0, 0);
+	btQuaternion rotation = btQuaternion::getIdentity();
 
-	if (m_parentId != -1) {
-		BoneImpl *parent = static_cast<detail::BoneImpl*>(GetParent());
-
-		// Work on translation
-		if (HasAnyFlag(BoneFlags::LocallyAttached)) {
-			translation = parent->GetLocalTransform().GetTranslation();
-		}
-		else if (HasAnyFlag(BoneFlags::TranslationAttached)) {
-			auto target = static_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
-			translation = target->m_inheritTranslation;
-		}
-		else {
-			translation = parent->GetTransform().GetTranslation();
-		}
-		translation = DirectX::XMVectorScale(translation, this->inherit.rate);
-
-		// Work on rotation..
-		if (HasAnyFlag(BoneFlags::LocallyAttached)) {
-			rotation = parent->GetLocalTransform().GetRotationQuaternion();
-		}
-		else {
-			if (HasAnyFlag(BoneFlags::RotationAttached)) {
-				auto target = static_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
-				rotation = target->m_inheritRotation;
-			}
-			else rotation = parent->GetTransform().GetRotationQuaternion();
-
-			// TODO: add inherited IK rotation
-		}
-		rotation = DirectX::XMQuaternionSlerp(DirectX::XMQuaternionIdentity(), rotation, this->inherit.rate);
+	auto parent = GetParent();
+	if (HasAnyFlag(BoneFlags::LocallyAttached)) {
+		translation += parent->GetLocalTransform().getOrigin();
 	}
+	else if (HasAnyFlag(BoneFlags::TranslationAttached)) {
+		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
+		if (target) translation += target->m_inheritTranslation;
+	}
+	translation *= inherit.rate;
+
+	if (HasAnyFlag(BoneFlags::LocallyAttached)) {
+		rotation *= parent->GetLocalTransform().getRotation();
+	}
+	else if (HasAnyFlag(BoneFlags::RotationAttached)) {
+		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
+		if (target) rotation *= target->m_inheritRotation;
+	}
+	rotation = btQuaternion::getIdentity().slerp(rotation, inherit.rate);
 
 	m_inheritRotation = rotation;
 	m_inheritTranslation = translation;
 
-	translation = translation + m_userTranslation + m_morphTranslation;
+	translation = (translation + m_userTranslation + m_morphTranslation + GetOffsetPosition());
 
-	rotation = DirectX::XMQuaternionMultiply(rotation, m_userRotation);
-	rotation = DirectX::XMQuaternionMultiply(rotation, m_morphRotation);
+	rotation = rotation * m_userRotation * m_morphRotation;
 	// TODO: add IK rotation
 
-	m_transform = DirectX::XMTRANSFORM(rotation, translation);
+	m_transform = parent->GetTransform() * btTransform(rotation, translation);
 
 	m_dirty = false;
 }
 
-void detail::BoneImpl::Transform(DirectX::FXMVECTOR angles, DirectX::FXMVECTOR offset, DeformationOrigin origin)
+void detail::BoneImpl::Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin)
 {
 	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable)))
 		return;
 
 	setDirty();
 
-	auto local = DirectX::XMQuaternionRotationRollPitchYawFromVector(angles);
+	btQuaternion local;
+	local.setEulerZYX(angles.x(), angles.y(), angles.z());
 
-	m_userRotation = DirectX::XMQuaternionMultiply(local, m_userRotation);
-	m_userTranslation = m_userTranslation + offset;
+	m_userRotation *= local;
+	m_userTranslation += offset;
 }
 
-void detail::BoneImpl::Transform(const DirectX::XMTRANSFORM& transform, DeformationOrigin origin)
+void detail::BoneImpl::Transform(const btTransform& transform, DeformationOrigin origin)
 {
 	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable)))
 		return;
 
 	setDirty();
 
-	m_userRotation = DirectX::XMQuaternionMultiply(transform.GetRotationQuaternion(), m_userRotation);
-	m_userTranslation = m_userTranslation + transform.GetTranslation();
+	m_userRotation *= transform.getRotation();
+	m_userTranslation += transform.getOrigin();
 }
 
-void detail::BoneImpl::Rotate(DirectX::FXMVECTOR axis, float angle, DeformationOrigin origin)
+void detail::BoneImpl::Rotate(btVector3 axis, float angle, DeformationOrigin origin)
 {
 	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable)))
 		return;
 
 	setDirty();
 
-	auto local = DirectX::XMQuaternionRotationAxis(axis, angle);
+	btQuaternion local;
+	local.setRotation(axis, angle);
 
-	m_userRotation = DirectX::XMQuaternionMultiply(local, m_userRotation);
+	m_userRotation *= local;
 }
 
-void detail::BoneImpl::Rotate(DirectX::FXMVECTOR angles, DeformationOrigin origin)
+void detail::BoneImpl::Rotate(btVector3 angles, DeformationOrigin origin)
 {
 	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable)))
 		return;
 
 	setDirty();
 
-	auto local = DirectX::XMQuaternionRotationRollPitchYawFromVector(angles);
+	btQuaternion local;
+	local.setEulerZYX(angles.x(), angles.y(), angles.z());
 
-	m_userRotation = DirectX::XMQuaternionMultiply(local, m_userRotation);
+	m_userRotation *= local;
 }
 
-void detail::BoneImpl::Translate(DirectX::FXMVECTOR offset, DeformationOrigin origin)
+void detail::BoneImpl::Translate(btVector3 offset, DeformationOrigin origin)
 {
 	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable)))
 		return;
 
 	setDirty();
 
-	m_userTranslation = m_userTranslation + offset;
+	m_userTranslation += offset;
 }
 
 void detail::BoneImpl::ResetTransform()
 {
 	setDirty();
-	m_userTranslation = DirectX::XMVectorZero();
-	m_userRotation = DirectX::XMQuaternionIdentity();
+	m_userTranslation.setZero();
+	m_userRotation = btQuaternion::getIdentity();
 }
 
-void detail::BoneImpl::ApplyPhysicsTransform(DirectX::XMTRANSFORM &transform)
+void detail::BoneImpl::ApplyPhysicsTransform(btTransform &transform)
 {
-	m_transform = GetRootBone()->GetInverseTransform() * transform;
+	m_transform = transform;
 }
 
 void detail::BoneImpl::ApplyMorph(Morph *morph, float weight)
@@ -289,8 +280,8 @@ void detail::BoneImpl::ApplyMorph(Morph *morph, float weight)
 			}
 		}
 	}
-	m_morphRotation = rotation;
-	m_morphTranslation = position;
+	m_morphRotation.set128(rotation);
+	m_morphTranslation.set128(position);
 }
 
 bool XM_CALLCONV detail::BoneImpl::Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection)
@@ -299,14 +290,15 @@ bool XM_CALLCONV detail::BoneImpl::Render(DirectX::FXMMATRIX world, DirectX::CXM
 
 	if (m_primitive)
 	{
-		float lensq = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(GetEndPosition() - GetPosition()));
+		float lensq = (GetEndPosition() - GetPosition()).length2();
 		if (lensq == 0) {
 			return true;
 		}
 
-		w = DirectX::XMMatrixScaling(0.3f, sqrtf(lensq), 0.3f) *
-			DirectX::XMMatrixRotationQuaternion(DirectX::XMQuaternionMultiply(m_debugRotation, GetTransform().GetRotationQuaternion())) *
-			DirectX::XMMatrixTranslationFromVector(GetTransform().GetTranslation() + startPosition);
+		btTransform t(m_debugRotation, startPosition);
+		t *= m_transform;
+
+		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, sqrtf(lensq), 0.3f, 1), DirectX::XMVectorZero(), t.getRotation().get128(), t.getOrigin().get128());
 
 		m_primitive->Draw(w, view, projection);
 	}

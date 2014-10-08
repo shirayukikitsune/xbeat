@@ -254,7 +254,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		return false;
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_tmpVertexBuffer);
 	if (FAILED(result))
@@ -314,25 +314,10 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 
 void PMX::Model::ShutdownBuffers()
 {
-	if (m_materialBuffer) {
-		m_materialBuffer->Release();
-		m_materialBuffer = nullptr;
-	}
-
-	if (m_tmpVertexBuffer) {
-		m_tmpVertexBuffer->Release();
-		m_tmpVertexBuffer = nullptr;
-	}
-
-	if (m_vertexBuffer) {
-		m_vertexBuffer->Release();
-		m_vertexBuffer = nullptr;
-	}
-
-	if (m_indexBuffer) {
-		m_indexBuffer->Release();
-		m_indexBuffer = nullptr;
-	}
+	DX_DELETEIF(m_materialBuffer);
+	DX_DELETEIF(m_tmpVertexBuffer);
+	DX_DELETEIF(m_vertexBuffer);
+	DX_DELETEIF(m_indexBuffer);
 
 	for (auto &material : rendermaterials)
 	{
@@ -449,21 +434,14 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 		for (auto & bone : bones) {
 			auto &shaderBone = shader->GetBone(bone->GetId());
-			shaderBone.position = bone->GetStartPosition();
-			//shaderBone.transform = DirectX::XMMatrixTranspose((DirectX::XMMATRIX)bone->GetTransform());
-			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition(), bone->GetTransform().GetRotationQuaternion(), bone->GetTransform().GetTranslation()));
+			shaderBone.position = bone->GetStartPosition().get128();
+			auto t = bone->GetLocalTransform();
+			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition().get128(), t.getRotation().get128(), t.getOrigin().get128()));
 		}
-		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
 
 		shader->UpdateBoneBuffer(context);
 
-		UINT offset = 0;
-		ID3D11Buffer *b = nullptr;
-		context->SOSetTargets(1, &m_tmpVertexBuffer, &offset);
-		shader->RenderGeometry(context, (int)m_vertices.size(), 0);
-		context->SOSetTargets(1, &b, &offset);
-
-		context->IASetVertexBuffers(0, 1, &m_tmpVertexBuffer, &stride, &vsOffset);
+		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
 
 		for (uint32_t i = 0; i < rendermaterials.size(); i++) {
 			if (!updateMaterialBuffer(i, context))
@@ -491,6 +469,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 	DirectX::XMMATRIX view = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.view);
 	DirectX::XMMATRIX projection = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.projection);
+	DirectX::XMMATRIX world = DirectX::XMMatrixRotationQuaternion(rootBone->GetTransform().getRotation().get128()) * DirectX::XMMatrixTranslationFromVector(rootBone->GetTransform().getOrigin().get128());
 
 	context->RSSetState(m_d3d->GetRasterState(1));
 	if (m_debugFlags & DebugFlags::RenderJoints) {
@@ -501,13 +480,13 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 	if (m_debugFlags & DebugFlags::RenderRigidBodies) {
 		for (auto &body : m_rigidBodies) {
-			body->Render((DirectX::XMMATRIX)rootBone->GetTransform(), view, projection);
+			body->Render(world, view, projection);
 		}
 	}
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
 		for (auto &bone : bones)
-			dynamic_cast<detail::BoneImpl*>(bone)->Render((DirectX::XMMATRIX)rootBone->GetTransform(), view, projection);
+			dynamic_cast<detail::BoneImpl*>(bone)->Render(world, view, projection);
 	}
 	context->RSSetState(m_d3d->GetRasterState(0));
 }

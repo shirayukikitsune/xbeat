@@ -60,8 +60,6 @@ struct VertexOutput
 	float3 normal : NORMAL;
 	float3 viewDirection : TEXCOORD1;
 	float depth : TEXCOORD2;
-	uint4 boneIndices : BONES0;
-	float4 boneWeights : BONES1;
 	uint material : MATERIAL0;
 };
 

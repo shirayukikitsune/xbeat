@@ -15,15 +15,15 @@ class Bone
 {
 public:
 	//! Applies a rotation around Euler angles and a translation
-	virtual void Transform(DirectX::FXMVECTOR angles, DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin = DeformationOrigin::User) = 0;
 	//! Applies a btTransform
-	virtual void Transform(const DirectX::XMTRANSFORM& transform, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void Transform(const btTransform& transform, DeformationOrigin origin = DeformationOrigin::User) = 0;
 	//! Rotates around an axis
-	virtual void Rotate(DirectX::FXMVECTOR axis, float angle, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void Rotate(btVector3 axis, float angle, DeformationOrigin origin = DeformationOrigin::User) = 0;
 	//! Rotates using euler angles
-	virtual void Rotate(DirectX::FXMVECTOR angles, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void Rotate(btVector3 angles, DeformationOrigin origin = DeformationOrigin::User) = 0;
 	//! Apply a translation
-	virtual void Translate(DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void Translate(btVector3 offset, DeformationOrigin origin = DeformationOrigin::User) = 0;
 	//! Resets the bone to the original position
 	virtual void ResetTransform() = 0;
 
@@ -47,20 +47,18 @@ public:
 	virtual Bone* GetRootBone() { return nullptr; }
 
 	//! Gets the global transformation
-	virtual DirectX::XMTRANSFORM GetTransform() = 0;
+	btTransform GetTransform() { return m_transform; }
 	//! Gets the local transformation
-	virtual DirectX::XMTRANSFORM GetLocalTransform() = 0;
+	btTransform GetLocalTransform() { return m_inverse * m_transform; }
 	//! Gets the inverse transformation
-	DirectX::XMTRANSFORM GetInverseTransform() { return m_inverse; }
-	//! Gets the direct transformation
-	DirectX::XMTRANSFORM GetDirectTransform() { return m_transform; }
+	btTransform GetInverseTransform() { return m_inverse; }
 
 	//! Returns the position of the bone
-	virtual DirectX::XMVECTOR GetPosition() { return GetTransform().GetTranslation(); }
+	virtual btVector3 GetPosition() { return GetTransform().getOrigin(); }
 	//! Returns the initial position of the bone
-	virtual DirectX::XMVECTOR XM_CALLCONV GetStartPosition() = 0;
+	virtual btVector3 GetStartPosition() = 0;
 
-	virtual void ApplyPhysicsTransform(DirectX::XMTRANSFORM &transform) {}
+	virtual void ApplyPhysicsTransform(btTransform &transform) {}
 
 	//! Update the transformation each frame
 	virtual void Update() = 0;
@@ -88,6 +86,8 @@ protected:
 		m_parentId = -1;
 		m_flags = 0;
 		m_deformationOrder = 0;
+		m_transform.setIdentity();
+		m_inverse.setIdentity();
 	}
 
 	//! Disallow copy and move constructors
@@ -100,8 +100,7 @@ protected:
 	int32_t m_deformationOrder;
 	uint32_t m_parentId;
 
-	DirectX::XMTRANSFORM m_transform, m_inverse;
-	DirectX::XMVECTOR m_position;
+	btTransform m_transform, m_inverse;
 };
 
 namespace detail {
@@ -117,23 +116,18 @@ public:
 
 	virtual Bone* GetRootBone() { return this; }
 
-	//! Gets the global transformation
-	virtual DirectX::XMTRANSFORM GetTransform() { return m_transform; }
-	//! Gets the local transformation
-	virtual DirectX::XMTRANSFORM GetLocalTransform() { return m_transform; }
-
-	virtual DirectX::XMVECTOR XM_CALLCONV GetStartPosition() { return DirectX::XMVectorZero(); }
+	virtual btVector3 GetStartPosition() { return btVector3(0, 0, 0); }
 
 	// Nothing to do with these
 	virtual void Initialize() {};
 	virtual void Terminate() {};
 	virtual void Update() {};
 
-	virtual void Transform(DirectX::FXMVECTOR angles, DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Transform(const DirectX::XMTRANSFORM& transform, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(DirectX::FXMVECTOR axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(DirectX::FXMVECTOR angles, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Translate(DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Transform(const btTransform& transform, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Rotate(btVector3 axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Rotate(btVector3 angles, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Translate(btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
 	virtual void ResetTransform();
 };
 
@@ -146,7 +140,7 @@ public:
 
 	friend class Loader;
 
-	virtual DirectX::XMVECTOR GetPosition();
+	virtual btVector3 GetPosition();
 
 	const Name& GetName() const { return name; }
 	const DirectX::XMVECTOR& GetAxisTranslation() const { return axisTranslation; }
@@ -159,27 +153,22 @@ public:
 
 	virtual void Update();
 
-	virtual void Transform(DirectX::FXMVECTOR angles, DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Transform(const DirectX::XMTRANSFORM& transform, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(DirectX::FXMVECTOR axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(DirectX::FXMVECTOR angles, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Translate(DirectX::FXMVECTOR offset, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Transform(const btTransform& transform, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Rotate(btVector3 axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Rotate(btVector3 angles, DeformationOrigin origin = DeformationOrigin::User);
+	virtual void Translate(btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
 
 	virtual void ResetTransform();
 	
 	void ApplyMorph(Morph *morph, float weight);
-	virtual void ApplyPhysicsTransform(DirectX::XMTRANSFORM &transform);
+	virtual void ApplyPhysicsTransform(btTransform &transform);
 
 	bool XM_CALLCONV Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
 
-	DirectX::XMVECTOR XM_CALLCONV GetOffsetPosition();
-	DirectX::XMVECTOR XM_CALLCONV GetEndPosition();
-	virtual DirectX::XMVECTOR XM_CALLCONV GetStartPosition();
-
-	//! Gets the global transformation
-	virtual DirectX::XMTRANSFORM GetTransform();
-	//! Gets the local transformation
-	virtual DirectX::XMTRANSFORM GetLocalTransform();
+	btVector3 GetOffsetPosition();
+	btVector3 GetEndPosition();
+	virtual btVector3 GetStartPosition();
 
 	virtual Bone* GetRootBone();
 
@@ -190,14 +179,13 @@ private:
 
 	std::list<std::pair<Morph*,float>> appliedMorphs;
 
-	DirectX::XMVECTOR m_inheritRotation, m_inheritTranslation;
-	DirectX::XMVECTOR m_userRotation, m_userTranslation;
-	DirectX::XMVECTOR m_morphRotation, m_morphTranslation;
+	btQuaternion m_inheritRotation, m_userRotation, m_morphRotation;
+	btVector3 m_inheritTranslation, m_userTranslation, m_morphTranslation;
 	DirectX::XMMATRIX m_localAxis;
-	DirectX::XMVECTOR m_debugRotation;
+	btQuaternion m_debugRotation;
 
 	Name name;
-	DirectX::XMVECTOR startPosition;
+	btVector3 startPosition;
 	union {
 		float length[3];
 		uint32_t attachTo;

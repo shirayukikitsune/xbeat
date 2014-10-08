@@ -132,7 +132,7 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 		return false;
 
 #ifdef _DEBUG
-	result = D3DX11CompileEffectFromFile(filename.c_str(), NULL, NULL, D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, device, &m_effect, &errorMsg);
+	result = D3DX11CompileEffectFromFile(filename.c_str(), NULL, NULL, D3DCOMPILE_PREFER_FLOW_CONTROL | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, device, &m_effect, &errorMsg);
 #else
 	result = D3DX11CompileEffectFromFile(filename.c_str(), NULL, NULL, 0, 0, device, &m_effect, &errorMsg);
 #endif

@@ -260,12 +260,6 @@
     <FxCompile Include="Data\Shaders\LightVertex.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="Data\Shaders\PMX\Passthru.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="Data\Shaders\PMX\PMXGeometry.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
     <FxCompile Include="Data\Shaders\PMX\PMXPixel.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>

@@ -66,7 +66,7 @@ lib/
 *.dotCover
 
 ## TODO: If you have NuGet Package Restore enabled, uncomment this
-#packages/
+packages/
 
 # Visual C++ cache files
 ipch/
@@ -178,3 +178,5 @@ Library_Bullet_Physics/
 Library_JPEG/
 Library_libpng/
 Library_zlib/
+*.nvuser
+XBeat/Data/ModelCache.dat

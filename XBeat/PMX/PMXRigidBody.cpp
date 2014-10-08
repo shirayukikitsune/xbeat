@@ -55,9 +55,15 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	case 15: m_color = DirectX::Colors::LightCoral; break;
 	}
 
-	if (body->mode != RigidBodyMode::Static)
+	float mass;
+	if (body->mode != RigidBodyMode::Static) {
 		m_shape->calculateLocalInertia(body->mass, inertia);
-	else inertia.setZero();
+		mass = body->mass;
+	}
+	else {
+		inertia.setZero();
+		mass = 0.0f;
+	}
 
 	if (body->targetBone != -1)
 		m_bone = model->GetBoneById(body->targetBone);
@@ -75,7 +81,7 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 		m_motion.reset(new btDefaultMotionState(m_transform));
 	}
 
-	btRigidBody::btRigidBodyConstructionInfo ci(body->mode == RigidBodyMode::Static ? 0.0f : body->mass, m_motion.get(), m_shape.get(), inertia);
+	btRigidBody::btRigidBodyConstructionInfo ci(mass, m_motion.get(), m_shape.get(), inertia);
 	ci.m_friction = body->friction;
 	ci.m_restitution = body->restitution;
 	ci.m_angularDamping = body->angularDamping;
@@ -120,17 +126,15 @@ void RigidBody::Update()
 	if (m_mode == RigidBodyMode::Static || m_bone == nullptr)
 		return;
 
-	btTransform tr = m_body->getCenterOfMassTransform() * m_inverse;
+	btTransform tr = m_body->getCenterOfMassTransform();
 	switch (m_mode) {
 	case RigidBodyMode::AlignedDynamic: {
-		btVector3 p;
-		p.set128( m_bone->GetTransform().GetTranslation());
-		//tr.setOrigin(p);
+		tr.setOrigin(m_bone->GetTransform().getOrigin());
 		break;
 	}
 	}
 
-	m_bone->ApplyPhysicsTransform((DirectX::XMTRANSFORM)tr);
+	m_bone->ApplyPhysicsTransform(tr);
 }
 
 RigidBody::operator btRigidBody*()

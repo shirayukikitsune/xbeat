@@ -15,7 +15,7 @@ PMXMotionState::~PMXMotionState()
 
 void PMXMotionState::getWorldTransform(btTransform &worldTrans) const
 {
-	worldTrans = m_transform * (btTransform)m_bone->GetRootBone()->GetTransform() * (btTransform)m_bone->GetLocalTransform();
+	worldTrans = m_transform * m_bone->GetLocalTransform();
 }
 
 void PMXMotionState::setWorldTransform(const btTransform &transform)
