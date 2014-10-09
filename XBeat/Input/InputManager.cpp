@@ -1,58 +1,68 @@
+//===-- Input/InputManager.cpp - Defines the Manager for Input Devices ---*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===-------------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file defines everything related to the InputManager class, which manages
+/// all used input devices.
+///
+//===-------------------------------------------------------------------------------===//
+
 #include "InputManager.h"
+
 #include <queue>
 
-using namespace Input;
-
-
-bool Input::operator< (const CallbackInfo& one, const CallbackInfo& other) {
-	if (one.eventType < other.eventType) return true;
-	if (one.eventType == other.eventType && one.button < other.button) return true;
+bool Input::operator< (const CallbackInfo& One, const CallbackInfo& Other) {
+	if (One.EventType < Other.EventType) return true;
+	if (One.EventType == Other.EventType && One.Button < Other.Button) return true;
 
 	return false;
 }
-bool Input::operator== (const CallbackInfo& one, const CallbackInfo& other) {
-	return one.eventType == other.eventType && one.button == other.button;
+bool Input::operator== (const CallbackInfo& One, const CallbackInfo& Other) {
+	return One.EventType == Other.EventType && One.Button == Other.Button;
 }
 
-Manager::Manager(void)
+Input::Manager::Manager(void)
 {
-	dinput = nullptr;
-	keyboard = nullptr;
-	mouse = nullptr;
-}
-
-
-Manager::~Manager(void)
-{
-	Shutdown();
+	DirectInputInterface = nullptr;
+	KeyboardInterface = nullptr;
+	MouseInterface = nullptr;
 }
 
 
-bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, std::shared_ptr<Dispatcher> dispatcher)
+Input::Manager::~Manager(void)
 {
-	HRESULT result;
+	shutdown();
+}
 
-	this->screenWidth = width;
-	this->screenHeight = height;
-	
-	this->dispatcher = dispatcher;
 
-	memset(keyState, 0, sizeof(keyState));
+bool Input::Manager::initialize(HINSTANCE Instance, HWND Window, std::shared_ptr<Dispatcher> EventDispatcher)
+{
+	HRESULT Result;
 
-	result = DirectInput8Create(instance, DIRECTINPUT_VERSION, IID_IDirectInput8, (LPVOID*)&dinput, NULL);
-	if (FAILED(result))
+	this->EventDispatcher = EventDispatcher;
+
+	memset(KeyState, 0, sizeof(KeyState));
+
+	Result = DirectInput8Create(Instance, DIRECTINPUT_VERSION, IID_IDirectInput8, (LPVOID*)&DirectInputInterface, NULL);
+	if (FAILED(Result))
 		return false;
 
-	result = dinput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
-	if (FAILED(result))
+	Result = DirectInputInterface->CreateDevice(GUID_SysKeyboard, &KeyboardInterface, NULL);
+	if (FAILED(Result))
 		return false;
 
-	result = keyboard->SetDataFormat(&c_dfDIKeyboard);
-	if (FAILED(result))
+	Result = KeyboardInterface->SetDataFormat(&c_dfDIKeyboard);
+	if (FAILED(Result))
 		return false;
 
-	result = keyboard->SetCooperativeLevel(wnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
-	if (FAILED(result))
+	Result = KeyboardInterface->SetCooperativeLevel(Window, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
+	if (FAILED(Result))
 		return false; 
 
 	DIPROPDWORD prop;
@@ -60,71 +70,71 @@ bool Manager::Initialize(HINSTANCE instance, HWND wnd, int width, int height, st
 	prop.diph.dwHeaderSize = sizeof(DIPROPHEADER);
 	prop.diph.dwObj = 0;
 	prop.diph.dwHow = DIPH_DEVICE;
-	prop.dwData = keyboardBufferSize; 
+	prop.dwData = KeyboardBufferSize; 
 
-	result = keyboard->SetProperty(DIPROP_BUFFERSIZE, &prop.diph);
-	if (FAILED(result))
+	Result = KeyboardInterface->SetProperty(DIPROP_BUFFERSIZE, &prop.diph);
+	if (FAILED(Result))
 		return false;
 
-	keyboard->Acquire();
+	KeyboardInterface->Acquire();
 
-	result = dinput->CreateDevice(GUID_SysMouse, &mouse, NULL);
-	if (FAILED(result))
+	Result = DirectInputInterface->CreateDevice(GUID_SysMouse, &MouseInterface, NULL);
+	if (FAILED(Result))
 		return false;
 
-	result = mouse->SetDataFormat(&c_dfDIMouse2);
-	if (FAILED(result))
+	Result = MouseInterface->SetDataFormat(&c_dfDIMouse2);
+	if (FAILED(Result))
 		return false;
 
-	result = mouse->SetCooperativeLevel(wnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
-	if (FAILED(result))
+	Result = MouseInterface->SetCooperativeLevel(Window, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
+	if (FAILED(Result))
 		return false;
 
-	mouse->Acquire();
+	MouseInterface->Acquire();
 
 	return true;
 }
 
-void Manager::Shutdown()
+void Input::Manager::shutdown()
 {
-	if (mouse) {
-		mouse->Unacquire();
-		mouse->Release();
-		mouse = nullptr;
+	if (MouseInterface) {
+		MouseInterface->Unacquire();
+		MouseInterface->Release();
+		MouseInterface = nullptr;
 	}
 
-	if (keyboard) {
-		keyboard->Unacquire();
-		keyboard->Release();
-		keyboard = nullptr;
+	if (KeyboardInterface) {
+		KeyboardInterface->Unacquire();
+		KeyboardInterface->Release();
+		KeyboardInterface = nullptr;
 	}
 
-	if (dinput) {
-		dinput->Release();
-		dinput = nullptr;
+	if (DirectInputInterface) {
+		DirectInputInterface->Release();
+		DirectInputInterface = nullptr;
 	}
 }
 
-bool Manager::Frame()
+bool Input::Manager::runFrame()
 {
-	if (!ReadKeyboard())
+	if (!readKeyboard())
 		return false;
 
-	if (!ReadMouse())
+	if (!readMouse())
 		return false;
 
-	ProcessInput();
+	processInput();
 	return true;
 }
 
-bool Manager::ReadKeyboard()
+bool Input::Manager::readKeyboard()
 {
-	HRESULT result;
+	HRESULT Result;
 
-	result = keyboard->GetDeviceState(sizeof (keyState), (LPVOID)&keyState);
-	if (FAILED(result)) {
-		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED) {
-			keyboard->Acquire();
+	Result = KeyboardInterface->GetDeviceState(sizeof(KeyState), (LPVOID)&KeyState);
+	if (FAILED(Result)) {
+		if (Result == DIERR_INPUTLOST || Result == DIERR_NOTACQUIRED) {
+			KeyboardInterface->Acquire();
 		}
 		else
 			return false;
@@ -133,14 +143,14 @@ bool Manager::ReadKeyboard()
 	return true;
 }
 
-bool Manager::ReadMouse()
+bool Input::Manager::readMouse()
 {
-	HRESULT result;
+	HRESULT Result;
 
-	result = mouse->GetDeviceState(sizeof (DIMOUSESTATE2), (LPVOID)&currentMouseState);
-	if (FAILED(result)) {
-		if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED)
-			mouse->Acquire();
+	Result = MouseInterface->GetDeviceState(sizeof(DIMOUSESTATE2), (LPVOID)&CurrentMouseState);
+	if (FAILED(Result)) {
+		if (Result == DIERR_INPUTLOST || Result == DIERR_NOTACQUIRED)
+			MouseInterface->Acquire();
 		else
 			return false;
 	}
@@ -148,154 +158,150 @@ bool Manager::ReadMouse()
 	return true;
 }
 
-void Manager::ProcessInput()
+void Input::Manager::processInput()
 {
-	DIDEVICEOBJECTDATA keyChanges[keyboardBufferSize];
-	DWORD items = keyboardBufferSize;
-	XINPUT_STATE gamepad;
-	HRESULT result;
-	result = keyboard->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), keyChanges, &items, 0);
-	auto v = bindings.end();
-	std::queue<uint8_t> upEvents;
+	DIDEVICEOBJECTDATA KeyChanges[KeyboardBufferSize];
+	DWORD KeyChangeCount = KeyboardBufferSize;
+	XINPUT_STATE CurrentXInputState;
+	HRESULT Result;
+	Result = KeyboardInterface->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), KeyChanges, &KeyChangeCount, 0);
+	auto BindingsEnd = Bindings.end(), Binding = Bindings.end();
+	std::queue<uint8_t> KeyUpEvents;
 
-	if (!FAILED(result)) {
-		for (DWORD i = 0; i < items; i++) {
-			pressedKeys[(uint8_t)keyChanges[i].dwOfs] = (keyChanges[i].dwData & 0x80) != 0 ? CallbackInfo::OnKeyDown : CallbackInfo::OnKeyUp;
+	if (!FAILED(Result)) {
+		for (DWORD i = 0; i < KeyChangeCount; i++) {
+			PressedKeys[(uint8_t)KeyChanges[i].dwOfs] = (KeyChanges[i].dwData & 0x80) != 0 ? CallbackInfo::OnKeyDown : CallbackInfo::OnKeyUp;
 		}
 	}
 
-	for (auto &key : pressedKeys) {
-		auto v = bindings.find(CallbackInfo(key.second, key.first));
-		if (v != bindings.end())
-			dispatcher->AddTask(std::bind(v->second, v->first.param));
-		if (key.second == CallbackInfo::OnKeyDown)
-			key.second = CallbackInfo::OnKeyPressed;
-		else if (key.second == CallbackInfo::OnKeyUp) upEvents.push(key.first);
+	for (auto &Key : PressedKeys) {
+		Binding = Bindings.find(CallbackInfo(Key.second, Key.first));
+		if (Binding != BindingsEnd)
+			EventDispatcher->AddTask(std::bind(Binding->second, Binding->first.Parameter));
+		if (Key.second == CallbackInfo::OnKeyDown)
+			Key.second = CallbackInfo::OnKeyPressed;
+		else if (Key.second == CallbackInfo::OnKeyUp) KeyUpEvents.push(Key.first);
 	}
 
-	while (!upEvents.empty()) {
-		pressedKeys.erase(upEvents.front());
-		upEvents.pop();
+	while (!KeyUpEvents.empty()) {
+		PressedKeys.erase(KeyUpEvents.front());
+		KeyUpEvents.pop();
 	}
 
 	// Check for mouse movements
-	if (mouseCallback) {
-		std::shared_ptr<MouseMovement> m(new MouseMovement);
-		m->x = currentMouseState.lX;
-		m->y = currentMouseState.lY;
-		this->dispatcher->AddTask(std::bind(mouseCallback, m));
+	if (MouseCallback) {
+		std::shared_ptr<MouseMovement> MovementInfo(new MouseMovement);
+		MovementInfo->x = CurrentMouseState.lX;
+		MovementInfo->y = CurrentMouseState.lY;
+		EventDispatcher->AddTask(std::bind(MouseCallback, MovementInfo));
 	}
 	for (int i = 0; i < 8; i++)
 	{
-		if (lastMouseState.rgbButtons[i] != currentMouseState.rgbButtons[i]) {
-			if (currentMouseState.rgbButtons[i] & 0x80) // Was released, now is pressed
-				v = bindings.find(CallbackInfo(CallbackInfo::OnMouseDown, i));
-			else v = bindings.find(CallbackInfo(CallbackInfo::OnMouseUp, i)); // was pressed, now is released
+		if (LastMouseState.rgbButtons[i] != CurrentMouseState.rgbButtons[i]) {
+			if (CurrentMouseState.rgbButtons[i] & 0x80) // Was released, now is pressed
+				Binding = Bindings.find(CallbackInfo(CallbackInfo::OnMouseDown, i));
+			else Binding = Bindings.find(CallbackInfo(CallbackInfo::OnMouseUp, i)); // was pressed, now is released
 
-			lastMouseState.rgbButtons[i] = currentMouseState.rgbButtons[i];
+			LastMouseState.rgbButtons[i] = CurrentMouseState.rgbButtons[i];
 		}
-		else if (currentMouseState.rgbButtons[i] & 0x80) v = bindings.find(CallbackInfo(CallbackInfo::OnMousePress, i));
+		else if (CurrentMouseState.rgbButtons[i] & 0x80) Binding = Bindings.find(CallbackInfo(CallbackInfo::OnMousePress, i));
 
-		if (v != bindings.end()) {
-			this->dispatcher->AddTask(std::bind(v->second, v->first.param));
-			v = bindings.end();
+		if (Binding != BindingsEnd) {
+			EventDispatcher->AddTask(std::bind(Binding->second, Binding->first.Parameter));
+			Binding = BindingsEnd;
 		}
 	}
-	lastMouseState = currentMouseState;
+	LastMouseState = CurrentMouseState;
 
-	DWORD gamepadResult = XInputGetState(0, &gamepad);
-	if (gamepadResult == ERROR_SUCCESS) {
-		v = bindings.end();
+	DWORD XInputResult = XInputGetState(0, &CurrentXInputState);
+	if (XInputResult == ERROR_SUCCESS) {
+		Binding = BindingsEnd;
 		for (DWORD i = XINPUT_GAMEPAD_DPAD_UP; i <= XINPUT_GAMEPAD_Y; i <<= 1) {
-			if (lastGamepadState.Gamepad.wButtons & i) {
-				if (gamepad.Gamepad.wButtons & i) v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadPress, i));
-				else v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadUp, i));
+			if (LastXInputState.Gamepad.wButtons & i) {
+				if (CurrentXInputState.Gamepad.wButtons & i) Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadPress, i));
+				else Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadUp, i));
 			}
-			else if (gamepad.Gamepad.wButtons & i) v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadDown, i));
+			else if (CurrentXInputState.Gamepad.wButtons & i) Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadDown, i));
 
-			if (v != bindings.end()) {
-				this->dispatcher->AddTask(std::bind(v->second, v->first.param));
-				v = bindings.end();
+			if (Binding != BindingsEnd) {
+				EventDispatcher->AddTask(std::bind(Binding->second, Binding->first.Parameter));
+				Binding = BindingsEnd;
 			}
 		}
 
-		auto normalizeStick = [](float valueX, float valueY, int deadzone) {
-			//determine how far the controller is pushed
-			float magnitude = sqrt(valueX*valueX + valueY*valueY);
-
-			//determine the direction the controller is pushed
-			float normalizedLX = valueX / magnitude;
-			float normalizedLY = valueY / magnitude;
-
-			float normalizedMagnitude = 0;
-
-			//check if the controller is outside a circular dead zone
-			if (magnitude > deadzone)
-			{
-				//clip the magnitude at its expected maximum value
-				if (magnitude > 32767) magnitude = 32767;
-
-				//adjust magnitude relative to the end of the dead zone
-				magnitude -= deadzone;
-
-				//optionally normalize the magnitude with respect to its expected range
-				//giving a magnitude value of 0.0 to 1.0
-				normalizedMagnitude = magnitude / (32767 - deadzone);
-			}
-			else //if the controller is in the deadzone zero out the magnitude
-			{
-				magnitude = 0.0;
-				normalizedMagnitude = 0.0;
-			}
-
-			return new ThumbMovement{ normalizedLX * normalizedMagnitude, normalizedLY * normalizedMagnitude };
-		};
-
-		v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadLeftThumb));
-		if (v != bindings.end()) {
-			this->dispatcher->AddTask(std::bind(v->second, normalizeStick(gamepad.Gamepad.sThumbLX, gamepad.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)));
-			v = bindings.end();
+		Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadLeftThumb));
+		if (Binding != BindingsEnd) {
+			EventDispatcher->AddTask(std::bind(Binding->second, normalizeStickValues(CurrentXInputState.Gamepad.sThumbLX, CurrentXInputState.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)));
+			Binding = BindingsEnd;
 		}
 
-		v = bindings.find(CallbackInfo(CallbackInfo::OnGamepadRightThumb));
-		if (v != bindings.end()) {
-			this->dispatcher->AddTask(std::bind(v->second, normalizeStick(gamepad.Gamepad.sThumbRX, gamepad.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)));
-			v = bindings.end();
+		Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadRightThumb));
+		if (Binding != BindingsEnd) {
+			EventDispatcher->AddTask(std::bind(Binding->second, normalizeStickValues(CurrentXInputState.Gamepad.sThumbRX, CurrentXInputState.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)));
+			Binding = BindingsEnd;
 		}
 
-		std::memcpy(&lastGamepadState, &gamepad, sizeof XINPUT_STATE);
+		std::memcpy(&LastXInputState, &CurrentXInputState, sizeof XINPUT_STATE);
 	}
-	else std::memset(&lastGamepadState, 0, sizeof XINPUT_STATE);
+	else std::memset(&LastXInputState, 0, sizeof XINPUT_STATE);
 }
 
-bool Manager::IsEscapePressed()
+bool Input::Manager::isKeyPressed(int key)
 {
-	return IsKeyPressed(DIK_ESCAPE);
+	return PressedKeys.find(key) != PressedKeys.end();
 }
 
-bool Manager::IsKeyPressed(int key)
+void Input::Manager::addBinding(CallbackInfo& Information, Callback Binding)
 {
-	return pressedKeys.find(key) != pressedKeys.end();
+	Bindings[Information] = Binding;
 }
 
-void Manager::AddBinding(CallbackInfo& info, Callback callback)
+void Input::Manager::removeBinding(CallbackInfo& Information)
 {
-	bindings[info] = callback;
+	auto i = Bindings.find(Information);
+	if (i != Bindings.end())
+		Bindings.erase(i);
 }
 
-void Manager::RemoveBinding(CallbackInfo& info)
+void Input::Manager::setMouseBinding(MouseMoveCallback Binding)
 {
-	auto i = bindings.find(info);
-	if (i != bindings.end())
-		bindings.erase(i);
+	MouseCallback = Binding;
 }
 
-void Manager::SetMouseBinding(MouseMoveCallback callback)
+void Input::Manager::removeMouseBinding()
 {
-	this->mouseCallback = callback;
+	MouseCallback = nullptr;
 }
 
-void Manager::RemoveMouseBinding()
+Input::ThumbMovement* Input::Manager::normalizeStickValues(float ValueX, float ValueY, int Deadzone)
 {
-	this->mouseCallback = nullptr;
+	//determine how far the controller is pushed
+	float Magnitude = sqrt(ValueX*ValueX + ValueY*ValueY);
+
+	//determine the direction the controller is pushed
+	float NormalizedLX = ValueX / Magnitude;
+	float NormalizedLY = ValueY / Magnitude;
+
+	float NormalizedMagnitude = 0;
+
+	//check if the controller is outside a circular dead zone
+	if (Magnitude > Deadzone)
+	{
+		//clip the magnitude at its expected maximum value
+		if (Magnitude > 32767) Magnitude = 32767;
+
+		//adjust magnitude relative to the end of the dead zone
+		Magnitude -= Deadzone;
+
+		//optionally normalize the magnitude with respect to its expected range
+		//giving a magnitude value of 0.0 to 1.0
+		NormalizedMagnitude = Magnitude / (32767 - Deadzone);
+	}
+	else //if the controller is in the deadzone zero out the magnitude
+	{
+		Magnitude = 0.0;
+		NormalizedMagnitude = 0.0;
+	}
+
+	return new ThumbMovement{ NormalizedLX * NormalizedMagnitude, NormalizedLY * NormalizedMagnitude };
 }

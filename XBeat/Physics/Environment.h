@@ -1,70 +1,119 @@
+//===-- Physics/Environment.h - Declares the physics environment ----*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===--------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares everything related to the physics environment class,
+/// which manages all rigid bodies, soft bodies and constraints.
+///
+//===--------------------------------------------------------------------------===//
+
 #pragma once
 
 #include <btBulletDynamicsCommon.h>
 #include <btBulletCollisionCommon.h>
-#include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletSoftBody/btSoftRigidDynamicsWorld.h>
 #include <BulletSoftBody/btSoftBodySolvers.h>
+
 #include <memory>
 #include <set>
 
-namespace Renderer {
-	class D3DRenderer;
-}
-
 namespace Physics {
-enum struct PauseState {
+
+/// \brief Defines the physics simulation state
+enum struct SimulationState {
+	/// \brief The simulation is running normally
 	Running,
+	/// \brief The simulation is paused
 	Paused,
+	/// \brief The simulation is on hold
+	///
+	/// When on hold, the simulation timer will advance, but the bodies won't be updated. When resumed, the bodies will move to the positions as if the simulation was running normally.
 	Holding
 };
 
+/// \brief The physics simulation environment
 class Environment
 {
 public:
-	Environment(void);
-	~Environment(void);
+	Environment();
+	~Environment();
 
-	bool Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d);
-	void Shutdown();
-	bool Frame(float frameTimeMsec);
+	/// \brief Initializes the simulated world
+	void initialize();
+	/// \brief Stops the simulated world
+	void shutdown();
 
-	__forceinline void Pause() { m_pauseState = PauseState::Paused; }
-	__forceinline void Hold() { m_pauseState = PauseState::Holding; }
-	__forceinline void Unpause() { m_pauseState = PauseState::Running; }
-	__forceinline PauseState GetPauseState() { return m_pauseState; }
-	__forceinline bool IsRunning() { return m_pauseState == PauseState::Running; }
-	__forceinline bool IsPaused() { return m_pauseState == PauseState::Paused; }
-	__forceinline bool IsHolding() { return m_pauseState == PauseState::Holding; }
-	__forceinline float GetPauseTime() { return m_pauseTime; }
-	__forceinline btSoftBodyWorldInfo& GetWorldInfo() { return m_dynamicsWorld->getWorldInfo(); }
+	/// \brief Advances the simulation by a time step
+	///
+	/// \param [in] Time The time step to advance the simulation, in milliseconds
+	void runFrame(float Time);
 
-	void AddSoftBody(std::shared_ptr<btSoftBody> body, int16_t group, int16_t mask);
-	void RemoveSoftBody(std::shared_ptr<btSoftBody> body);
+	/// \brief Pauses the simulated world
+	void pause() { State = SimulationState::Paused; }
+	/// \brief Puts the simulated world in hold
+	///
+	/// By putting the simulated world in hold, the time counter will continue to advance normally.
+	///
+	/// When the state is set to Running again, the simulation will be computed normally as if it were running normally.
+	void hold() { State = SimulationState::Holding; }
+	/// \brief Resumes the simulated world
+	void resume() { State = SimulationState::Running; }
+	/// \brief Checks if the simulated world is running
+	bool isRunning() { return State == SimulationState::Running; }
+	/// \brief Checks if the simulated world is paused
+	bool isPaused() { return State == SimulationState::Paused; }
+	/// \brief Checks if the simulated world is on hold
+	/// \see Environemnt::hold()
+	bool isHolding() { return State == SimulationState::Holding; }
 
-	void AddRigidBody(std::shared_ptr<btRigidBody> body, int16_t group = -1, int16_t mask = -1);
-	void RemoveRigidBody(std::shared_ptr<btRigidBody> body);
+	/// \brief Adds a soft body to the simulation
+	///
+	/// \param [in] SoftBody The soft body to be added
+	/// \param [in] Group The collision group that the body will belong to
+	/// \param [in] Mask The collision groups that the body will collide against
+	void addSoftBody(std::shared_ptr<btSoftBody> SoftBody, int16_t Group, int16_t Mask);
+	/// \brief Removes a soft body from the simulation
+	void removeSoftBody(std::shared_ptr<btSoftBody> SoftBody);
 
-	void AddConstraint(std::shared_ptr<btTypedConstraint> constraint);
-	void RemoveConstraint(std::shared_ptr<btTypedConstraint> constraint);
+	/// \brief Adds a rigid body to the simulation
+	///
+	/// \param [in] RigidBody The rigid body to be added
+	/// \param [in] Group The collision group that the body will belong to
+	/// \param [in] Mask The collision groups that the body will collide against
+	void addRigidBody(std::shared_ptr<btRigidBody> RigidBody, int16_t Group = -1, int16_t Mask = -1);
+	/// \brief Removes a rigid body from the simulation
+	void removeRigidBody(std::shared_ptr<btRigidBody> RigidBody);
 
-	void AddCharacter(std::shared_ptr<btActionInterface> character);
-	void RemoveCharacter(std::shared_ptr<btActionInterface> character);
+	/// \brief Adds a constraint to the simulation
+	void addConstraint(std::shared_ptr<btTypedConstraint> Constraint);
+	/// \brief Removes a constraint from the simulation
+	void removeConstraint(std::shared_ptr<btTypedConstraint> Constraint);
 
 private:
-	PauseState m_pauseState;
-	float m_pauseTime;
+	/// \brief The current state of the simulation
+	SimulationState State;
+	/// \brief The time that the simulation is on hold
+	float PauseTime;
 
-	std::set<std::shared_ptr<btSoftBody>> m_softBodies;
-	std::set<std::shared_ptr<btRigidBody>> m_rigidBodies;
-	std::set<std::shared_ptr<btActionInterface>> m_characters;
-	std::set<std::shared_ptr<btTypedConstraint>> m_constraints;
-	std::unique_ptr<btBroadphaseInterface> m_broadphase;
-	std::unique_ptr<btCollisionConfiguration> m_collisionConfiguration;
-	std::unique_ptr<btCollisionDispatcher> m_collisionDispatcher;
-	std::unique_ptr<btConstraintSolver> m_constraintSolver;
-	std::unique_ptr<btSoftRigidDynamicsWorld> m_dynamicsWorld;
-	std::unique_ptr<btSoftBodySolver> m_softBodySolver;
+	/// \brief The soft bodies that are registered in this world
+	std::set<std::shared_ptr<btSoftBody>> SoftBodies;
+	/// \brief The rigid bodies that are registered in this world
+	std::set<std::shared_ptr<btRigidBody>> RigidBodies;
+	/// \brief The constraints that are registered in this world
+	std::set<std::shared_ptr<btTypedConstraint>> Constraints;
+
+	std::unique_ptr<btBroadphaseInterface> Broadphase;
+	std::unique_ptr<btCollisionConfiguration> CollisionConfiguration;
+	std::unique_ptr<btCollisionDispatcher> CollisionDispatcher;
+	std::unique_ptr<btConstraintSolver> ConstraintSolver;
+	std::unique_ptr<btSoftRigidDynamicsWorld> DynamicsWorld;
+	std::unique_ptr<btSoftBodySolver> SoftBodySolver;
 };
 
 }

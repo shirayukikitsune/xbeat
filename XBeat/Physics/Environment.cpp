@@ -1,4 +1,18 @@
-#include "../Renderer/D3DRenderer.h"
+//===-- Physics/Environment.cpp - Defines the physics environment ----*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===---------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file defines everything related to the physics environment class,
+/// which manages all rigid bodies, soft bodies and constraints.
+///
+//===---------------------------------------------------------------------------===//
+
 #include "Environment.h"
 
 #include <BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h>
@@ -6,164 +20,136 @@
 #include <BulletSoftBody/btSoftBodySolvers.h>
 
 #include <algorithm>
+#include <cassert>
 
-using Physics::Environment;
-
-Environment::Environment(void)
+Physics::Environment::Environment()
 {
-	m_pauseState = PauseState::Running;
-	m_pauseTime = 0.0f;
+	State = SimulationState::Running;
+	PauseTime = 0.0f;
 }
 
-
-Environment::~Environment(void)
+Physics::Environment::~Environment()
 {
-	Shutdown();
+	shutdown();
 }
 
-bool Environment::Initialize(std::shared_ptr<Renderer::D3DRenderer> d3d)
+// Create all pointers to the bullet world and set the default parameters
+void Physics::Environment::initialize()
 {
-	m_broadphase.reset(new btDbvtBroadphase);
-	if (!m_broadphase)
-		return false;
+	Broadphase.reset(new btDbvtBroadphase);
+	assert(Broadphase != nullptr);
 
-	m_collisionConfiguration.reset(new btSoftBodyRigidBodyCollisionConfiguration);
-	if (!m_collisionConfiguration)
-		return false;
+	CollisionConfiguration.reset(new btSoftBodyRigidBodyCollisionConfiguration);
+	assert(CollisionConfiguration != nullptr);
 
-	m_collisionDispatcher.reset(new btCollisionDispatcher(m_collisionConfiguration.get()));
-	if (!m_collisionDispatcher)
-		return false;
+	CollisionDispatcher.reset(new btCollisionDispatcher(CollisionConfiguration.get()));
+	assert(CollisionDispatcher != nullptr);
 
-	m_constraintSolver.reset(new btSequentialImpulseConstraintSolver);
-	if (!m_constraintSolver)
-		return false;
+	ConstraintSolver.reset(new btSequentialImpulseConstraintSolver);
+	assert(ConstraintSolver != nullptr);
 
-	m_softBodySolver.reset(new btDefaultSoftBodySolver);
-	if (!m_softBodySolver)
-		return false;
+	SoftBodySolver.reset(new btDefaultSoftBodySolver);
+	assert(SoftBodySolver != nullptr);
 
-	m_dynamicsWorld.reset(new btSoftRigidDynamicsWorld(m_collisionDispatcher.get(), m_broadphase.get(), m_constraintSolver.get(), m_collisionConfiguration.get(), m_softBodySolver.get()));
-	if (!m_dynamicsWorld)
-		return false;
+	DynamicsWorld.reset(new btSoftRigidDynamicsWorld(CollisionDispatcher.get(), Broadphase.get(), ConstraintSolver.get(), CollisionConfiguration.get(), SoftBodySolver.get()));
+	assert(DynamicsWorld != nullptr);
 
-	m_dynamicsWorld->setGravity(btVector3(0, -98.f, 0)); // We multiply the gravity force by 10 due the approximation that 10u in PMD/PMX models = 1m
-
-	return true;
+	// Here the gravity force is multiplied by 10 due the approximation that 10u in PMD/PMX models = 1m
+	DynamicsWorld->setGravity(btVector3(0, -98.f, 0));
 }
 
-void Environment::Shutdown()
+// Before deleting the pointers to the bullet world, we must remove all registered bodies and contraints.
+void Physics::Environment::shutdown()
 {
-	for (auto i = m_softBodies.begin(); !m_softBodies.empty(); i = m_softBodies.begin()) {
-		m_dynamicsWorld->removeSoftBody(i->get());
-		m_softBodies.erase(i);
+	for (auto i = SoftBodies.begin(); !SoftBodies.empty(); i = SoftBodies.begin()) {
+		DynamicsWorld->removeSoftBody(i->get());
+		SoftBodies.erase(i);
 	}
-	for (auto i = m_constraints.begin(); !m_constraints.empty(); i = m_constraints.begin()) {
-		m_dynamicsWorld->removeConstraint(i->get());
-		m_constraints.erase(i);
+	for (auto i = Constraints.begin(); !Constraints.empty(); i = Constraints.begin()) {
+		DynamicsWorld->removeConstraint(i->get());
+		Constraints.erase(i);
 	}
-	for (auto i = m_rigidBodies.begin(); !m_rigidBodies.empty(); i = m_rigidBodies.begin()) {
-		m_dynamicsWorld->removeRigidBody(i->get());
-		m_rigidBodies.erase(i);
+	for (auto i = RigidBodies.begin(); !RigidBodies.empty(); i = RigidBodies.begin()) {
+		DynamicsWorld->removeRigidBody(i->get());
+		RigidBodies.erase(i);
 	}
-	if (m_dynamicsWorld != nullptr)
-		m_dynamicsWorld.reset();
-	if (m_softBodySolver != nullptr)
-		m_softBodySolver.reset();
-	if (m_constraintSolver != nullptr)
-		m_constraintSolver.reset();
-	if (m_collisionDispatcher != nullptr)
-		m_collisionDispatcher.reset();
-	if (m_collisionConfiguration != nullptr)
-		m_collisionConfiguration.reset();
-	if (m_broadphase != nullptr)
-		m_broadphase.reset();
+
+	// Delete the created pointers in reverse order
+	DynamicsWorld.reset();
+	SoftBodySolver.reset();
+	ConstraintSolver.reset();
+	CollisionDispatcher.reset();
+	CollisionConfiguration.reset();
+	Broadphase.reset();
 }
 
-bool Environment::Frame(float frameTimeMsec)
+void Physics::Environment::runFrame(float Time)
 {
-	if (!IsRunning()) {
+	if (!isRunning()) {
 		// If we are on hold, increase the time counter, so when we resume, we can skip the simulation for this long
-		if (IsHolding())
-			m_pauseTime += frameTimeMsec;
-		return true;
+		if (isHolding())
+			PauseTime += Time;
+
+		return;
 	}
 
-	// Check if the screen was frozen
-	if (m_pauseTime > 0.0f) {
+	// Check if the simulation was on hold
+	if (PauseTime > 0.0f) {
 		// If we were on hold, do all simulation while we were frozen on a single step
-		m_dynamicsWorld->stepSimulation(m_pauseTime / 1000.f, 1, m_pauseTime / 1000.f);
+		DynamicsWorld->stepSimulation(PauseTime / 1000.f, 1, PauseTime / 1000.f);
 
 		// We must not skip the current frame simulation, so dont exit yet!
+		PauseTime = 0.0f;
 	}
 
 	// Do our frame simulation
-	m_dynamicsWorld->stepSimulation(frameTimeMsec);
-
-	return true;
+	DynamicsWorld->stepSimulation(Time);
 }
 
-void Environment::AddSoftBody(std::shared_ptr<btSoftBody> body, int16_t group, int16_t mask)
+void Physics::Environment::addSoftBody(std::shared_ptr<btSoftBody> SoftBody, int16_t Group, int16_t Mask)
 {
-	m_softBodies.insert(body);
-	m_dynamicsWorld->addSoftBody(body.get(), group, mask);
+	SoftBodies.insert(SoftBody);
+	DynamicsWorld->addSoftBody(SoftBody.get(), Group, Mask);
 }
 
-void Environment::RemoveSoftBody(std::shared_ptr<btSoftBody> body)
+void Physics::Environment::removeSoftBody(std::shared_ptr<btSoftBody> SoftBody)
 {
-	auto i = m_softBodies.find(body);
+	auto i = SoftBodies.find(SoftBody);
 
-	if (i != m_softBodies.end()) {
-		m_softBodies.erase(i);
-		m_dynamicsWorld->removeSoftBody(body.get());
+	if (i != SoftBodies.end()) {
+		SoftBodies.erase(i);
+		DynamicsWorld->removeSoftBody(SoftBody.get());
 	}
 }
 
-void Environment::AddRigidBody(std::shared_ptr<btRigidBody> body, int16_t group, int16_t mask)
+void Physics::Environment::addRigidBody(std::shared_ptr<btRigidBody> RigidBody, int16_t Group, int16_t Mask)
 {
-	m_rigidBodies.insert(body);
-	m_dynamicsWorld->addRigidBody(body.get(), group, mask);
+	RigidBodies.insert(RigidBody);
+	DynamicsWorld->addRigidBody(RigidBody.get(), Group, Mask);
 }
 
-void Environment::RemoveRigidBody(std::shared_ptr<btRigidBody> body)
+void Physics::Environment::removeRigidBody(std::shared_ptr<btRigidBody> RigidBody)
 {
-	auto i = m_rigidBodies.find(body);
+	auto i = RigidBodies.find(RigidBody);
 
-	if (i != m_rigidBodies.end()) {
-		m_rigidBodies.erase(i);
-		m_dynamicsWorld->removeRigidBody(body.get());
+	if (i != RigidBodies.end()) {
+		RigidBodies.erase(i);
+		DynamicsWorld->removeRigidBody(RigidBody.get());
 	}
 }
 
-void Environment::AddConstraint(std::shared_ptr<btTypedConstraint> constraint)
+void Physics::Environment::addConstraint(std::shared_ptr<btTypedConstraint> Constraint)
 {
-	m_constraints.insert(constraint);
-	m_dynamicsWorld->addConstraint(constraint.get(), true);
+	Constraints.insert(Constraint);
+	DynamicsWorld->addConstraint(Constraint.get(), true);
 }
 
-void Environment::RemoveConstraint(std::shared_ptr<btTypedConstraint> constraint)
+void Physics::Environment::removeConstraint(std::shared_ptr<btTypedConstraint> Constraint)
 {
-	auto i = m_constraints.find(constraint);
+	auto i = Constraints.find(Constraint);
 
-	if (i != m_constraints.end()) {
-		m_constraints.erase(i);
-		m_dynamicsWorld->removeConstraint(constraint.get());
+	if (i != Constraints.end()) {
+		Constraints.erase(i);
+		DynamicsWorld->removeConstraint(Constraint.get());
 	}
 }
-
-void Environment::AddCharacter(std::shared_ptr<btActionInterface> character)
-{
-	m_characters.insert(character);
-	m_dynamicsWorld->addCharacter(character.get());
-}
-
-void Environment::RemoveCharacter(std::shared_ptr<btActionInterface> character)
-{
-	auto i = m_characters.find(character);
-
-	if (i != m_characters.end()) {
-		m_characters.erase(i);
-		m_dynamicsWorld->removeCharacter(character.get());
-	}
-}
-

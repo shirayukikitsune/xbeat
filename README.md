@@ -3,6 +3,12 @@ XBeat
 
 XBeat is a PC clone of the game Project Diva, created originally for the Sony(r) PlayStation Portable(c).
 
+License
+-------
+This software is licensed under the University of Illinois Open Source License.
+
+See LICENSE.txt for details.
+
 Computer Requisites
 -------------------
 
@@ -34,5 +40,13 @@ There are some dependencies included with the source code, but it is also needed
   - Boost 1.55 or higher, available [here][1]
   - Bullet Physics 2.82 or higher, available [here][2]
   
+Coding Standards
+----------------
+
+To make the source code more readable, we are adopting the LLVM coding standards, which can be seen [here][3].
+
+When submitting a patch or doing a merge request, please follow these standards.
+  
 [1]: http://www.boost.org/
 [2]: http://bulletphysics.org/
+[3]: http://llvm.org/docs/CodingStandards.html
