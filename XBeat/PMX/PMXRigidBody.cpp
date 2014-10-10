@@ -75,7 +75,7 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	m_transform.setBasis(bm);
 
 	if (body->mode == RigidBodyMode::Static) {
-		if (m_bone) m_motion.reset(new PMXMotionState(m_bone, m_transform));
+		if (m_bone) m_motion.reset(new Physics::PMXMotionState(m_bone, m_transform));
 	}
 	else {
 		m_motion.reset(new btDefaultMotionState(m_transform));
@@ -102,7 +102,7 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	m_shapeType = body->shape;
 	m_inverse = m_transform.inverse();
 
-	physics->AddRigidBody(m_body, m_groupId, m_groupMask);
+	physics->addRigidBody(m_body, m_groupId, m_groupMask);
 }
 
 bool XM_CALLCONV RigidBody::Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection)

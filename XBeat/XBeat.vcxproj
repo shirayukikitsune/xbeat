@@ -177,6 +177,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ModelManager.cpp" />
+    <ClCompile Include="VMD\MotionController.cpp" />
+    <ClCompile Include="VMD\Motion.cpp" />
     <ClCompile Include="Physics\PMXMotionState.cpp" />
     <ClCompile Include="PMX\PMXBone.cpp" />
     <ClCompile Include="PMX\PMXJoint.cpp" />
@@ -210,6 +212,8 @@
   <ItemGroup>
     <ClInclude Include="Dispatcher.h" />
     <ClInclude Include="ModelManager.h" />
+    <ClInclude Include="VMD\MotionController.h" />
+    <ClInclude Include="VMD\Motion.h" />
     <ClInclude Include="Physics\PMXMotionState.h" />
     <ClInclude Include="PMX\PMXBone.h" />
     <ClInclude Include="PMX\PMXDefinitions.h" />
@@ -249,6 +253,7 @@
     <ClInclude Include="Renderer\SkyBox.h" />
     <ClInclude Include="SystemClass.h" />
     <ClInclude Include="Renderer\ViewFrustum.h" />
+    <ClInclude Include="VMD\VMDDefinitions.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Data\Shaders\LightPixel.hlsl">

@@ -1,23 +1,35 @@
-#include "../PMX/PMXBone.h"
+//===-- Physics/PMXMotionState.cpp - Defines a Motion State for PMX ----*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===-----------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file defines everything related to the Physics::PMXMotionState class,
+/// which is an interface between bullet dynamics world and a PMX::Model.
+///
+//===-----------------------------------------------------------------------------===//
+
 #include "PMXMotionState.h"
 
-using namespace PMX;
+#include "../PMX/PMXBone.h"
 
-PMXMotionState::PMXMotionState(Bone *bone, const btTransform &initialTransform)
+Physics::PMXMotionState::PMXMotionState(PMX::Bone *AssociatedBone, const btTransform &InitialTransform)
 {
-	m_transform = initialTransform;
-	m_bone = bone;
+	assert(AssociatedBone != nullptr);
+
+	this->InitialTransform = InitialTransform;
+	this->AssociatedBone = AssociatedBone;
 }
 
-PMXMotionState::~PMXMotionState()
+void Physics::PMXMotionState::getWorldTransform(btTransform &WorldTransform) const
 {
+	WorldTransform = InitialTransform * AssociatedBone->GetLocalTransform();
 }
 
-void PMXMotionState::getWorldTransform(btTransform &worldTrans) const
-{
-	worldTrans = m_transform * m_bone->GetLocalTransform();
-}
-
-void PMXMotionState::setWorldTransform(const btTransform &transform)
+void Physics::PMXMotionState::setWorldTransform(const btTransform &WorldTransform)
 {
 }

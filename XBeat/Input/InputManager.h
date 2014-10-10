@@ -8,8 +8,8 @@
 //===-------------------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares everything related to the InputManager class, which manages
-/// all used input devices.
+/// \brief This file declares everything related to the Input::Manager class, which
+/// manages all used input devices.
 ///
 //===-------------------------------------------------------------------------------===//
 
@@ -119,11 +119,11 @@ public:
 	~Manager();
 
 	/// \brief Initializes the input manager, instanciating all interfaces
-	bool initialize(HINSTANCE Instance, HWND Window, std::shared_ptr<Dispatcher> EventDispatcher);
+	bool initialize(HINSTANCE Instance, HWND Window, std::weak_ptr<Dispatcher> EventDispatcher);
 	/// \brief Stops processing input, deleting all interface references
 	void shutdown();
 	/// \brief Processes the state of input devices at an instant of time
-	bool runFrame();
+	bool doFrame();
 
 	/// \brief Checks if a keyboard's key is pressed
 	bool isKeyPressed(int Key);
@@ -172,7 +172,7 @@ private:
 	/// \brief All callbacks registered
 	std::map<CallbackInfo, Callback> Bindings;
 	/// \brief The class that will run the events
-	std::shared_ptr<Dispatcher> EventDispatcher;
+	std::weak_ptr<Dispatcher> EventDispatcher;
 };
 
 }

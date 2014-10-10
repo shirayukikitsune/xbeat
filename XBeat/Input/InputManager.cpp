@@ -8,13 +8,14 @@
 //===-------------------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file defines everything related to the InputManager class, which manages
-/// all used input devices.
+/// \brief This file defines everything related to the Input::Manager class, which
+/// manages all used input devices.
 ///
 //===-------------------------------------------------------------------------------===//
 
 #include "InputManager.h"
 
+#include <cassert>
 #include <queue>
 
 bool Input::operator< (const CallbackInfo& One, const CallbackInfo& Other) {
@@ -41,7 +42,7 @@ Input::Manager::~Manager(void)
 }
 
 
-bool Input::Manager::initialize(HINSTANCE Instance, HWND Window, std::shared_ptr<Dispatcher> EventDispatcher)
+bool Input::Manager::initialize(HINSTANCE Instance, HWND Window, std::weak_ptr<Dispatcher> EventDispatcher)
 {
 	HRESULT Result;
 
@@ -115,7 +116,7 @@ void Input::Manager::shutdown()
 	}
 }
 
-bool Input::Manager::runFrame()
+bool Input::Manager::doFrame()
 {
 	if (!readKeyboard())
 		return false;
@@ -168,6 +169,9 @@ void Input::Manager::processInput()
 	auto BindingsEnd = Bindings.end(), Binding = Bindings.end();
 	std::queue<uint8_t> KeyUpEvents;
 
+	std::shared_ptr<Dispatcher> EventDispatcher = this->EventDispatcher.lock();
+	assert(EventDispatcher);
+
 	if (!FAILED(Result)) {
 		for (DWORD i = 0; i < KeyChangeCount; i++) {
 			PressedKeys[(uint8_t)KeyChanges[i].dwOfs] = (KeyChanges[i].dwData & 0x80) != 0 ? CallbackInfo::OnKeyDown : CallbackInfo::OnKeyUp;
@@ -177,7 +181,7 @@ void Input::Manager::processInput()
 	for (auto &Key : PressedKeys) {
 		Binding = Bindings.find(CallbackInfo(Key.second, Key.first));
 		if (Binding != BindingsEnd)
-			EventDispatcher->AddTask(std::bind(Binding->second, Binding->first.Parameter));
+			EventDispatcher->addTask(std::bind(Binding->second, Binding->first.Parameter));
 		if (Key.second == CallbackInfo::OnKeyDown)
 			Key.second = CallbackInfo::OnKeyPressed;
 		else if (Key.second == CallbackInfo::OnKeyUp) KeyUpEvents.push(Key.first);
@@ -193,7 +197,7 @@ void Input::Manager::processInput()
 		std::shared_ptr<MouseMovement> MovementInfo(new MouseMovement);
 		MovementInfo->x = CurrentMouseState.lX;
 		MovementInfo->y = CurrentMouseState.lY;
-		EventDispatcher->AddTask(std::bind(MouseCallback, MovementInfo));
+		EventDispatcher->addTask(std::bind(MouseCallback, MovementInfo));
 	}
 	for (int i = 0; i < 8; i++)
 	{
@@ -207,7 +211,7 @@ void Input::Manager::processInput()
 		else if (CurrentMouseState.rgbButtons[i] & 0x80) Binding = Bindings.find(CallbackInfo(CallbackInfo::OnMousePress, i));
 
 		if (Binding != BindingsEnd) {
-			EventDispatcher->AddTask(std::bind(Binding->second, Binding->first.Parameter));
+			EventDispatcher->addTask(std::bind(Binding->second, Binding->first.Parameter));
 			Binding = BindingsEnd;
 		}
 	}
@@ -224,20 +228,20 @@ void Input::Manager::processInput()
 			else if (CurrentXInputState.Gamepad.wButtons & i) Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadDown, i));
 
 			if (Binding != BindingsEnd) {
-				EventDispatcher->AddTask(std::bind(Binding->second, Binding->first.Parameter));
+				EventDispatcher->addTask(std::bind(Binding->second, Binding->first.Parameter));
 				Binding = BindingsEnd;
 			}
 		}
 
 		Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadLeftThumb));
 		if (Binding != BindingsEnd) {
-			EventDispatcher->AddTask(std::bind(Binding->second, normalizeStickValues(CurrentXInputState.Gamepad.sThumbLX, CurrentXInputState.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)));
+			EventDispatcher->addTask(std::bind(Binding->second, normalizeStickValues(CurrentXInputState.Gamepad.sThumbLX, CurrentXInputState.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)));
 			Binding = BindingsEnd;
 		}
 
 		Binding = Bindings.find(CallbackInfo(CallbackInfo::OnGamepadRightThumb));
 		if (Binding != BindingsEnd) {
-			EventDispatcher->AddTask(std::bind(Binding->second, normalizeStickValues(CurrentXInputState.Gamepad.sThumbRX, CurrentXInputState.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)));
+			EventDispatcher->addTask(std::bind(Binding->second, normalizeStickValues(CurrentXInputState.Gamepad.sThumbRX, CurrentXInputState.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)));
 			Binding = BindingsEnd;
 		}
 

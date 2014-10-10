@@ -3,6 +3,7 @@
 #include "../PMX/PMXBone.h"
 #include "OBJ/OBJModel.h"
 #include "D3DRenderer.h"
+#include "../VMD/Motion.h"
 
 #include <iomanip>
 #include <sstream>
@@ -36,7 +37,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 
 	m_modelManager.reset(new ModelManager);
 	try {
-		m_modelManager->LoadList();
+		m_modelManager->loadList();
 	}
 	catch (std::exception &e) {
 		MessageBoxA(wnd, e.what(), "Error", MB_OK);
@@ -108,14 +109,14 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	m_font.reset(new DirectX::SpriteFont(d3d->GetDevice(), L"./Data/Fonts/unifont.spritefont"));
 
 	// Setup bindings
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_Z), [this](void* param) {
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_Z), [this](void* param) {
 		m_models[0]->ApplyMorph(L"ﾍﾞｰﾙ非表示1", 1.0f);
 		m_models[0]->ApplyMorph(L"ﾍﾞｰﾙ非表示2", 1.0f);
 		m_models[0]->ApplyMorph(L"薔薇非表示", 1.0f);
 		m_models[0]->ApplyMorph(L"肩服非表示", 1.0f);
 		m_models[0]->ApplyMorph(L"眼帯off", 1.0f);
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_A), [this](void* param) {
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_A), [this](void* param) {
 		static float value = 0.0f;
 		static float increment = 0.01f;
 		value += increment;
@@ -131,44 +132,45 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 
 		m_models[0]->ApplyMorph(L"翼羽ばたき", value);
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(1.0f, 0.0f, 0.0f)); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(1.0f, 0.0f, 0.0f)); });
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) {
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) {
 		for (auto &model : m_models) {
 			auto bone = model->GetBoneByName(L"右腕");
 			DirectX::XMVECTOR direction = dynamic_cast<PMX::detail::BoneImpl*>(bone)->GetOffsetPosition().get128();
 			bone->Rotate(btVector3(0, 0, 1), DirectX::XMConvertToRadians(30.0f));
 		}
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_C), [this](void* param) {
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_C), [this](void* param) {
 		for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f);
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_V), [this](void* param) {
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_V), [this](void* param) {
 		for (auto model : m_models) {
 			auto bone = model->GetBoneByName(L"右腕");
-			if (bone) bone->Rotate(btVector3(0.0f, 0.0f, DirectX::XMConvertToRadians(90.0f)));
+			if (bone) bone->Rotate(btVector3(0.0f, 0.0f, DirectX::XMConvertToRadians(45.0f)));
 		}
 	});
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_G), [this](void* param) { 
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_G), [this](void* param) {
 		for (auto model : m_models) {
 			auto body = model->GetRigidBodyByName(L"後髪１");
 			if (body) body->getBody()->applyCentralImpulse(btVector3(0, 50, 0));
 		}
 	});
 
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F1), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F2), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F3), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F4), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderSoftBodies); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F5), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F6), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::DontUpdatePhysics); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F7), [this](void* param) { this->physics->Pause(); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F8), [this](void* param) { this->physics->Unpause(); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F1), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderBones); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F2), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderJoints); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F3), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderRigidBodies); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F4), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::RenderSoftBodies); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F5), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::DontRenderModel); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F6), [this](void* param) { for (auto &model : m_models) model->ToggleDebugFlags(PMX::Model::DebugFlags::DontUpdatePhysics); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F7), [this](void* param) { this->physics->pause(); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F8), [this](void* param) { this->physics->hold(); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F9), [this](void* param) { this->physics->resume(); });
 
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadDown, XINPUT_GAMEPAD_A), [this](void* param) {for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f); });
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadLeftThumb), [this](void* v) {
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadDown, XINPUT_GAMEPAD_A), [this](void* param) {for (auto &model : m_models) model->GetBoneByName(L"首")->Rotate(btVector3(0.0f, 1.0f, 0.0f), 0.3f); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadLeftThumb), [this](void* v) {
 		Input::ThumbMovement *value = (Input::ThumbMovement*)v;
 		camera->Move(value->dx, 0.0f, value->dy);
 		delete v;
@@ -176,7 +178,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 
 	static float rotation[2] = { 0.0f, 0.0f };
 
-	input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadRightThumb), [this](void *v) {
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnGamepadRightThumb), [this](void *v) {
 		Input::ThumbMovement *value = (Input::ThumbMovement*)v;
 		rotation[0] += value->dx / 50.f;
 		rotation[1] -= value->dy / 50.f;
@@ -185,7 +187,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 		delete v;
 	});
 
-	input->SetMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
+	input->setMouseBinding([this](std::shared_ptr<Input::MouseMovement> data) {
 		if (data->x != 0 || data->y != 0) {
 			rotation[0] += data->x / 1000.f;
 			rotation[1] += data->y / 1000.f;
@@ -217,7 +219,7 @@ bool SceneManager::LoadScene() {
 	}
 	stage->SetShader(lightShader);
 
-	auto model = m_modelManager->LoadModel(L"北乃カムイv0.9");
+	auto model = m_modelManager->loadModel(L"北乃カムイv0.9");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the first model", L"Error", MB_OK);
 		return false;
@@ -236,7 +238,7 @@ bool SceneManager::LoadScene() {
 #if 1
 	m_models[0]->GetRootBone()->Translate(btVector3(-7.5f, 0, 0));
 
-	model = m_modelManager->LoadModel(L"門を開く者 アリス");
+	model = m_modelManager->loadModel(L"門を開く者 アリス");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the second model", L"Error", MB_OK);
 		return false;
@@ -256,6 +258,9 @@ bool SceneManager::LoadScene() {
 	model->SetShader(m_pmxShader[1]);
 	m_models[1]->GetRootBone()->Translate(btVector3(7.5f, 0, 0));
 #endif
+
+	auto motion = new VMD::Motion();
+	motion->Load(L"./Data/Musics/rolling girl/rolling girl.vmd");
 
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
@@ -328,18 +333,18 @@ bool SceneManager::Frame(float frameTime)
 
 	DirectX::XMFLOAT3 campos(0,0,0);
 
-	if (input->IsKeyPressed(DIK_UPARROW)) {
-		if (input->IsKeyPressed(DIK_LCONTROL))
+	if (input->isKeyPressed(DIK_UPARROW)) {
+		if (input->isKeyPressed(DIK_LCONTROL))
 			campos.x = 0.1f;
-		else if (!input->IsKeyPressed(DIK_LSHIFT))
+		else if (!input->isKeyPressed(DIK_LSHIFT))
 			campos.y = 0.1f;
 		else
 			campos.z = 0.1f;
 	}
-	if (input->IsKeyPressed(DIK_DOWNARROW)) {
-		if (input->IsKeyPressed(DIK_LCONTROL))
+	if (input->isKeyPressed(DIK_DOWNARROW)) {
+		if (input->isKeyPressed(DIK_LCONTROL))
 			campos.x = -0.1f;
-		else if (!input->IsKeyPressed(DIK_LSHIFT))
+		else if (!input->isKeyPressed(DIK_LSHIFT))
 			campos.y = -0.1f;
 		else
 			campos.z = -0.1f;

@@ -1,145 +1,142 @@
+//===-- SystemClass.cpp - Defines the functional entrypoint of the engine --*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===---------------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares everything related to the functional entrypoint of the
+/// engine class
+///
+//===---------------------------------------------------------------------------------===//
+
 #include "SystemClass.h"
-#include <tchar.h>
+
+#include "Dispatcher.h"
+#include "Input/InputManager.h"
+// Renderer must be placed before Physics due to incompatibilities of Bullet and DirectX
+#include "Renderer/SceneManager.h"
+#include "Physics/Environment.h"
+
+#include <cassert>
 #include <chrono>
 
-SystemClass::SystemClass(void)
+SystemClass::SystemClass()
 {
-	input.reset();
-	renderer.reset();
+	Window = NULL;
+	ApplicationInstance = NULL;
 }
 
 
-SystemClass::SystemClass(const SystemClass &other)
+bool SystemClass::initialize()
 {
-}
+	int Width, Height;
 
+	initializeWindow(Width, Height);
 
-SystemClass::~SystemClass(void)
-{
-}
+	EventDispatcher.reset(new Dispatcher);
+	assert(EventDispatcher);
+	EventDispatcher->initialize();
 
-
-bool SystemClass::Initialize()
-{
-	int width, height;
-
-	InitializeWindow(width, height);
-
-	dispatcher.reset(new Dispatcher);
-	if (dispatcher == nullptr)
-		return false;
-	dispatcher->Initialize();
-
-	input.reset(new Input::Manager);
-	if (input == nullptr)
-		return false;
-
-	if (!input->Initialize(instance, wnd, width, height, dispatcher))
+	InputManager.reset(new Input::Manager);
+	assert(InputManager);
+	if (!InputManager->initialize(ApplicationInstance, Window, EventDispatcher))
 	{
-		MessageBox(wnd, L"Failed to initialize DirectInput8 interface", L"Error", MB_OK);
+		MessageBox(Window, L"Failed to initialize DirectInput8 interface", L"Error", MB_OK);
 		return false;
 	}
 
-	frameMsec();
+	// Sets the initial timer to zero
+	calculateFrameMsec();
 
-	renderer.reset(new Renderer::SceneManager);
-	if (renderer == nullptr)
+	RendererManager.reset(new Renderer::SceneManager);
+	assert(RendererManager);
+
+	PhysicsWorld.reset(new Physics::Environment);
+	assert(PhysicsWorld);
+
+	if (!RendererManager->Initialize(Width, Height, Window, InputManager, PhysicsWorld, EventDispatcher))
 		return false;
 
-	physics.reset(new Physics::Environment);
-	if (physics == nullptr)
-		return false;
+	PhysicsWorld->initialize();
 
-	if (!renderer->Initialize(width, height, wnd, input, physics, dispatcher))
-		return false;
-
-	if (!physics->Initialize(/*renderer->GetRenderer()*/nullptr))
-		return false;
-
-	if (!renderer->LoadScene())
+	if (!RendererManager->LoadScene())
 		return false;
 
 	return true;
 }
 
-void SystemClass::Run()
+void SystemClass::run()
 {
-	MSG msg;
-	bool done = false;
+	MSG Message;
+	bool Done = false;
 
-	ZeroMemory(&msg, sizeof MSG);
+	ZeroMemory(&Message, sizeof MSG);
 
-	while (!done) {
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+	while (!Done) {
+		if (PeekMessage(&Message, NULL, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&Message);
+			DispatchMessage(&Message);
 		}
 
-		if (msg.message == WM_QUIT || !Frame())
-			done = true;
+		if (Message.message == WM_QUIT || !doFrame())
+			Done = true;
 
-		if (input->IsEscapePressed())
-			done = true;
+		if (InputManager->isKeyPressed(DIK_ESCAPE))
+			Done = true;
 	}
 }
 
-void SystemClass::Shutdown()
+void SystemClass::shutdown()
 {
-	if (renderer != nullptr) {
-		renderer->Shutdown();
-		renderer.reset();
-	}
+	RendererManager.reset();
+	InputManager.reset();
+	EventDispatcher.reset();
 
-	if (input != nullptr) {
-		input->Shutdown();
-		input.reset();
-	}
-
-	if (dispatcher != nullptr) {
-		dispatcher->Shutdown();
-		dispatcher.reset();
-	}
-
-	ShutdownWindow();
+	shutdownWindow();
 }
 
-bool SystemClass::Frame()
+bool SystemClass::doFrame()
 {
-	float frameTime = frameMsec();
+	float frameTime = calculateFrameMsec();
 
-	if (!input->Frame())
+	if (!InputManager->doFrame())
 		return false;
 
-	if (!physics->Frame(frameTime))
-		return false;
+	PhysicsWorld->doFrame(frameTime);
 
-	if (!renderer->Frame(frameTime))
+	if (!RendererManager->Frame(frameTime))
 		return false;
 
 	return true;
 }
 
-void SystemClass::InitializeWindow(int &width, int &height)
+void SystemClass::initializeWindow(int &width, int &height)
 {
-	WNDCLASSEX wc;
+	assert(Window == NULL);
 
-	instance = GetModuleHandle(NULL);
-	appName = L"XBeat";
+	WNDCLASSEX WindowClass;
 
-	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-	wc.lpfnWndProc = WndProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
-	wc.hInstance = instance;
-	wc.hIcon = LoadIcon(NULL, IDI_WINLOGO);
-	wc.hIconSm = wc.hIcon;
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-	wc.lpszMenuName = NULL;
-	wc.lpszClassName = appName;
-	wc.cbSize = sizeof WNDCLASSEX;
+	ApplicationInstance = GetModuleHandle(NULL);
+	ApplicationName = L"XBeat";
 
-	RegisterClassEx(&wc);
+	WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+	WindowClass.lpfnWndProc = WndProc;
+	WindowClass.cbClsExtra = 0;
+	WindowClass.cbWndExtra = 0;
+	WindowClass.hInstance = ApplicationInstance;
+	WindowClass.hIcon = LoadIcon(NULL, IDI_WINLOGO);
+	WindowClass.hIconSm = WindowClass.hIcon;
+	WindowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+	WindowClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	WindowClass.lpszMenuName = NULL;
+	WindowClass.lpszClassName = ApplicationName;
+	WindowClass.cbSize = sizeof WNDCLASSEX;
+
+	RegisterClassEx(&WindowClass);
 
 	width = GetSystemMetrics(SM_CXSCREEN);
 	height = GetSystemMetrics(SM_CYSCREEN);
@@ -147,15 +144,15 @@ void SystemClass::InitializeWindow(int &width, int &height)
 	int posx = 0, posy = 0;
 
 	if (Renderer::FULL_SCREEN) {
-		DEVMODE dm;
-		ZeroMemory(&dm, sizeof dm);
-		dm.dmSize = sizeof dm;
-		dm.dmPelsWidth = (DWORD)width;
-		dm.dmPelsHeight = (DWORD)height;
-		dm.dmBitsPerPel = 32;
-		dm.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+		DEVMODE DisplaySettings;
+		ZeroMemory(&DisplaySettings, sizeof DisplaySettings);
+		DisplaySettings.dmSize = sizeof DisplaySettings;
+		DisplaySettings.dmPelsWidth = (DWORD)width;
+		DisplaySettings.dmPelsHeight = (DWORD)height;
+		DisplaySettings.dmBitsPerPel = 32;
+		DisplaySettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 
-		ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
+		ChangeDisplaySettings(&DisplaySettings, CDS_FULLSCREEN);
 	}
 	else {
 		posx = (width - 1280) / 2;
@@ -165,45 +162,47 @@ void SystemClass::InitializeWindow(int &width, int &height)
 		height = 720;
 	}
 
-	wnd = CreateWindowEx(WS_EX_APPWINDOW, appName, appName, WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP,
-		posx, posy, width, height, NULL, NULL, instance, NULL);
+	Window = CreateWindowEx(WS_EX_APPWINDOW, ApplicationName, ApplicationName, WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP,
+		posx, posy, width, height, NULL, NULL, ApplicationInstance, NULL);
 
-	ShowWindow(wnd, SW_SHOW);
-	SetForegroundWindow(wnd);
-	SetFocus(wnd);
+	ShowWindow(Window, SW_SHOW);
+	SetForegroundWindow(Window);
+	SetFocus(Window);
 }
 
-void SystemClass::ShutdownWindow()
+void SystemClass::shutdownWindow()
 {
+	assert(Window != NULL);
+
 	if (Renderer::FULL_SCREEN)
 		ChangeDisplaySettings(NULL, 0);
 
-	DestroyWindow(wnd);
-	wnd = NULL;
+	DestroyWindow(Window);
+	Window = NULL;
 
-	UnregisterClass(appName, instance);
-	instance = NULL;
+	UnregisterClass(ApplicationName, ApplicationInstance);
+	ApplicationInstance = NULL;
 }
 
-float SystemClass::frameMsec()
+float SystemClass::calculateFrameMsec()
 {
-	static std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+	static std::chrono::high_resolution_clock::time_point LastTime = std::chrono::high_resolution_clock::now();
 
-	auto nowTime = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<float> elapsedSec = nowTime - lastTime;
-	lastTime = nowTime;
+	auto NowTime = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> ElapsedSec = NowTime - LastTime;
+	LastTime = NowTime;
 
-	return elapsedSec.count() * 1000.0f;
+	return ElapsedSec.count() * 1000.0f;
 }
 
-LRESULT CALLBACK SystemClass::MessageHandler(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
+LRESULT CALLBACK SystemClass::messageHandler(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 {
-	return DefWindowProc(wnd, msg, wparam, lparam);
+	return DefWindowProc(Window, Message, WParam, LParam);
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
+LRESULT CALLBACK WndProc(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 {
-	switch(umessage)
+	switch (Message)
 	{
 		// Check if the window is being destroyed.
 		case WM_DESTROY:
@@ -223,8 +222,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 		default:
 		{
 			if (auto system = SystemClass::getInstance().lock())
-				return system->MessageHandler(hwnd, umessage, wparam, lparam);
-			else return DefWindowProc(hwnd, umessage, wparam, lparam);
+				return system->messageHandler(Window, Message, WParam, LParam);
+			else return DefWindowProc(Window, Message, WParam, LParam);
 		}
 	}
 }

@@ -130,7 +130,7 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 	}
 	}
 
-	physics->AddConstraint(m_constraint);
+	physics->addConstraint(m_constraint);
 
 	m_primitive = DirectX::GeometricPrimitive::CreateCube(context, 0.5f);
 	m_type = joint->type;
@@ -140,7 +140,7 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 
 void Joint::Shutdown(std::shared_ptr<Physics::Environment> physics)
 {
-	physics->RemoveConstraint(m_constraint);
+	physics->removeConstraint(m_constraint);
 	m_constraint.reset();
 }
 

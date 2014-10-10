@@ -1,26 +1,49 @@
+//===-- Physics/PMXMotionState.h - Declares a Motion State for PMX ----*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares everything related to the Physics::PMXMotionState class,
+/// which is an interface between bullet dynamics world and a PMX::Model.
+///
+//===----------------------------------------------------------------------------===//
+
 #pragma once
 
 #include "LinearMath/btMotionState.h"
 #include "LinearMath/btTransform.h"
 
-namespace PMX
-{
-	class Bone;
+namespace PMX { class Bone; }
 
+namespace Physics
+{
+	/// \brief The PMX::Model and Bullet communication interface
 	class PMXMotionState
 		: public btMotionState
 	{
 	public:
-		PMXMotionState(Bone* bone, const btTransform &initialTransform);
-		virtual ~PMXMotionState();
+		/// \brief Constructs this Motion State
+		///
+		/// \param [in] AssociatedBone The PMX::Bone that this motion state is associated with
+		/// \param [in] InitialTransform The initial transform of the associated rigid body
+		PMXMotionState(PMX::Bone* AssociatedBone, const btTransform &InitialTransform);
 
-		virtual void getWorldTransform(btTransform &worldTrans) const;
+		/// \brief 
+		virtual void getWorldTransform(btTransform &WorldTransform) const;
 
-		virtual void setWorldTransform(const btTransform &worldTrans);
+		/// \brief
+		///
+		/// \remarks This function does nothing, since this class is used to update the rigid body when the bone is deformed and is not affected by the physics world
+		virtual void setWorldTransform(const btTransform &WorldTransform);
 
 	private:
-		Bone *m_bone;
-		btTransform m_transform;
+		PMX::Bone *AssociatedBone;
+		btTransform InitialTransform;
 	};
 
 }

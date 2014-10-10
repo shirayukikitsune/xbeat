@@ -52,7 +52,7 @@ public:
 	/// \brief Advances the simulation by a time step
 	///
 	/// \param [in] Time The time step to advance the simulation, in milliseconds
-	void runFrame(float Time);
+	void doFrame(float Time);
 
 	/// \brief Pauses the simulated world
 	void pause() { State = SimulationState::Paused; }

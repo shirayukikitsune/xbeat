@@ -1,122 +1,163 @@
+//===-- ModelManager.cpp - Defines the manager for PMX Model objects --*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file defines everything related to the PMX::Model manager, the
+/// ModelManager class.
+///
+//===----------------------------------------------------------------------------===//
+
 #include "ModelManager.h"
+
+#include "PMX/PMXModel.h"
+
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/algorithm/string.hpp>
 #include <stdexcept>
-#include "PMX/PMXModel.h"
 
 namespace fs = boost::filesystem;
 
 ModelManager::ModelManager()
 {
+	ModelLoader.reset(new PMX::Loader);
 }
-
 
 ModelManager::~ModelManager()
 {
+
 }
 
-void ModelManager::LoadList()
+void ModelManager::loadList()
 {
-	fs::path modelPath(L"./Data/Models/");
-	if (!fs::exists(modelPath)) throw std::ios_base::failure("Model directory not found");
+	fs::path ModelPath(L"./Data/Models/"), CacheFilePath(L"./Data/ModelCache.dat");
+	if (!fs::exists(ModelPath)) throw std::ios_base::failure("Model directory not found");
 
-	// Check for cache file
-	fs::path cacheFile(L"./Data/ModelCache.dat");
+	if (loadFromCache(CacheFilePath, ModelPath))
+		return;
 
-	bool reloadCache = true;
+	// Rebuild the cache file, since it is invalid
+	loadInternal(ModelPath);
+	saveToCache(CacheFilePath, ModelPath);
+}
 
-	if (fs::exists(cacheFile)) {
-		fs::ifstream ifs;
-		ifs.open(cacheFile, std::ios::binary);
-		if (ifs.good()) {
-			uint64_t cacheTime;
-			ifs.read((char*)&cacheTime, sizeof(uint64_t));
+std::shared_ptr<PMX::Model> ModelManager::loadModel(const std::wstring &name)
+{
+	auto Path = KnownModels.find(name);
 
-			if (fs::last_write_time(modelPath) > cacheTime)
-				reloadCache = true;
-			else {
-				uint64_t count;
-				ifs.read((char*)&count, sizeof(uint64_t));
+	if (Path == KnownModels.end())
+		return nullptr;
 
-				auto readwstr = [](std::istream &is) {
-					uint64_t len;
-					
-					is.read((char*)&len, sizeof(uint64_t));
-					wchar_t *buf = new wchar_t[len];
-					is.read((char*)buf, sizeof(wchar_t) * len);
-					std::wstring out(buf, len);
-					delete[] buf;
+	std::shared_ptr<PMX::Model> Model(new PMX::Model);
+	assert(Model);
 
-					return out;
-				};
+	if (!Model->LoadModel(Path->second.wstring()))
+		return nullptr;
 
-				while (count --> 0) {
-					std::wstring name = readwstr(ifs);
-					std::wstring path = readwstr(ifs);
-					m_models[name] = fs::path(path);
-				}
-			}
+	return Model;
+}
 
-			ifs.close();
+bool ModelManager::loadFromCache(const boost::filesystem::path &FileName, const fs::path &ModelPath) {
+	fs::path CacheFile(FileName);
 
-			if (!reloadCache) return;
-		}
+	if (!fs::exists(CacheFile))
+		return false;
+
+	fs::ifstream inputStream;
+	inputStream.open(CacheFile, std::ios::binary);
+
+	if (!inputStream.good()) {
+		inputStream.close();
+		return false;
 	}
 
-	if (reloadCache) loadInternal(modelPath);
+	int64_t CacheTime;
+	inputStream.read((char*)&CacheTime, sizeof(int64_t));
 
-	// Rebuild the cache file
-	fs::ofstream ofs;
-	ofs.open(cacheFile, std::ios::binary);
-	if (ofs.good()) {
-		uint64_t time = fs::last_write_time(modelPath);
-		ofs.write((char*)&time, sizeof(uint64_t));
-		uint64_t count = m_models.size();
-		ofs.write((char*)&count, sizeof(uint64_t));
-
-		auto writestr = [](std::ofstream &os, const std::wstring &str) {
-			uint64_t len = (uint64_t)str.length();
-			os.write((char*)&len, sizeof(uint64_t));
-			os.write((char*)str.c_str(), len * sizeof(wchar_t));
-		};
-
-		for (auto i : m_models) {
-			writestr(ofs, i.first);
-			writestr(ofs, i.second.generic_wstring());
-		}
-
-		ofs.close();
+	// If the folder modify time is more recent than the stored in the cache, then we need to recache the model list
+	if (fs::last_write_time(ModelPath) > CacheTime) {
+		inputStream.close();
+		return false;
 	}
+
+	uint64_t ModelCount;
+	inputStream.read((char*)&ModelCount, sizeof(uint64_t));
+
+	// This function is used to read a std::wstring from the cache file in its binary form
+	auto readWideString = [](std::istream &inputStream) {
+		uint64_t stringLength;
+		inputStream.read((char*)&stringLength, sizeof(uint64_t));
+
+		wchar_t *Buffer = new wchar_t[stringLength];
+		inputStream.read((char*)Buffer, sizeof(wchar_t) * stringLength);
+
+		std::wstring Output(Buffer, stringLength);
+
+		delete[] Buffer;
+
+		return Output;
+	};
+
+	// New operator :)
+	while (ModelCount --> 0) {
+		std::wstring Name = readWideString(inputStream);
+		std::wstring Path = readWideString(inputStream);
+		KnownModels[Name] = fs::path(Path);
+	}
+
+	inputStream.close();
+	return true;
 }
 
-std::shared_ptr<PMX::Model> ModelManager::LoadModel(const std::wstring &name)
-{
-	auto path = m_models.find(name);
+void ModelManager::loadInternal(const boost::filesystem::path &Path) {
+	fs::directory_iterator EndIterator;
 
-	if (path == m_models.end()) return nullptr;
-
-	std::shared_ptr<PMX::Model> model(new PMX::Model);
-
-	if (!model) return nullptr;
-
-	if (!model->LoadModel(path->second.wstring())) return nullptr;
-
-	return model;
-}
-
-void ModelManager::loadInternal(const boost::filesystem::path &p) {
-	fs::directory_iterator end;
-
-	for (fs::directory_iterator i(p); i != end; ++i) {
-		if (fs::is_directory(i->status())) {
-			loadInternal(i->path());
+	for (fs::directory_iterator PathIterator(Path); PathIterator != EndIterator; ++PathIterator) {
+		// If the current visited path is a directory, recusively look for a model
+		if (fs::is_directory(PathIterator->status())) {
+			loadInternal(PathIterator->path());
 		}
-		else if (fs::is_regular_file(i->status()) && i->path().has_extension()) {
-			if (boost::iequals(i->path().extension().generic_wstring(), L".pmx")) {
-				auto desc = loader.GetDescription(i->path().wstring());
-				m_models[desc.name.japanese] = i->path();
+		// Validates the PMX model extension
+		else if (fs::is_regular_file(PathIterator->status()) && PathIterator->path().has_extension()) {
+			if (boost::iequals(PathIterator->path().extension().generic_wstring(), L".pmx")) {
+				auto desc = ModelLoader->GetDescription(PathIterator->path().wstring());
+				KnownModels[desc.name.japanese] = PathIterator->path();
 			}
 		}
 	}
+}
+
+void ModelManager::saveToCache(const boost::filesystem::path &FileName, const fs::path &ModelPath) {
+	fs::ofstream outputStream;
+	outputStream.open(FileName, std::ios::binary);
+
+	if (!outputStream.good()) {
+		outputStream.close();
+		return;
+	}
+
+	int64_t CacheTime = fs::last_write_time(ModelPath);
+	outputStream.write((char*)&CacheTime, sizeof(int64_t));
+	uint64_t ModelCount = KnownModels.size();
+	outputStream.write((char*)&ModelCount, sizeof(uint64_t));
+
+	// This function is used to write to the output stream a string in its binary form
+	auto writeWideString = [](std::ostream &outputStream, const std::wstring &String) {
+		uint64_t StringLength = (uint64_t)String.length();
+		outputStream.write((char*)&StringLength, sizeof(uint64_t));
+		outputStream.write((char*)String.c_str(), StringLength * sizeof(wchar_t));
+	};
+
+	for (auto &Model : KnownModels) {
+		writeWideString(outputStream, Model.first);
+		writeWideString(outputStream, Model.second.generic_wstring());
+	}
+
+	outputStream.close();
 }

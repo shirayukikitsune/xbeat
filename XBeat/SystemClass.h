@@ -1,54 +1,86 @@
+//===-- SystemClass.h - Declares the functional entrypoint of the engine --*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===--------------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares everything related to the functional entrypoint of the
+/// engine class
+///
+//===--------------------------------------------------------------------------------===//
+
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN
 
-#include <Windows.h>
 #include <memory>
+#include <Windows.h>
 
-#include "Input/InputManager.h"
-#include "Renderer/SceneManager.h"
-#include "Physics/Environment.h"
-#include "Dispatcher.h"
+class Dispatcher;
+namespace Input { class Manager; }
+namespace Physics { class Environment; }
+namespace Renderer { class SceneManager; }
 
+/// \brief An interface to initialize the engine
 class SystemClass
 {
 public:
 	static std::weak_ptr<SystemClass> getInstance() {
-		static std::shared_ptr<SystemClass> instance;
-		if (instance.get() == nullptr) {
-			instance.reset(new SystemClass);
+		static std::shared_ptr<SystemClass> Instance;
+
+		if (Instance.get() == nullptr) {
+			Instance.reset(new SystemClass);
 		}
-		return instance;
+
+		return Instance;
 	}
 
-	~SystemClass();
+	/// \brief Initializes the engine
+	bool initialize();
+	/// \brief Stops the engine
+	void shutdown();
+	/// \brief Run the engine
+	void run();
 
-	bool Initialize();
-	void Shutdown();
-	void Run();
-
-	LRESULT CALLBACK MessageHandler(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam);
+	/// \brief Handler for Windows messages
+	LRESULT CALLBACK messageHandler(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam);
 
 private:
-	void InitializeWindow(int &width, int &height);
-	bool Frame();
-	void ShutdownWindow();
+	/// \brief Initializes and creates a window
+	void initializeWindow(int &Width, int &Height);
+	/// \brief Step of execution of the engine
+	bool doFrame();
+	/// \brief Destroys the window created by SystemClass::initializeWindow()
+	void shutdownWindow();
 
-	float frameMsec();
+	/// \brief Calculates the time span, in milliseconds, between the start
+	/// of the last frame and the start of the current frame
+	float calculateFrameMsec();
 
 	SystemClass();
-	SystemClass(const SystemClass &);
+	SystemClass(const SystemClass &) = delete;
 
-private: 
-	LPCWSTR appName;
-	HINSTANCE instance;
-	HWND wnd;
+private:
+	/// \brief The name of the application
+	LPCWSTR ApplicationName;
+	/// \brief The instance of the application
+	HINSTANCE ApplicationInstance;
+	/// \brief The window of the application
+	HWND Window;
 
-	std::shared_ptr<Input::Manager> input;
-	std::shared_ptr<Renderer::SceneManager> renderer;
-	std::shared_ptr<Physics::Environment> physics;
-	std::shared_ptr<Dispatcher> dispatcher;
+	/// \brief The instance of the Input::Manager
+	std::shared_ptr<Input::Manager> InputManager;
+	/// \brief The instance of the Renderer::SceneManager
+	std::shared_ptr<Renderer::SceneManager> RendererManager;
+	/// \brief The instance of the Physics::Environment
+	std::shared_ptr<Physics::Environment> PhysicsWorld;
+	/// \brief The instance of the Dispatcher
+	std::shared_ptr<Dispatcher> EventDispatcher;
 };
 
-
-LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam);
+/// \brief Default window message handler
+LRESULT CALLBACK WndProc(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam);

@@ -83,7 +83,7 @@ void Physics::Environment::shutdown()
 	Broadphase.reset();
 }
 
-void Physics::Environment::runFrame(float Time)
+void Physics::Environment::doFrame(float Time)
 {
 	if (!isRunning()) {
 		// If we are on hold, increase the time counter, so when we resume, we can skip the simulation for this long

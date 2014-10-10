@@ -4,10 +4,10 @@
 #include "PMXLoader.h"
 #include "GeometricPrimitive.h"
 
+namespace Physics { class PMXMotionState; }
+
 namespace PMX {
 class Model;
-
-class PMXMotionState;
 
 class RigidBody
 {
@@ -43,9 +43,8 @@ private:
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
 	std::unique_ptr<btCollisionShape> m_shape;
 	std::shared_ptr<btRigidBody> m_body;
-	std::unique_ptr<btPairCachingGhostObject> m_ghost;
 	std::unique_ptr<btMotionState> m_motion;
-	std::unique_ptr<PMXMotionState> m_kinematic;
+	std::unique_ptr<Physics::PMXMotionState> m_kinematic;
 };
 }
 

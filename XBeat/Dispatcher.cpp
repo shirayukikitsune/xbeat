@@ -1,64 +1,76 @@
-#include "Dispatcher.h"
+//===-- Dispatcher.cpp - Defines a class for multithreading support ----*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===-----------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file defines everything related to the event dispatcher class, which
+/// takes responsibility for multithreading.
+///
+//===-----------------------------------------------------------------------------===//
 
+#include "Dispatcher.h"
+#include <cassert>
 
 Dispatcher::Dispatcher()
-:sync()
 {
 }
-
 
 Dispatcher::~Dispatcher()
 {
+	shutdown();
 }
 
-
-void Dispatcher::Initialize()
+void Dispatcher::initialize()
 {
-	if (run)
-		return;
+	assert(Run == false);
 
-	run = true;
-	auto threadCount = std::thread::hardware_concurrency();
-	threadPool.resize(threadCount);
+	Run = true;
+	auto ThreadCount = std::thread::hardware_concurrency();
+	ThreadPool.resize(ThreadCount);
 
-	for (size_t i = 0; i < threadPool.size(); i++) {
-		threadPool[i] = std::thread(std::bind(&Dispatcher::consumer, this));
+	for (auto &Thread : ThreadPool) {
+		Thread = std::thread(std::bind(&Dispatcher::consumeTask, this));
 	}
 }
 
-void Dispatcher::Shutdown()
+void Dispatcher::shutdown()
 {
-	if (run) {
-		run = false;
+	assert(Run == true);
 
-		condition.notify_all();
+	Run = false;
 
-		for (auto &thread : threadPool)
-			thread.join();
-	}
+	SynchronizingCondition.notify_all();
+
+	for (auto &Thread : ThreadPool)
+		Thread.join();
 }
 
-void Dispatcher::AddTask(std::function<void(void)> task)
+void Dispatcher::addTask(std::function<void(void)> Task)
 {
-	std::lock_guard<std::mutex> lock(this->sync);
+	std::lock_guard<std::mutex> Lock(Synchronizer);
 
-	tasks.push_back(task);
+	Tasks.push_back(Task);
 
-	condition.notify_one();
+	SynchronizingCondition.notify_one();
 }
 
-void Dispatcher::consumer()
+void Dispatcher::consumeTask()
 {
-	while (run) {
-		std::unique_lock<std::mutex> lock(this->sync);
-		while (tasks.empty() && run) condition.wait(lock);
+	while (Run) {
+		std::unique_lock<std::mutex> Lock(Synchronizer);
+		while (Tasks.empty() && Run) SynchronizingCondition.wait(Lock);
 
-		if (!run) break;
+		if (!Run) break;
 
-		auto task = tasks.front();
-		tasks.pop_front();
-		lock.unlock();
+		auto Task = Tasks.front();
+		Tasks.pop_front();
+		Lock.unlock();
 
-		task();
+		Task();
 	}
 }

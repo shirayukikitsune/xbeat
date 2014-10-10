@@ -1,29 +1,61 @@
+//===-- ModelManager.h - Declares the manager for PMX Model objects --*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===---------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares everything related to the PMX::Model manager, the
+/// ModelManager class.
+///
+//===---------------------------------------------------------------------------===//
+
 #pragma once
 
+#include <boost/filesystem/path.hpp>
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
-#include <boost/filesystem/path.hpp>
 
-#include "PMX/PMXLoader.h"
+namespace PMX { class Loader; class Model; }
 
-namespace Renderer { class Model; }
-
+/// \brief Class that manages all PMX::Model in the Data folder
 class ModelManager
 {
 public:
 	ModelManager();
 	~ModelManager();
 
-	void LoadList();
+	/// \brief Populates the list of available models
+	void loadList();
 
-	std::shared_ptr<PMX::Model> LoadModel(const std::wstring &name);
+	/// \brief Loads a particular model from the list, by its name
+	///
+	/// \param [in] name The name of the model to be loaded
+	std::shared_ptr<PMX::Model> loadModel(const std::wstring &name);
 
 private:
-	std::map<std::wstring, boost::filesystem::path> m_models;
+	std::map<std::wstring, boost::filesystem::path> KnownModels;
+	std::unique_ptr<PMX::Loader> ModelLoader;
 
-	void loadInternal(const boost::filesystem::path &p);
+	/// \brief Loads the model list from the cache file
+	///
+	/// \param [in] FileName The path to the cache file
+	/// \param [in] ModelPath The path that the models are stored in
+	///
+	/// \returns false if the cache file failed to be loaded or if the cache is invalid
+	bool loadFromCache(const boost::filesystem::path &FileName, const boost::filesystem::path &ModelPath);
 
-	PMX::Loader loader;
+	/// \brief Does the dirty job of populating the KnownModels if the cache needs to be revalidated
+	void loadInternal(const boost::filesystem::path &Path);
+
+	/// \brief Saves the cache to the cache file
+	///
+	/// \param [in] FileName The path to the cache file
+	/// \param [in] ModelPath The path that the models are stored in
+	void saveToCache(const boost::filesystem::path &FileName, const boost::filesystem::path &ModelPath);
 };
 

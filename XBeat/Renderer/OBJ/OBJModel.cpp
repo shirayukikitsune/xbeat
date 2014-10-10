@@ -54,7 +54,7 @@ bool OBJModel::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	//m_shape.reset(new btBvhTriangleMeshShape(m_mesh.get(), true));
 	m_shape.reset(new btStaticPlaneShape(btVector3(0, 1, 0), 0));
 	m_body.reset(new btRigidBody(0, new btDefaultMotionState(), m_shape.get()));
-	m_physics->AddRigidBody(m_body);
+	m_physics->addRigidBody(m_body);
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	vertexBufferDesc.ByteWidth = (UINT)(sizeof(Shaders::Light::VertexInput) * vertices.size());
