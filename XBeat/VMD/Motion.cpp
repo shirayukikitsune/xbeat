@@ -1,81 +1,109 @@
+//===-- VMD/Motion.cpp - Defines the VMD animation class ------------*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===-------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file defines the VMD::Motion class
+///
+//===-------------------------------------------------------------------------===//
+
 #include "Motion.h"
 
-using namespace VMD;
-
-Motion::Motion()
+VMD::Motion::Motion()
 {
 }
 
 
-Motion::~Motion()
+VMD::Motion::~Motion()
 {
 }
 
-bool Motion::Load(const std::wstring &filename)
+bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 {
-	std::ifstream fs;
+	std::ifstream InputStream;
 
-	fs.open(filename, std::ios::binary);
+	InputStream.open(FileName, std::ios::binary);
 
-	if (!fs.good())
+	if (!InputStream.good())
 		return false;
 
-	char magic[30];
+	char Magic[30];
 
-	fs.read(magic, 30);
+	InputStream.read(Magic, 30);
 
-	int version;
+	int Version;
 
-	if (!strcmp("Vocaloid Motion Data file", magic))
-		version = 1;
-	else if (!strcmp("Vocaloid Motion Data 0002", magic))
-		version = 2;
+	if (!strcmp("Vocaloid Motion Data file", Magic))
+		Version = 1;
+	else if (!strcmp("Vocaloid Motion Data 0002", Magic))
+		Version = 2;
 	else {
-		fs.close();
+		InputStream.close();
 		return false;
 	}
 
-	char * model = new char[version * 10];
-	fs.read(model, version * 10);
+#if 0
+	char * ModelName = new char[Version * 10];
+	InputStream.read(ModelName, Version * 10);
+#endif
+	// Skips the model name for the animation
+	InputStream.seekg(Version * 10, std::ios::cur);
 
-	uint32_t count;
-	fs.read((char*)&count, sizeof(uint32_t));
-	boneKeyFrames.resize(count);
+	uint32_t FrameCount;
+	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
 
-	for (uint32_t i = 0; i < count; ++i) {
-		fs.read(boneKeyFrames[i].boneName, 15);
-		fs.read((char*)&boneKeyFrames[i].frameCount, sizeof(uint32_t));
-		fs.read((char*)boneKeyFrames[i].translation, sizeof(float) * 3);
-		fs.read((char*)boneKeyFrames[i].rotation, sizeof(float) * 4);
-		fs.read((char*)boneKeyFrames[i].interpolationData, 64);
+	while (FrameCount --> 0) {
+		BoneKeyFrame Frame;
+
+		InputStream.read(Frame.BoneName, 15);
+		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
+		InputStream.read((char*)Frame.Translation, sizeof(float) * 3);
+		InputStream.read((char*)Frame.Rotation, sizeof(float) * 4);
+		InputStream.read((char*)Frame.InterpolationData, 64);
+
+		BoneKeyFrames.push(Frame);
 	}
 
-	fs.read((char*)&count, sizeof(uint32_t));
-	faceKeyFrames.resize(count);
+	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
 
-	for (uint32_t i = 0; i < count; ++i) {
-		fs.read(faceKeyFrames[i].name, 15);
-		fs.read((char*)&faceKeyFrames[i].frameCount, sizeof(uint32_t));
-		fs.read((char*)&faceKeyFrames[i].weight, sizeof(float));
+	while (FrameCount --> 0) {
+		MorphKeyFrame Frame;
+
+		InputStream.read(Frame.MorphName, 15);
+		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
+		InputStream.read((char*)&Frame.Weight, sizeof(float));
+
+		MorphKeyFrames.push(Frame);
 	}
 
 	// Check for camera data
-	if (!fs.eof()) {
-		fs.read((char*)&count, sizeof(uint32_t));
-		cameraKeyFrames.resize(count);
-
-		for (uint32_t i = 0; i < count; ++i) {
-			fs.read((char*)&cameraKeyFrames[i].frameCount, sizeof(uint32_t));
-			fs.read((char*)&cameraKeyFrames[i].distance, sizeof(float));
-			fs.read((char*)cameraKeyFrames[i].position, sizeof(float) * 3);
-			fs.read((char*)cameraKeyFrames[i].angles, sizeof(float) * 3);
-			fs.read((char*)cameraKeyFrames[i].interpolationData, 24);
-			fs.read((char*)&cameraKeyFrames[i].fovAngle, sizeof(uint32_t));
-			fs.read((char*)&cameraKeyFrames[i].noPerspective, 1);
-		}
+	if (InputStream.eof()) {
+		InputStream.close();
+		return true;
 	}
 
-	fs.close();
+	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
+
+	while (FrameCount --> 0) {
+		CameraKeyFrame Frame;
+
+		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
+		InputStream.read((char*)&Frame.Distance, sizeof(float));
+		InputStream.read((char*)Frame.Position, sizeof(float) * 3);
+		InputStream.read((char*)Frame.Angles, sizeof(float) * 3);
+		InputStream.read((char*)Frame.InterpolationData, 24);
+		InputStream.read((char*)&Frame.FovAngle, sizeof(uint32_t));
+		InputStream.read((char*)&Frame.NoPerspective, 1);
+
+		CameraKeyFrames.push(Frame);
+	}
+
+	InputStream.close();
 
 	return true;
 }
