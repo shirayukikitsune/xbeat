@@ -33,12 +33,10 @@ namespace Physics
 		/// \param [in] InitialTransform The initial transform of the associated rigid body
 		PMXMotionState(PMX::Bone* AssociatedBone, const btTransform &InitialTransform);
 
-		/// \brief 
+		/// \brief This function is called by the Bullet library in order to update the rigid body in the simulation
 		virtual void getWorldTransform(btTransform &WorldTransform) const;
 
-		/// \brief
-		///
-		/// \remarks This function does nothing, since this class is used to update the rigid body when the bone is deformed and is not affected by the physics world
+		/// \brief This function does nothing, since this class is used to update the rigid body when the bone is deformed and is not affected by the physics world
 		virtual void setWorldTransform(const btTransform &WorldTransform);
 
 	private:

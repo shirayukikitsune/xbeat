@@ -13,9 +13,8 @@
 ///
 //===-----------------------------------------------------------------------------===//
 
-#include "PMXMotionState.h"
-
 #include "../PMX/PMXBone.h"
+#include "PMXMotionState.h"
 
 Physics::PMXMotionState::PMXMotionState(PMX::Bone *AssociatedBone, const btTransform &InitialTransform)
 {
