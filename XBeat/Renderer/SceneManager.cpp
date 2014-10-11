@@ -260,7 +260,7 @@ bool SceneManager::LoadScene() {
 #endif
 
 	auto motion = new VMD::Motion();
-	motion->Load(L"./Data/Musics/rolling girl/rolling girl.vmd");
+	motion->loadFromFile(L"./Data/Musics/rolling girl/rolling girl.vmd");
 
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
