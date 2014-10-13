@@ -262,6 +262,10 @@ bool SceneManager::LoadScene() {
 	auto motion = new VMD::Motion();
 	motion->loadFromFile(L"./Data/Musics/rolling girl/rolling girl.vmd");
 
+	camera->setAspectRatio((float)screenWidth / (float)screenHeight);
+	camera->setFieldOfView(DirectX::XM_PIDIV4);
+	camera->setNearPlane(SCREEN_NEAR);
+	camera->setFarPlane(SCREEN_DEPTH);
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
 	lightShader->SetLightCount(1);
@@ -391,9 +395,9 @@ bool SceneManager::RenderScene(float frameTime)
 {
 	DirectX::XMMATRIX view, projection, world;
 
-	camera->GetViewMatrix(view);
+	camera->getViewMatrix(view);
 	d3d->GetWorldMatrix(world);
-	d3d->GetProjectionMatrix(projection);
+	camera->getProjectionMatrix(projection);
 
 	frustum->Construct(SCREEN_DEPTH, projection, view);
 
@@ -429,7 +433,7 @@ bool SceneManager::RenderEffects(float frameTime)
 {
 	DirectX::XMMATRIX view, ortho, world;
 
-	camera->GetViewMatrix(view);
+	camera->getViewMatrix(view);
 	d3d->GetWorldMatrix(world);
 	d3d->GetOrthoMatrix(ortho);
 
@@ -443,7 +447,7 @@ bool SceneManager::Render2DTextureScene(float frameTime)
 {
 	DirectX::XMMATRIX view, ortho, world;
 
-	camera->GetViewMatrix(view);
+	camera->getViewMatrix(view);
 	d3d->GetWorldMatrix(world);
 	d3d->GetOrthoMatrix(ortho);
 

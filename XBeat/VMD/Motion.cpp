@@ -23,6 +23,10 @@ VMD::Motion::~Motion()
 {
 }
 
+void VMD::Motion::advanceTime(float Time)
+{
+}
+
 bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 {
 	std::ifstream InputStream;

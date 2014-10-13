@@ -99,7 +99,6 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	D3D11_BLEND_DESC blendStateDesc;
 	D3D11_RASTERIZER_DESC rasterDesc;
-	float fov, aspect;
 
 	vsyncEnabled = vsync;
 
@@ -309,10 +308,6 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 
 	deviceContext->RSSetViewports(1, &viewport);
 
-	fov = DirectX::XM_PIDIV4;
-	aspect = (float)width / (float)height;
-
-	projection = DirectX::XMMatrixPerspectiveFovLH(fov, aspect, screenNear, screenDepth);
 	worldMatrix = DirectX::XMMatrixIdentity();
 	orthoMatrix = DirectX::XMMatrixOrthographicLH((float)width, (float)height, screenNear, screenDepth);
 
@@ -442,11 +437,6 @@ void D3DRenderer::DisableAlphaBlending()
 	static const float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	deviceContext->OMSetBlendState(blendState[1], blendFactor, 0xFFFFFFFFU);
-}
-
-void D3DRenderer::GetProjectionMatrix(DirectX::XMMATRIX &matrix)
-{
-	matrix = projection;
 }
 
 void D3DRenderer::GetWorldMatrix(DirectX::XMMATRIX &matrix)
