@@ -14,6 +14,8 @@
 
 #include "Motion.h"
 
+#include <Windows.h>
+
 VMD::Motion::Motion()
 {
 }
@@ -51,12 +53,40 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		return false;
 	}
 
+	// Function used to read a Shift-JIS string from an input stream and returns its counterfeit in a std::wstring
+	auto readSJISString = [](std::istream &Input, size_t Length) {
+		char *ReadBuffer = new char[Length];
+		assert(ReadBuffer != nullptr);
+
+		Input.read(ReadBuffer, Length);
+
+		// Gets the required output buffer size
+		auto RequiredLength = MultiByteToWideChar(932, 0, ReadBuffer, Length, nullptr, 0);
+
+		// Creates the output buffer
+		wchar_t *OutputBuffer = new wchar_t[RequiredLength];
+		assert(OutputBuffer != nullptr);
+
+		// Convert the sequence
+		auto WrittenCharacters = MultiByteToWideChar(932, 0, ReadBuffer, Length, OutputBuffer, RequiredLength);
+
+		// Create the output string
+		std::wstring Output(OutputBuffer, WrittenCharacters);
+
+		// Delete the buffers
+		delete[] ReadBuffer;
+		delete[] OutputBuffer;
+
+		return Output;
+	};
+
 #if 0
 	char * ModelName = new char[Version * 10];
 	InputStream.read(ModelName, Version * 10);
-#endif
+#else
 	// Skips the model name for the animation
 	InputStream.seekg(Version * 10, std::ios::cur);
+#endif
 
 	uint32_t FrameCount;
 	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
@@ -64,7 +94,7 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 	while (FrameCount --> 0) {
 		BoneKeyFrame Frame;
 
-		InputStream.read(Frame.BoneName, 15);
+		Frame.BoneName = readSJISString(InputStream, 15);
 		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
 		InputStream.read((char*)Frame.Translation, sizeof(float) * 3);
 		InputStream.read((char*)Frame.Rotation, sizeof(float) * 4);
@@ -78,7 +108,7 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 	while (FrameCount --> 0) {
 		MorphKeyFrame Frame;
 
-		InputStream.read(Frame.MorphName, 15);
+		Frame.MorphName = readSJISString(InputStream, 15);
 		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
 		InputStream.read((char*)&Frame.Weight, sizeof(float));
 

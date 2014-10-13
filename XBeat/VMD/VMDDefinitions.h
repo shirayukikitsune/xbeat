@@ -14,15 +14,17 @@
 //===--------------------------------------------------------------------------------===//
 
 #pragma once
+
 #include <cstdint>
+#include <string>
 
 namespace VMD {
 
 	/// \brief Stores information about the bone animation
 	struct BoneKeyFrame
 	{
-		/// \brief The name of the bone to be animated, Shift-JIS encoded
-		char BoneName[15];
+		/// \brief The name of the bone to be animated
+		std::wstring BoneName;
 		/// \brief The amount of frames until the next keyframe
 		uint32_t FrameCount;
 		/// \brief The bone translation component
@@ -37,7 +39,7 @@ namespace VMD {
 	struct MorphKeyFrame
 	{
 		/// \brief The name of the morph to be applied, Shift-JIS encoded
-		char MorphName[15];
+		std::wstring MorphName;
 		/// \brief The amount of frames until the next keyframe
 		uint32_t FrameCount;
 		/// \brief The weight of the morph to be applied
