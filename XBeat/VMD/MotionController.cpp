@@ -20,6 +20,7 @@ using namespace VMD;
 
 MotionController::MotionController()
 {
+	FramesPerSecond = 60.f;
 }
 
 
@@ -29,9 +30,32 @@ MotionController::~MotionController()
 
 void MotionController::advanceFrame(float Time)
 {
+	float FrameCount = Time * FramesPerSecond / 1000.f;
+
 	for (auto &Motion : KnownMotions) {
-		Motion->advanceTime(Time);
+		Motion->advanceFrame(FrameCount);
 	}
+}
+
+void MotionController::clearFinished()
+{
+	for (auto motion = KnownMotions.begin(); motion != KnownMotions.end(); ) {
+		if ((*motion)->isFinished()) {
+			KnownMotions.erase(motion);
+			motion = KnownMotions.begin();
+		}
+		else ++motion;
+	}
+}
+
+void MotionController::setFPS(float FPS)
+{
+	FramesPerSecond = FPS;
+}
+
+float MotionController::getFPS()
+{
+	return FramesPerSecond;
 }
 
 std::shared_ptr<Motion> MotionController::loadMotion(std::wstring FileName)

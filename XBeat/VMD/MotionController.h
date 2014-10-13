@@ -36,6 +36,14 @@ namespace VMD {
 		/// \param [in] Time The amount of time, in milliseconds to advance the VMD motions
 		void advanceFrame(float Time);
 
+		/// \brief Sets the new amount of Frames per Second
+		void setFPS(float FPS);
+		/// \brief Gets the amount of frames per second
+		float getFPS();
+
+		/// \brief Removes all finished motions
+		void clearFinished();
+
 		/// \brief Loads a VMD motion from the specified filename
 		///
 		/// \param [in] FileName The file to load the motion from
@@ -44,6 +52,9 @@ namespace VMD {
 	private:
 		/// \brief Stores all loaded motions
 		std::vector<std::shared_ptr<Motion>> KnownMotions;
+
+		/// \brief The amount of frames per second of the motions
+		float FramesPerSecond;
 	};
 
 }

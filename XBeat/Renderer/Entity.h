@@ -58,13 +58,20 @@ namespace Renderer {
 			return m_position;
 		}
 
-		void XM_CALLCONV SetRotation(float x, float y, float z)
+		void XM_CALLCONV SetRotation(float x, float y, float z, bool isRadians = false)
 		{
 			float yaw, pitch, roll;
 
-			pitch = DirectX::XMConvertToRadians(x);
-			yaw = DirectX::XMConvertToRadians(y);
-			roll = DirectX::XMConvertToRadians(z);
+			if (!isRadians) {
+				pitch = DirectX::XMConvertToRadians(x);
+				yaw = DirectX::XMConvertToRadians(y);
+				roll = DirectX::XMConvertToRadians(z);
+			}
+			else {
+				pitch = x;
+				yaw = y;
+				roll = z;
+			}
 
 			m_rotation = DirectX::XMQuaternionRotationRollPitchYaw(pitch, yaw, roll);
 		}

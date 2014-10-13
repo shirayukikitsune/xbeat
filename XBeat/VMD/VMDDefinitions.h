@@ -17,6 +17,9 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
+
+#include <LinearMath/btVector3.h>
 
 namespace VMD {
 
@@ -54,13 +57,13 @@ namespace VMD {
 		/// \brief The distance of the camera to the focal point
 		float Distance;
 		/// \brief The focal point
-		float Position[3];
+		btVector3 Position;
 		/// \brief Rotation around the focal point
-		float Angles[3];
+		btVector3 Angles;
 		/// \brief Animation interpolation data
-		int8_t InterpolationData[24];
-		/// \brief Field of View angle
-		uint32_t FovAngle;
+		std::vector<float> InterpolationData[6];
+		/// \brief Field of View angle, in radians
+		float FovAngle;
 		/// \brief Use or not orthogonal projection
 		///
 		/// \remarks If this is not zero, use orthogonal projection, if zero, use perspective projection

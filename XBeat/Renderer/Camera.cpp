@@ -16,21 +16,30 @@
 
 using namespace Renderer;
 
-Camera::Camera(void)
+Camera::Camera(float FieldOfView, float AspectRatio, float NearPlane, float FarPlane)
+	: FieldOfView(FieldOfView), AspectRatio(AspectRatio), NearPlane(NearPlane), FarPlane(FarPlane)
 {
 	m_rotation = DirectX::XMQuaternionIdentity();
+
+	FocalDistance = 0.0f;
+	Projection = DirectX::XMMatrixPerspectiveFovLH(FieldOfView, AspectRatio, NearPlane, FarPlane);
 }
 
 bool Camera::update(float Time)
 {
-	DirectX::XMVECTOR up, lookAt;
+	DirectX::XMVECTOR Up, LookAt;
+	Up = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), m_rotation);
+	LookAt = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), m_rotation);
+	LookAt = DirectX::XMVectorAdd(m_position, LookAt);
 
-	up = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), m_rotation);
-	lookAt = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), m_rotation);
+#if 0
+	DirectX::XMVECTOR EyePosition = m_position;
+#else
+	DirectX::XMVECTOR EyePosition = DirectX::XMVector3Rotate(DirectX::XMVectorSet(FocalDistance, 0, 0, 0), m_rotation);
+	EyePosition = DirectX::XMVectorAdd(EyePosition, m_position);
+#endif
 
-	lookAt = DirectX::XMVectorAdd(m_position, lookAt);
-
-	ViewMatrix = DirectX::XMMatrixLookAtLH(m_position, lookAt, up);
+	ViewMatrix = DirectX::XMMatrixLookAtLH(EyePosition, LookAt, Up);
 
 	return true;
 }
@@ -67,4 +76,9 @@ void Camera::setFarPlane(float FarPlane)
 {
 	this->FarPlane = FarPlane;
 	Projection = DirectX::XMMatrixPerspectiveFovLH(FieldOfView, AspectRatio, NearPlane, FarPlane);
+}
+
+void Camera::setFocalDistance(float FocalDistance)
+{
+	this->FocalDistance = FocalDistance;
 }

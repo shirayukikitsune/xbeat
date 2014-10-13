@@ -204,7 +204,7 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 }
 
 bool SceneManager::LoadScene() {
-	camera.reset(new Camera);
+	camera.reset(new Camera(DirectX::XM_PIDIV4, (float)screenWidth / (float)screenHeight, SCREEN_NEAR, SCREEN_DEPTH));
 	if (camera == nullptr)
 		return false;
 
@@ -259,19 +259,20 @@ bool SceneManager::LoadScene() {
 	m_models[1]->GetRootBone()->Translate(btVector3(7.5f, 0, 0));
 #endif
 
-	auto motion = new VMD::Motion();
-	motion->loadFromFile(L"./Data/Musics/rolling girl/rolling girl.vmd");
+	MotionManager.reset(new VMD::MotionController);
+	assert(MotionManager != nullptr);
+	auto motion = MotionManager->loadMotion(L"./Data/Musics/rolling girl/camera.vmd");
+	motion->attachCamera(camera);
 
-	camera->setAspectRatio((float)screenWidth / (float)screenHeight);
-	camera->setFieldOfView(DirectX::XM_PIDIV4);
-	camera->setNearPlane(SCREEN_NEAR);
-	camera->setFarPlane(SCREEN_DEPTH);
+	motion = MotionManager->loadMotion(L"./Data/Musics/rolling girl/rolling girl.vmd");
+	motion->attachModel(m_models[1]);
+
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 
 	lightShader->SetLightCount(1);
 	lightShader->SetLights(light->GetAmbientColor(), light->GetDiffuseColor(), light->GetSpecularColor(), light->GetDirection(), DirectX::XMVectorZero(), 0);
 	Shaders::Light::MaterialBufferType material;
-	material.ambientColor = DirectX::XMFLOAT4(01.0f, 1.0f, 1.0f, 1.0f);
+	material.ambientColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	material.diffuseColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	material.specularColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	lightShader->UpdateMaterialBuffer(material, d3d->GetDeviceContext());
@@ -335,6 +336,9 @@ bool SceneManager::Frame(float frameTime)
 
 	totalTime += frameTime;
 
+	MotionManager->advanceFrame(frameTime);
+
+#if 0
 	DirectX::XMFLOAT3 campos(0,0,0);
 
 	if (input->isKeyPressed(DIK_UPARROW)) {
@@ -355,7 +359,9 @@ bool SceneManager::Frame(float frameTime)
 	}
 
 	camera->Move(campos.x, campos.y, campos.z);
-	camera->Update(frameTime);
+#endif
+
+	camera->update(frameTime);
 
 	if (!Render(frameTime))
 		return false;
@@ -393,15 +399,21 @@ bool SceneManager::RenderToTexture(float frameTime)
 
 bool SceneManager::RenderScene(float frameTime)
 {
-	DirectX::XMMATRIX view, projection, world;
+	DirectX::XMMATRIX skyView, view, projection, world;
 
 	camera->getViewMatrix(view);
-	d3d->GetWorldMatrix(world);
+	world = DirectX::XMMatrixIdentity();
 	camera->getProjectionMatrix(projection);
+
+	float Distance = camera->getFocalDistance();
+	camera->setFocalDistance(0.0f);
+	camera->update(0.0f);
+	camera->getViewMatrix(skyView);
+	camera->setFocalDistance(Distance);
 
 	frustum->Construct(SCREEN_DEPTH, projection, view);
 
-	if (!sky->Render(d3d, world, view, projection, camera, light))
+	if (!sky->Render(d3d, world, skyView, projection, camera, light))
 		return false;
 
 	lightShader->SetEyePosition(camera->GetPosition());
@@ -434,7 +446,7 @@ bool SceneManager::RenderEffects(float frameTime)
 	DirectX::XMMATRIX view, ortho, world;
 
 	camera->getViewMatrix(view);
-	d3d->GetWorldMatrix(world);
+	world = DirectX::XMMatrixIdentity();
 	d3d->GetOrthoMatrix(ortho);
 
 	if (!m_postProcess->Render(d3d, fullWindow->GetIndexCount(), world, view, ortho, renderTexture, fullWindow, SCREEN_DEPTH, SCREEN_NEAR))
@@ -448,7 +460,7 @@ bool SceneManager::Render2DTextureScene(float frameTime)
 	DirectX::XMMATRIX view, ortho, world;
 
 	camera->getViewMatrix(view);
-	d3d->GetWorldMatrix(world);
+	world = DirectX::XMMatrixIdentity();
 	d3d->GetOrthoMatrix(ortho);
 
 	d3d->SetBackBufferRenderTarget();

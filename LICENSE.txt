@@ -30,8 +30,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
 THE SOFTWARE.
 
 
-The files in the Library_MMDAgent and Library_MMDFiles are licensed under these
-terms:
+The file XBeat/VMD/Motion.cpp is based on the MMDAgent Project; the files
+in the Library_MMDAgent and Library_MMDFiles are licensed under these terms:
  
 /* ----------------------------------------------------------------- */
 /*           The Toolkit for Building Voice Interaction Systems      */

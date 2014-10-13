@@ -21,6 +21,7 @@
 #include "SpriteFont.h"
 #include "../PMX/PMXShader.h"
 #include "../ModelManager.h"
+#include "../VMD/MotionController.h"
 
 namespace Renderer {
 
@@ -58,6 +59,8 @@ private:
 	std::unique_ptr<DirectX::SpriteFont> m_font;
 	std::unique_ptr<DirectX::SpriteBatch> m_batch;
 	std::unique_ptr<ModelManager> m_modelManager;
+	std::unique_ptr<VMD::MotionController> MotionManager;
+
 	std::shared_ptr<ViewFrustum> frustum;
 	std::shared_ptr<D3DRenderer> d3d;
 	std::shared_ptr<SkyBox> sky;

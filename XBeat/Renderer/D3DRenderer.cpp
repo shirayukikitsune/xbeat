@@ -308,7 +308,6 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 
 	deviceContext->RSSetViewports(1, &viewport);
 
-	worldMatrix = DirectX::XMMatrixIdentity();
 	orthoMatrix = DirectX::XMMatrixOrthographicLH((float)width, (float)height, screenNear, screenDepth);
 
 	return true;
@@ -437,11 +436,6 @@ void D3DRenderer::DisableAlphaBlending()
 	static const float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	deviceContext->OMSetBlendState(blendState[1], blendFactor, 0xFFFFFFFFU);
-}
-
-void D3DRenderer::GetWorldMatrix(DirectX::XMMATRIX &matrix)
-{
-	matrix = worldMatrix;
 }
 
 void D3DRenderer::GetOrthoMatrix(DirectX::XMMATRIX &matrix)

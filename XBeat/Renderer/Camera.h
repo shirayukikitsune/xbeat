@@ -23,7 +23,7 @@ namespace Renderer {
 		: public Entity
 	{
 	public:
-		Camera();
+		Camera(float FieldOfView, float AspectRatio, float NearPlane, float FarPlane);
 
 		/// \brief Updates the view matrix
 		virtual bool update(float Time);
@@ -44,11 +44,21 @@ namespace Renderer {
 		/// \brief Sets the far clipping plane distance
 		void setFarPlane(float FarPlane);
 
+		/// \brief Sets the focal distance
+		void setFocalDistance(float FocalDistance);
+		/// \brief Gets the focal distance
+		float getFocalDistance() { return FocalDistance; }
+
 	private:
 		/// \brief The view matrix
 		DirectX::XMMATRIX ViewMatrix;
 		/// \brief The projection matrix
 		DirectX::XMMATRIX Projection;
+
+		/// \brief The distance to the focal point
+		///
+		/// \remarks The Entity::GetPosition() is the focal point
+		float FocalDistance;
 
 		/// \brief The field of view angle, in radians
 		float FieldOfView;

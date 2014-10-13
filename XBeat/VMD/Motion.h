@@ -14,12 +14,11 @@
 
 #pragma once
 
-#include "VMDDefinitions.h"
-
 #include "../PMX/PMXModel.h"
 #include "../Renderer/Camera.h"
 
-#include <queue>
+#include "VMDDefinitions.h"
+
 #include <string>
 #include <vector>
 
@@ -34,16 +33,20 @@ namespace VMD {
 		Motion();
 		~Motion();
 
+		/// \brief Resets the animation state
+		void reset();
+
 		/// \brief Loads a motion from a file
 		///
 		/// \param [in] FileName The path of the motion file to be loaded
 		/// \returns Whether the loading was successful or not
 		bool loadFromFile(const std::wstring &FileName);
 
-		/// \brief Advances the time of the motion
+		/// \brief Advances the frame of the motion
 		///
-		/// \param [in] Time The amount of time, in milliseconds, to advance the motion
-		void advanceTime(float Time);
+		/// \param [in] Frames The amount of frames to advance the motion
+		/// \returns true if the animation is finished, false otherwise
+		bool advanceFrame(float Frames);
 
 		/// \brief Attaches a Renderer::Camera to the motion
 		///
@@ -52,23 +55,63 @@ namespace VMD {
 		/// \brief Attaches a Renderer::Model to the motion
 		///
 		/// \param [in] Model The model to be attached
-		void attachModel(std::shared_ptr<Renderer::Model> Model);
+		void attachModel(std::shared_ptr<PMX::Model> Model);
+
+		/// \brief Returns the motion finished state
+		bool isFinished() { return Finished; }
 
 	private:
-		/// \brief The current time of the motion
-		float CurrentTime;
+		/// \brief The current frame of the motion
+		float CurrentFrame;
+
+		/// \brief The last key frame index
+		uint32_t LastKeyFrame;
+
+		/// \brief Defines whether this motion has finished or not
+		bool Finished;
 
 		/// \brief The key frames of bone animations
-		std::queue<BoneKeyFrame> BoneKeyFrames;
+		std::vector<BoneKeyFrame> BoneKeyFrames;
 		/// \brief The key frames of morphs animations
-		std::queue<MorphKeyFrame> MorphKeyFrames;
+		std::vector<MorphKeyFrame> MorphKeyFrames;
 		/// \brief The key frames of camera animations
-		std::queue<CameraKeyFrame> CameraKeyFrames;
+		std::vector<CameraKeyFrame> CameraKeyFrames;
 
 		/// \brief The attached cameras
 		std::vector<std::shared_ptr<Renderer::Camera>> AttachedCameras;
 		/// \brief The attached models
 		std::vector<std::shared_ptr<PMX::Model>> AttachedModels;
+
+		/// \brief Apply motion parameters to all attached cameras
+		void setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btVector3 &Angles);
+
+		/// \name Functions extracted from MMDAgent, http://www.mmdagent.jp/
+		/// @{
+
+		/// \brief Sets camera parameters according to the motion at the specified frame
+		///
+		/// \param [in] Frame The frame of the animation
+		void updateCamera(float Frame);
+
+		/// \brief Parses the camera interpolation data from the VMD file
+		void parseCameraInterpolationData(CameraKeyFrame &Frame, int8_t *InterpolationData);
+
+		/// \brief Cubic Bézier curve interpolation function
+		///
+		/// \param [in] T The interpolation value, in [0.0; 1.0] range
+		/// \param [in] P1 The first point ordinate
+		/// \param [in] P2 The second point ordinate
+		float InterpolationFunction(float T, float P1, float P2);
+
+		/// \brief The derivative of the cubic Bézier curve
+		/// \sa float VMD::Motion::InterpolationFunction(float T, float P1, float P2)
+		float InterpolationFunctionDerivative(float T, float P1, float P2);
+
+		/// @}
+
+		enum {
+			InterpolationTableSize = 64
+		};
 	};
 
 }

@@ -32,7 +32,6 @@ public:
 
 	ID3D11RasterizerState *GetRasterState(int idx);
 
-	void GetWorldMatrix(DirectX::XMMATRIX &matrix);
 	void GetOrthoMatrix(DirectX::XMMATRIX &matrix);
 
 	void GetVideoCardInfo(char *name, int &memory);
@@ -70,7 +69,6 @@ private:
 	ID3D11BlendState *blendState[2];
 	ID3D11RasterizerState *rasterState[3];
 	D3D11_VIEWPORT viewport;
-	DirectX::XMMATRIX worldMatrix;
 	DirectX::XMMATRIX orthoMatrix;
 };
 
