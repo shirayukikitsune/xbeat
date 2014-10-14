@@ -19,6 +19,7 @@
 VMD::Motion::Motion()
 {
 	reset();
+	MaxFrame = 0.0f;
 }
 
 
@@ -29,7 +30,8 @@ VMD::Motion::~Motion()
 void VMD::Motion::reset()
 {
 	CurrentFrame = 0.0f;
-	LastKeyFrame = 0;
+	LastCameraKeyFrame = 0;
+	LastBoneKeyFrame = 0;
 	Finished = false;
 }
 
@@ -37,13 +39,16 @@ bool VMD::Motion::advanceFrame(float Frames)
 {
 	CurrentFrame += Frames;
 
-	updateCamera(CurrentFrame);
-
-	if (CurrentFrame >= (float)CameraKeyFrames.back().FrameCount) {
-		CurrentFrame = (float)CameraKeyFrames.back().FrameCount;
-
+	if (CurrentFrame >= MaxFrame) {
+		Finished = true;
 		return true;
 	}
+
+	if (!AttachedCameras.empty())
+		updateCamera(CurrentFrame);
+
+	if (!AttachedModels.empty())
+		updateBones(CurrentFrame);
 
 	return false;
 }
@@ -101,7 +106,7 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		auto WrittenCharacters = MultiByteToWideChar(932, 0, ReadBuffer, -1, OutputBuffer, RequiredLength);
 
 		// Create the output string
-		std::wstring Output(OutputBuffer, WrittenCharacters);
+		std::wstring Output(OutputBuffer);
 
 		// Delete the buffers
 		delete[] ReadBuffer;
@@ -123,14 +128,32 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 
 	while (FrameCount --> 0) {
 		BoneKeyFrame Frame;
+		int8_t InterpolationData[64];
+		float TempVector[4];
 
 		Frame.BoneName = readSJISString(InputStream, 15);
 		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
-		InputStream.read((char*)Frame.Translation, sizeof(float) * 3);
-		InputStream.read((char*)Frame.Rotation, sizeof(float) * 4);
-		InputStream.read((char*)Frame.InterpolationData, 64);
+		InputStream.read((char*)TempVector, sizeof(float) * 3);
+		Frame.Translation = btVector3(TempVector[0], TempVector[1], TempVector[2]);
+		InputStream.read((char*)TempVector, sizeof(float) * 4);
+		Frame.Rotation = btQuaternion(TempVector[0], TempVector[1], TempVector[2], TempVector[3]);
+		InputStream.read((char*)InterpolationData, 64);
 
-		BoneKeyFrames.push_back(Frame);
+		parseBoneInterpolationData(Frame, InterpolationData);
+
+		MaxFrame = std::max(MaxFrame, (float)Frame.FrameCount);
+
+		auto BoneMotion = BoneKeyFrames.find(Frame.BoneName);
+		if (BoneMotion == BoneKeyFrames.end())
+			BoneKeyFrames[Frame.BoneName] = { Frame };
+		else BoneKeyFrames[Frame.BoneName].emplace_back(Frame);
+	}
+
+	// Sort the bone motion by the key frames
+	for (auto &BoneMotion : BoneKeyFrames) {
+		std::sort(BoneMotion.second.begin(), BoneMotion.second.end(), [](BoneKeyFrame &a, BoneKeyFrame &b) {
+			return a.FrameCount < b.FrameCount;
+		});
 	}
 
 	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
@@ -141,6 +164,8 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		Frame.MorphName = readSJISString(InputStream, 15);
 		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
 		InputStream.read((char*)&Frame.Weight, sizeof(float));
+
+		MaxFrame = std::max(MaxFrame, (float)Frame.FrameCount);
 
 		MorphKeyFrames.push_back(Frame);
 	}
@@ -177,6 +202,8 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 
 		parseCameraInterpolationData(Frame, InterpolationData);
 
+		MaxFrame = std::max(MaxFrame, (float)Frame.FrameCount);
+
 		CameraKeyFrames.push_back(Frame);
 	}
 
@@ -195,10 +222,21 @@ void VMD::Motion::setCameraParameters(float FieldOfView, float Distance, btVecto
 	}
 }
 
+void VMD::Motion::setBoneParameters(std::wstring BoneName, btVector3 &Translation, btQuaternion &Rotation)
+{
+	for (auto &Model : AttachedModels) {
+		auto bone = Model->GetBoneByName(BoneName);
+		if (bone) {
+			bone->ResetTransform();
+			bone->Transform(btTransform(Rotation, Translation), PMX::DeformationOrigin::Internal);
+		}
+	}
+}
+
 // The following functions were extracted from MMDAgent project
 void VMD::Motion::updateCamera(float Frame)
 {
-	assert(CameraKeyFrames.size() >= 2);
+	if (CameraKeyFrames.size() < 2) return;
 
 	// Clamp frame to the last frame of the animation
 	if (Frame > (float)CameraKeyFrames.at(CameraKeyFrames.size() - 2).FrameCount) {
@@ -207,8 +245,8 @@ void VMD::Motion::updateCamera(float Frame)
 
 	// Find the next key frame
 	uint32_t NextKeyFrame = 0, CurrentKeyFrame = 0;
-	if (Frame >= CameraKeyFrames[LastKeyFrame].FrameCount) {
-		for (uint32_t i = LastKeyFrame; i < CameraKeyFrames.size(); ++i) {
+	if (Frame >= CameraKeyFrames[LastCameraKeyFrame].FrameCount) {
+		for (uint32_t i = LastCameraKeyFrame; i < CameraKeyFrames.size(); ++i) {
 			if (Frame <= CameraKeyFrames[i].FrameCount) {
 				NextKeyFrame = i;
 				break;
@@ -216,7 +254,7 @@ void VMD::Motion::updateCamera(float Frame)
 		}
 	}
 	else {
-		for (uint32_t i = 0; i <= LastKeyFrame && i < CameraKeyFrames.size(); ++i) {
+		for (uint32_t i = 0; i <= LastCameraKeyFrame && i < CameraKeyFrames.size(); ++i) {
 			if (Frame <= CameraKeyFrames[i].FrameCount) {
 				NextKeyFrame = i;
 				break;
@@ -230,7 +268,7 @@ void VMD::Motion::updateCamera(float Frame)
 	if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 	else CurrentKeyFrame = NextKeyFrame - 1;
 
-	LastKeyFrame = CurrentKeyFrame;
+	LastCameraKeyFrame = CurrentKeyFrame;
 
 	float Frame1Time = (float)CameraKeyFrames[CurrentKeyFrame].FrameCount;
 	float Frame2Time = (float)CameraKeyFrames[NextKeyFrame].FrameCount;
@@ -267,6 +305,87 @@ void VMD::Motion::updateCamera(float Frame)
 	setCameraParameters(FieldOfView, Distance, Position, Angles);
 }
 
+void VMD::Motion::updateBones(float Frame)
+{
+	for (auto BoneMotion = BoneKeyFrames.begin(); BoneMotion != BoneKeyFrames.end(); ) {
+		if (BoneMotion->second.size() == 1) {
+			if (BoneMotion->second.front().FrameCount > Frame) continue;
+
+			setBoneParameters(BoneMotion->first, BoneMotion->second.front().Translation, BoneMotion->second.front().Rotation);
+			std::wstring key = BoneMotion->first;
+			BoneMotion++;
+			std::wstring nextKey;
+			if (BoneMotion != BoneKeyFrames.end()) {
+				nextKey = BoneMotion->first;
+			}
+			BoneMotion = BoneKeyFrames.find(nextKey);
+			BoneKeyFrames.erase(key);
+			continue;
+		}
+
+		auto &BoneKeyFrames = BoneMotion->second;
+
+		// Clamp frame to the last frame of the animation
+		if (Frame > (float)BoneKeyFrames.at(BoneKeyFrames.size() - 2).FrameCount) {
+			Frame = (float)BoneKeyFrames.at(BoneKeyFrames.size() - 2).FrameCount;
+		}
+
+		// Find the next key frame
+		uint32_t NextKeyFrame = 0, CurrentKeyFrame = 0;
+		for (uint32_t i = 0; i < BoneKeyFrames.size(); ++i) {
+			if (Frame <= BoneKeyFrames[i].FrameCount) {
+				NextKeyFrame = i;
+				break;
+			}
+		}
+
+		// Value clamping
+		if (NextKeyFrame >= BoneKeyFrames.size()) NextKeyFrame = BoneKeyFrames.size() - 1;
+
+		if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
+		else CurrentKeyFrame = NextKeyFrame - 1;
+
+		LastBoneKeyFrame = CurrentKeyFrame;
+
+		float Frame1Time = (float)BoneKeyFrames[CurrentKeyFrame].FrameCount;
+		float Frame2Time = (float)BoneKeyFrames[NextKeyFrame].FrameCount;
+		BoneKeyFrame& Frame1 = BoneKeyFrames[CurrentKeyFrame];
+		BoneKeyFrame& Frame2 = BoneKeyFrames[NextKeyFrame];
+
+		if (Frame1Time == Frame2Time || Frame <= Frame1Time) {
+			setBoneParameters(Frame1.BoneName, Frame1.Translation, Frame1.Rotation);
+			return;
+		}
+		else if (Frame >= Frame2Time) {
+			setBoneParameters(Frame2.BoneName, Frame2.Translation, Frame2.Rotation);
+			return;
+		}
+
+		float Ratio = (Frame - Frame1Time) / (Frame2Time - Frame1Time);
+		uint32_t InterpolationIndex = (uint32_t)(Ratio * InterpolationTableSize);
+
+		auto doLinearInterpolation = [](float Ratio, float V1, float V2) {
+			return V1 * (1.0f - Ratio) + V2 * Ratio;
+		};
+		auto findRatio = [Ratio, InterpolationIndex](std::vector<float> &Table) {
+			if (Table.empty()) return Ratio;
+
+			return Table[InterpolationIndex] + (Table[InterpolationIndex + 1] - Table[InterpolationIndex]) * (Ratio * InterpolationTableSize - InterpolationIndex);
+		};
+
+		btVector3 Translation;
+		Translation.setX(doLinearInterpolation(findRatio(Frame2.InterpolationData[0]), Frame1.Translation.getX(), Frame2.Translation.getX()));
+		Translation.setY(doLinearInterpolation(findRatio(Frame2.InterpolationData[1]), Frame1.Translation.getY(), Frame2.Translation.getY()));
+		Translation.setZ(doLinearInterpolation(findRatio(Frame2.InterpolationData[2]), Frame1.Translation.getZ(), Frame2.Translation.getZ()));
+		btQuaternion Rotation;
+		Rotation = Frame1.Rotation.slerp(Frame2.Rotation, findRatio(Frame2.InterpolationData[3]));
+
+		setBoneParameters(Frame1.BoneName, Translation, Rotation);
+
+		++BoneMotion;
+	}
+}
+
 void VMD::Motion::parseCameraInterpolationData(CameraKeyFrame &Frame, int8_t *InterpolationData)
 {
 	float X1, Y1, X2, Y2;
@@ -283,25 +402,50 @@ void VMD::Motion::parseCameraInterpolationData(CameraKeyFrame &Frame, int8_t *In
 		X2 = InterpolationData[i * 4 + 1] / 127.0f;
 		Y2 = InterpolationData[i * 4 + 3] / 127.0f;
 
-		for (int k = 0; k < InterpolationTableSize; ++k) {
-			float CurrentFrame = (float)k / (float)InterpolationTableSize;
-			float Param = CurrentFrame;
+		generateInterpolationTable(Frame.InterpolationData[i], X1, X2, Y1, Y2);
+	}
+}
 
-			while (true) {
-				float Value = InterpolationFunction(Param, X1, X2) - CurrentFrame;
-				if (fabsf(Value) <= 0.0001f) break;
+void VMD::Motion::parseBoneInterpolationData(BoneKeyFrame &Frame, int8_t *InterpolationData)
+{
+	float X1, Y1, X2, Y2;
 
-				float ParamDT = InterpolationFunctionDerivative(Param, X1, X2);
-				if (ParamDT == 0.0f) break;
-
-				Param -= Value / ParamDT;
-			}
-
-			Frame.InterpolationData[i][k] = InterpolationFunction(Param, Y1, Y2);
+	for (int i = 0; i < 4; ++i) {
+		if (InterpolationData[i] == InterpolationData[i + 4] && InterpolationData[i + 8] == InterpolationData[i + 12]) {
+			Frame.InterpolationData[i].clear();
+			continue;
 		}
 
-		Frame.InterpolationData[i][InterpolationTableSize] = 1.0f;
+		Frame.InterpolationData[i].resize(InterpolationTableSize + 1);
+		X1 = InterpolationData[i] / 127.0f;
+		Y1 = InterpolationData[i + 4] / 127.0f;
+		X2 = InterpolationData[i + 8] / 127.0f;
+		Y2 = InterpolationData[i + 12] / 127.0f;
+
+		generateInterpolationTable(Frame.InterpolationData[i], X1, X2, Y1, Y2);
 	}
+}
+
+void VMD::Motion::generateInterpolationTable(std::vector<float> &Table, float X1, float X2, float Y1, float Y2)
+{
+	for (int k = 0; k < InterpolationTableSize; ++k) {
+		float CurrentFrame = (float)k / (float)InterpolationTableSize;
+		float Param = CurrentFrame;
+
+		while (true) {
+			float Value = InterpolationFunction(Param, X1, X2) - CurrentFrame;
+			if (fabsf(Value) <= 0.0001f) break;
+
+			float ParamDT = InterpolationFunctionDerivative(Param, X1, X2);
+			if (ParamDT == 0.0f) break;
+
+			Param -= Value / ParamDT;
+		}
+
+		Table[k] = InterpolationFunction(Param, Y1, Y2);
+	}
+
+	Table[InterpolationTableSize] = 1.0f;
 }
 
 float VMD::Motion::InterpolationFunction(float T, float P1, float P2)

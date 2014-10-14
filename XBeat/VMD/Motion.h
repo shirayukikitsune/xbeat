@@ -63,15 +63,19 @@ namespace VMD {
 	private:
 		/// \brief The current frame of the motion
 		float CurrentFrame;
+		/// \brief The motion frame count
+		float MaxFrame;
 
-		/// \brief The last key frame index
-		uint32_t LastKeyFrame;
+		/// \brief The last camera key frame index
+		uint32_t LastCameraKeyFrame;
+		/// \brief The last bone key frame index
+		uint32_t LastBoneKeyFrame;
 
 		/// \brief Defines whether this motion has finished or not
 		bool Finished;
 
 		/// \brief The key frames of bone animations
-		std::vector<BoneKeyFrame> BoneKeyFrames;
+		std::map<std::wstring, std::vector<BoneKeyFrame>> BoneKeyFrames;
 		/// \brief The key frames of morphs animations
 		std::vector<MorphKeyFrame> MorphKeyFrames;
 		/// \brief The key frames of camera animations
@@ -85,6 +89,8 @@ namespace VMD {
 		/// \brief Apply motion parameters to all attached cameras
 		void setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btVector3 &Angles);
 
+		void setBoneParameters(std::wstring BoneName, btVector3 &Translation, btQuaternion &Rotation);
+
 		/// \name Functions extracted from MMDAgent, http://www.mmdagent.jp/
 		/// @{
 
@@ -95,6 +101,14 @@ namespace VMD {
 
 		/// \brief Parses the camera interpolation data from the VMD file
 		void parseCameraInterpolationData(CameraKeyFrame &Frame, int8_t *InterpolationData);
+
+		/// \brief Sets bones parameters according to the motion at the specified frame
+		void updateBones(float Frame);
+
+		/// \brief Parses the bone interpolation data from the VMD file
+		void parseBoneInterpolationData(BoneKeyFrame &Frame, int8_t *InterpolationData);
+
+		void generateInterpolationTable(std::vector<float> &Table, float X1, float X2, float Y1, float Y2);
 
 		/// \brief Cubic Bézier curve interpolation function
 		///

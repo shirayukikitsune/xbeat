@@ -219,7 +219,7 @@ bool SceneManager::LoadScene() {
 	}
 	stage->SetShader(lightShader);
 
-	auto model = m_modelManager->loadModel(L"北乃カムイv0.9");
+	auto model = m_modelManager->loadModel(L"Tda式ミク・アペンド");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the first model", L"Error", MB_OK);
 		return false;
@@ -261,11 +261,17 @@ bool SceneManager::LoadScene() {
 
 	MotionManager.reset(new VMD::MotionController);
 	assert(MotionManager != nullptr);
+#if 0
 	auto motion = MotionManager->loadMotion(L"./Data/Musics/rolling girl/camera.vmd");
-	motion->attachCamera(camera);
+	//motion->attachCamera(camera);
 
 	motion = MotionManager->loadMotion(L"./Data/Musics/rolling girl/rolling girl.vmd");
+	motion->attachModel(m_models[0]);
 	motion->attachModel(m_models[1]);
+#else
+	auto motion = MotionManager->loadMotion(L"./Data/Musics/Yellow/Yellow.vmd");
+	motion->attachModel(m_models[0]);
+#endif
 
 	camera->SetPosition(0.0f, 10.0f, -30.f);
 

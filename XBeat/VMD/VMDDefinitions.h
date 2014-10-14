@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <LinearMath/btVector3.h>
+#include <LinearMath/btQuaternion.h>
 
 namespace VMD {
 
@@ -31,11 +32,11 @@ namespace VMD {
 		/// \brief The amount of frames until the next keyframe
 		uint32_t FrameCount;
 		/// \brief The bone translation component
-		float Translation[3];
+		btVector3 Translation;
 		/// \brief The bone rotation component, a quaternion
-		float Rotation[4];
+		btQuaternion Rotation;
 		/// \brief Bone interpolation data
-		int8_t InterpolationData[64];
+		std::vector<float> InterpolationData[4];
 	};
 
 	/// \brief Stores information about morph animations
