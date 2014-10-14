@@ -238,7 +238,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		dynamic_cast<detail::BoneImpl*>(bone)->InitializeDebug(d3d);
 	}
 
-	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	vertexBufferDesc.ByteWidth = (UINT)(sizeof(PMXShader::VertexType) * m_vertices.size());
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = 0;
@@ -253,8 +253,8 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	if (FAILED(result))
 		return false;
 
-	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
 	result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_tmpVertexBuffer);
 	if (FAILED(result))
@@ -399,9 +399,43 @@ bool PMX::Model::updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *co
 	return true;
 }
 
+bool PMX::Model::updateVertexBuffer(ID3D11DeviceContext *Context)
+{
+	bool Touched = false;
+
+	for (auto &Material : rendermaterials) {
+		if ((Material.dirty & RenderMaterial::DirtyFlags::VertexBuffer) != 0) {
+			Material.dirty &= ~RenderMaterial::DirtyFlags::VertexBuffer;
+
+			for (uint32_t i = Material.startIndex; i < Material.indexCount + Material.startIndex; ++i) {
+				auto Vertex = this->vertices[this->verticesIndex[i]];
+				DirectX::XMVECTOR Position = DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&Vertex->position), Vertex->MorphOffset);
+				DirectX::XMStoreFloat3(&m_vertices[i].position, Position);
+			}
+
+			Touched = true;
+		}
+	}
+
+	if (!Touched) return true;
+
+	D3D11_MAPPED_SUBRESOURCE MappedResource;
+	HRESULT Result = Context->Map(m_tmpVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
+	if (FAILED(Result))
+		return false;
+
+	memcpy(MappedResource.pData, m_vertices.data(), m_vertices.size() * sizeof(PMX::PMXShader::VertexType));
+
+	Context->Unmap(m_tmpVertexBuffer, 0);
+
+	Context->CopyResource(m_vertexBuffer, m_tmpVertexBuffer);
+
+	return true;
+}
+
 bool PMX::Model::Update(float msec)
 {
-	//if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
+	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
 		for (auto &bone : m_prePhysicsBones) {
 			bone->Update();
 		}
@@ -413,7 +447,7 @@ bool PMX::Model::Update(float msec)
 		for (auto &bone : m_postPhysicsBones) {
 			bone->Update();
 		}
-	//}
+	}
 
 	return true;
 }
@@ -440,6 +474,8 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		}
 
 		shader->UpdateBoneBuffer(context);
+
+		updateVertexBuffer(context);
 
 		context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &vsOffset);
 
@@ -663,6 +699,7 @@ void PMX::Model::ApplyMorph(Morph *morph, float weight)
 		applyFlipMorph(morph, weight);
 		break;
 	case MorphType::Impulse:
+		applyImpulseMorph(morph, weight);
 		break;
 	}
 }
@@ -689,17 +726,14 @@ void PMX::Model::applyVertexMorph(Morph *morph, float weight)
 				(*it)->weight = weight;
 		}
 
-		/*v->morphOffset.setZero();
+		v->MorphOffset = DirectX::XMVectorZero();
 		for (auto &m : v->morphs) {
-			v->morphOffset.setX(v->morphOffset.x() + m->type->vertex.offset[0] * m->weight);
-			v->morphOffset.setY(v->morphOffset.y() + m->type->vertex.offset[1] * m->weight);
-			v->morphOffset.setZ(v->morphOffset.z() + m->type->vertex.offset[2] * m->weight);
+			v->MorphOffset = v->MorphOffset + DirectX::XMVectorSet(m->type->vertex.offset[0] * m->weight, m->type->vertex.offset[1] * m->weight, m->type->vertex.offset[2] * m->weight, 0.0f);
 		}
 
 		// Mark the material for update next frame
 		for (auto &m : v->materials)
-			m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;*/
-		//v->material->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
+			m.first->dirty |= RenderMaterial::DirtyFlags::VertexBuffer;
 	}
 }
 
@@ -718,10 +752,11 @@ void PMX::Model::applyMaterialMorph(Morph *morph, float weight)
 		if (i.material.index == -1) {
 			for (auto m : rendermaterials)
 				applyMaterialMorph(&i, &m, weight);
+			continue;
 		}
-		else if (i.material.index < rendermaterials.size() && i.material.index >= 0) {
-			applyMaterialMorph(&i, &rendermaterials[i.material.index], weight);
-		}
+
+		assert("Material morph index out of range" && i.material.index < rendermaterials.size());
+		applyMaterialMorph(&i, &rendermaterials[i.material.index], weight);
 	}
 }
 
@@ -745,3 +780,11 @@ void PMX::Model::applyFlipMorph(Morph* morph, float weight)
 	}
 }
 
+void PMX::Model::applyImpulseMorph(Morph* morph, float weight)
+{
+	for (auto &Morph : morph->data) {
+		assert("Impulse morph rigid body index out of range" && Morph.impulse.index < m_rigidBodies.size());
+		auto Body = m_rigidBodies[Morph.impulse.index];
+		assert("Impulse morph cannot be applied to a kinematic rigid body" && Body->isDynamic());
+	}
+}

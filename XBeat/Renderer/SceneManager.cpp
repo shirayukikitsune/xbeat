@@ -132,7 +132,9 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 
 		m_models[0]->ApplyMorph(L"翼羽ばたき", value);
 	});
-	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) { m_models[0]->ApplyMorph(L"翼羽ばたき", 0.9f); });
+	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) {
+		m_models[0]->ApplyMorph(L"ウィンク", 0.9f);
+	});
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(1.0f, 0.0f, 0.0f)); });
 	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) {

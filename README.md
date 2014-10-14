@@ -24,11 +24,18 @@ Currently, the project is under development and is not in a playable state yet.
 The features that are implemented so far are:
 
   - PMX 2.0 and 2.1 model support, with a manager to list all available mods
+  - Morph type supported:
+    - Vertex
+    - Material
+	- Bone
+    - Group
+	- Flip (PMX 2.1 exclusive)
   - Physics support (PMX 2.1 soft bodies not yet supported)
   - OBJ for static meshes
   - PostProcessing effect (only for the entire scene, to be done for each model)
   - Bone deformation
   - Vertex skinning on GPU
+  - VMD motion, for cameras and bone transformations (morphs to be done)
 
 Compiling
 ---------
@@ -43,7 +50,7 @@ There are some dependencies included with the source code, but it is also needed
 Coding Standards
 ----------------
 
-To make the source code more readable, we are adopting the LLVM coding standards, which can be seen [here][3].
+To make the source code more readable, we are (at least, trying to :P) adopting the LLVM coding standards, which can be seen [here][3].
 
 When submitting a patch or doing a merge request, please follow these standards.
   

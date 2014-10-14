@@ -98,6 +98,7 @@ private:
 
 	std::vector<PMXShader::VertexType> m_vertices;
 
+	bool updateVertexBuffer(ID3D11DeviceContext *Context);
 	bool updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *context);
 	bool m_dirtyBuffer;
 	ID3D11Buffer *m_materialBuffer;

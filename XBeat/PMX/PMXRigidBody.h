@@ -29,6 +29,8 @@ public:
 	operator btRigidBody*();
 	btRigidBody* getBody() { return (btRigidBody*)*this; }
 
+	bool isDynamic() { return m_mode == RigidBodyMode::Dynamic; }
+
 private:
 	Bone* m_bone;
 	btTransform m_transform, m_inverse;

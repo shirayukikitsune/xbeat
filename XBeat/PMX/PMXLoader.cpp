@@ -208,6 +208,8 @@ void Loader::loadVertexData(Model *model, const char*& data) {
 		for (int i = 0; i < 4; i++) {
 			vertex->bones[i] = nullptr;
 		}
+
+		vertex->MorphOffset = DirectX::XMVectorZero();
 	}
 }
 

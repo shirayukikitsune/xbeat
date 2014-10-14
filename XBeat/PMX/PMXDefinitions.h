@@ -271,6 +271,7 @@ struct Vertex {
 		float weight;
 	};
 	std::list<MorphData*> morphs;
+	DirectX::XMVECTOR MorphOffset;
 
 	uint32_t index;
 };
