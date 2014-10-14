@@ -77,7 +77,7 @@ void detail::BoneImpl::Initialize()
 	m_parent->m_children.push_back(this);
 
 	using namespace DirectX;
-	if (!HasAnyFlag(BoneFlags::LocalAxis)) {
+	if (!HasAnyFlag((uint16_t)BoneFlags::LocalAxis)) {
 		m_localAxis = XMMatrixIdentity();
 
 		auto parent = dynamic_cast<detail::BoneImpl*>(GetParent());
@@ -95,7 +95,7 @@ void detail::BoneImpl::Initialize()
 
 void detail::BoneImpl::InitializeDebug(std::shared_ptr<Renderer::D3DRenderer> d3d)
 {
-	if (!HasAnyFlag(BoneFlags::IK) && HasAnyFlag(BoneFlags::View))
+	if (!HasAnyFlag((uint16_t)BoneFlags::IK) && HasAnyFlag((uint16_t)BoneFlags::View))
 		m_primitive = DirectX::GeometricPrimitive::CreateCylinder(d3d->GetDeviceContext());
 }
 
@@ -121,7 +121,7 @@ btVector3 detail::BoneImpl::GetEndPosition()
 {
 	btVector3 p;
 
-	if (HasAnyFlag(BoneFlags::Attached)) {
+	if (HasAnyFlag((uint16_t)BoneFlags::Attached)) {
 		auto other = m_model->GetBoneById(this->size.attachTo);
 		p = other->GetPosition();
 	}
@@ -148,19 +148,19 @@ void detail::BoneImpl::Update()
 	btQuaternion rotation = btQuaternion::getIdentity();
 
 	auto parent = GetParent();
-	if (HasAnyFlag(BoneFlags::LocallyAttached)) {
+	if (HasAnyFlag((uint16_t)BoneFlags::LocallyAttached)) {
 		translation += parent->GetLocalTransform().getOrigin();
 	}
-	else if (HasAnyFlag(BoneFlags::TranslationAttached)) {
+	else if (HasAnyFlag((uint16_t)BoneFlags::TranslationAttached)) {
 		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
 		if (target) translation += target->m_inheritTranslation;
 	}
 	translation *= inherit.rate;
 
-	if (HasAnyFlag(BoneFlags::LocallyAttached)) {
+	if (HasAnyFlag((uint16_t)BoneFlags::LocallyAttached)) {
 		rotation *= parent->GetLocalTransform().getRotation();
 	}
-	else if (HasAnyFlag(BoneFlags::RotationAttached)) {
+	else if (HasAnyFlag((uint16_t)BoneFlags::RotationAttached)) {
 		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
 		if (target) rotation *= target->m_inheritRotation;
 	}
@@ -181,7 +181,7 @@ void detail::BoneImpl::Update()
 
 void detail::BoneImpl::Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin)
 {
-	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable)))
+	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable))
 		return;
 
 	setDirty();
@@ -195,7 +195,7 @@ void detail::BoneImpl::Transform(btVector3 angles, btVector3 offset, Deformation
 
 void detail::BoneImpl::Transform(const btTransform& transform, DeformationOrigin origin)
 {
-	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable)))
+	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable))
 		return;
 
 	setDirty();
@@ -206,7 +206,7 @@ void detail::BoneImpl::Transform(const btTransform& transform, DeformationOrigin
 
 void detail::BoneImpl::Rotate(btVector3 axis, float angle, DeformationOrigin origin)
 {
-	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable)))
+	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable))
 		return;
 
 	setDirty();
@@ -219,7 +219,7 @@ void detail::BoneImpl::Rotate(btVector3 axis, float angle, DeformationOrigin ori
 
 void detail::BoneImpl::Rotate(btVector3 angles, DeformationOrigin origin)
 {
-	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable)))
+	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable))
 		return;
 
 	setDirty();
@@ -232,7 +232,7 @@ void detail::BoneImpl::Rotate(btVector3 angles, DeformationOrigin origin)
 
 void detail::BoneImpl::Translate(btVector3 offset, DeformationOrigin origin)
 {
-	if (origin == DeformationOrigin::User && !HasAllFlags((BoneFlags)((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable)))
+	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable))
 		return;
 
 	setDirty();

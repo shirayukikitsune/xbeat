@@ -66,7 +66,7 @@ bool PMX::Model::LoadModel(const wstring &filename)
 	rootBone->Initialize();
 	for (auto &bone : bones) {
 		bone->Initialize();
-		if (bone->HasAnyFlag(BoneFlags::PostPhysicsDeformation))
+		if (bone->HasAnyFlag((uint16_t)BoneFlags::PostPhysicsDeformation))
 			m_postPhysicsBones.push_back(bone);
 		else
 			m_prePhysicsBones.push_back(bone);

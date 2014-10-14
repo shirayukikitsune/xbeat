@@ -66,9 +66,9 @@ public:
 	//! Returns the flags for this bone
 	BoneFlags GetFlags() const { return (BoneFlags)m_flags; }
 	//! Check if this bone has all of the specified flags
-	bool HasAllFlags(BoneFlags flag) const { return (m_flags & (uint16_t)flag) == (uint16_t)flag; }
+	bool HasAllFlags(uint16_t flag) const { return (m_flags & flag) == flag; }
 	//! Check if this bone has any of the specified flags
-	bool HasAnyFlag(BoneFlags flag) const { return (m_flags & (uint16_t)flag) != 0; }
+	bool HasAnyFlag(uint16_t flag) const { return (m_flags & flag) != 0; }
 
 	//! Returns the physical deformation order
 	int32_t GetDeformationOrder() const { return m_deformationOrder; }
