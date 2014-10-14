@@ -82,7 +82,7 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 {
 	HRESULT result;
 	ID3DBlob *errorMsg;
-	D3D11_BUFFER_DESC matrixBufferDesc;
+	D3D11_BUFFER_DESC CBufferDesc;
 	D3D11_INPUT_ELEMENT_DESC layoutDesc[2];
 	D3D11_SAMPLER_DESC samplerDesc;
 	D3D11_TEXTURE2D_DESC texDesc;
@@ -179,33 +179,27 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 	layoutDesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	layoutDesc[1].InstanceDataStepRate = 0;
 
-	// Create matrix buffer
-	matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	matrixBufferDesc.ByteWidth = sizeof (MatrixBuffer);
-	matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	matrixBufferDesc.MiscFlags = 0;
-	matrixBufferDesc.StructureByteStride = 0;
-	matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	CBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	CBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	CBufferDesc.MiscFlags = 0;
+	CBufferDesc.StructureByteStride = 0;
+	CBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 
-	result = device->CreateBuffer(&matrixBufferDesc, NULL, &m_matrixBuffer);
+	CBufferDesc.ByteWidth = sizeof(DOFBuffer);
+
+	result = device->CreateBuffer(&CBufferDesc, NULL, &m_dofBuffer);
 	if (FAILED(result))
 		return false;
 
-	matrixBufferDesc.ByteWidth = sizeof (DOFBuffer);
+	CBufferDesc.ByteWidth = sizeof(BlurSamplersBuffer);
 
-	result = device->CreateBuffer(&matrixBufferDesc, NULL, &m_dofBuffer);
+	result = device->CreateBuffer(&CBufferDesc, NULL, &m_blurBuffer);
 	if (FAILED(result))
 		return false;
 
-	matrixBufferDesc.ByteWidth = sizeof (BlurSamplersBuffer);
-
-	result = device->CreateBuffer(&matrixBufferDesc, NULL, &m_blurBuffer);
-	if (FAILED(result))
-		return false;
-
-	matrixBufferDesc.ByteWidth = sizeof (ScreenSizeBuffer);
-	matrixBufferDesc.CPUAccessFlags = 0;
-	matrixBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	CBufferDesc.ByteWidth = sizeof(ScreenSizeBuffer);
+	CBufferDesc.CPUAccessFlags = 0;
+	CBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
 
 	ScreenSizeBuffer ssb;
 	ssb.dimentions = DirectX::XMFLOAT2((float)width, (float)height);
@@ -214,7 +208,7 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 	srd.pSysMem = (LPVOID)&ssb;
 	srd.SysMemPitch = 0;
 	srd.SysMemSlicePitch = 0;
-	result = device->CreateBuffer(&matrixBufferDesc, &srd, &m_screenSizeBuffer);
+	result = device->CreateBuffer(&CBufferDesc, &srd, &m_screenSizeBuffer);
 	if (FAILED(result))
 		return false;
 
@@ -276,7 +270,6 @@ bool PostProcessEffect::InitializeEffect(ID3D11Device *device, HWND wnd, int wid
 	m_blurVar = m_effect->GetConstantBufferByName("GaussianBlurBuffer");
 	m_dofVar = m_effect->GetConstantBufferByName("dofbuffer");
 	m_screenSizeVar = m_effect->GetConstantBufferByName("ScreenSize");
-	m_WVPVar = m_effect->GetConstantBufferByName("WVP");
 	m_defaultSamplerVar = m_effect->GetVariableByName("TexSampler");
 	m_currentSceneVar = m_effect->GetVariableByName("CurrentScene");
 	m_depthSceneVar = m_effect->GetVariableByName("DepthScene");
@@ -298,7 +291,6 @@ void PostProcessEffect::ShutdownEffect()
 	DX_DELETEIF(m_currentBackView)
 	DX_DELETEIF(m_blurBuffer)
 	DX_DELETEIF(m_dofBuffer)
-	DX_DELETEIF(m_matrixBuffer)
 	DX_DELETEIF(m_screenSizeBuffer)
 	DX_DELETEIF(m_sampler)
 	DX_DELETEIF(m_layout)
@@ -333,23 +325,9 @@ bool PostProcessEffect::SetEffectParameters(ID3D11DeviceContext *context, Direct
 {
 	static auto GaussianFunction = [](float sigmaSquared, float offset) { return (1.0f / sqrtf(2.0f * DirectX::XM_PI * sigmaSquared)) * expf(-(offset * offset) / (2 * sigmaSquared)); };
 	BlurSamplersBuffer *blurBuffer;
-	MatrixBuffer *matrixBuffer;
 	DOFBuffer *dofBuffer;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	HRESULT result;
-
-	result = context->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result)) {
-		return false;
-	}
-
-	matrixBuffer = (MatrixBuffer*)mappedResource.pData;
-
-	matrixBuffer->world = world;
-	matrixBuffer->view = view;
-	matrixBuffer->projection = projection;
-
-	context->Unmap(m_matrixBuffer, 0);
 
 	result = context->Map(m_dofBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result)) {
@@ -392,13 +370,15 @@ bool PostProcessEffect::SetEffectParameters(ID3D11DeviceContext *context, Direct
 		blurBuffer->offsetAndWeight[i * 2 + 1].x = sampleOffset;
 		blurBuffer->offsetAndWeight[i * 2 + 2].x = -sampleOffset;
 	}
-	for (int i = 0; i < BLUR_SAMPLE_COUNT; i++)
+	for (int i = 0; i < BLUR_SAMPLE_COUNT; i++) {
 		blurBuffer->offsetAndWeight[i].y /= totalWeights;
+		blurBuffer->offsetAndWeight[i].z = 0;
+		blurBuffer->offsetAndWeight[i].w = 0;
+	}
 
 	context->Unmap(m_blurBuffer, 0);
 
 	m_blurVar->SetConstantBuffer(m_blurBuffer);
-	m_WVPVar->SetConstantBuffer(m_matrixBuffer);
 	m_screenSizeVar->SetConstantBuffer(m_screenSizeBuffer);
 	m_dofVar->SetConstantBuffer(m_dofBuffer);
 

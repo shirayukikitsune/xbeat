@@ -69,5 +69,5 @@ typedef VertexOutput PixelInput;
 struct PixelOutput
 {
 	float4 color : SV_Target;
-	//float depth : SV_Depth;
+	float depth : SV_Depth;
 };

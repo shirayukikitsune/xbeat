@@ -27,32 +27,26 @@ Texture2D OriginalScene;
 Texture2D DepthScene;
 Texture2D CurrentScene;
 
-cbuffer WVP {
-	matrix world;
-	matrix view;
-	matrix projection;
-};
-
 cbuffer ScreenSize {
 	float2 screenDimentions;
 	float2 texelSize;
 };
 
-static const float NearBlurDepth = 0.1;
+static const float NearBlurDepth = 0.3;
 //The difference between the focal plane and the near plane depths.
-static const float FarBlurDepth = 0.1;
+static const float FarBlurDepth = 0.3;
 //The difference between the focal plane and the far plane depths.
-static const float MaxBlurCutoff = 1;
+static const float MaxBlurCutoff = 0.7;
 //The maximum blurriness that an object behind the focal plane can have, where 1 is full blur and 0 is none.
  
-static const float dofMinThreshold = 0.1; //0.5;
+static const float dofMinThreshold = 0.5;
 //Ensures a smoother transition between near focal plane and focused area.
  
 static const float ApertureDiameter = 3;
 
 #define BLUR_SAMPLE_COUNT 15
 cbuffer GaussianBlurBuffer {
-	float2 blurWeightsAndOffsets[BLUR_SAMPLE_COUNT];
+	float4 blurWeightsAndOffsets[BLUR_SAMPLE_COUNT];
 }
 
 static const float2 poisson[8] =
@@ -304,7 +298,7 @@ technique11 Bloom
 	}
 }
 
-/*technique11 DepthOfField
+technique11 DepthOfField
 {
 	pass dof
 	{
@@ -322,7 +316,7 @@ technique11 Bloom
 	{
 		PixelShader = compile ps_5_0 verblurps();
 	}
-}*/
+}
 
 technique11 EdgeDetection
 {

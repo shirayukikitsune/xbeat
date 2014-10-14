@@ -16,18 +16,12 @@ namespace Shaders {
 	class PostProcessEffect
 {
 public:
-	struct MatrixBuffer {
-		DirectX::XMMATRIX world;
-		DirectX::XMMATRIX view;
-		DirectX::XMMATRIX projection;
-	};
-
 	struct ScreenSizeBuffer {
 		DirectX::XMFLOAT2 dimentions;
 		DirectX::XMFLOAT2 texelSize;
 	};
 
-	__declspec(align(16)) struct DOFBuffer {
+	struct DOFBuffer {
 		float nearZ;
 		float farZ;
 		float range;
@@ -35,8 +29,7 @@ public:
 	};
 
 	struct BlurSamplersBuffer {
-		DirectX::XMFLOAT2 offsetAndWeight[BLUR_SAMPLE_COUNT];
-		DirectX::XMFLOAT2 padding;
+		DirectX::XMFLOAT4 offsetAndWeight[BLUR_SAMPLE_COUNT];
 	};
 
 	PostProcessEffect(void);
@@ -57,7 +50,6 @@ private:
 	ID3DX11Effect *m_effect;
 	ID3D11SamplerState *m_sampler;
 	ID3D11InputLayout *m_layout;
-	ID3D11Buffer *m_matrixBuffer;
 	ID3D11Buffer *m_screenSizeBuffer;
 	ID3D11Buffer *m_dofBuffer;
 	ID3D11Buffer *m_blurBuffer;
@@ -70,7 +62,6 @@ private:
 	ID3DX11EffectVariable *m_depthSceneVar;
 	ID3DX11EffectVariable *m_currentSceneVar;
 	ID3DX11EffectVariable *m_defaultSamplerVar;
-	ID3DX11EffectConstantBuffer *m_WVPVar;
 	ID3DX11EffectConstantBuffer *m_screenSizeVar;
 	ID3DX11EffectConstantBuffer *m_dofVar;
 	ID3DX11EffectConstantBuffer *m_blurVar;

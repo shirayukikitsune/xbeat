@@ -88,6 +88,6 @@ PixelOutput main(PixelInput input)
 
 	PixelOutput output;
 	output.color = color;
-	//output.depth = input.depth;
+	output.depth = input.depth;
 	return output;
 }
