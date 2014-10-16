@@ -26,6 +26,7 @@ Physics::Environment::Environment()
 {
 	State = SimulationState::Running;
 	PauseTime = 0.0f;
+	TimePerFrame = 1.0f / 30.0f;
 }
 
 Physics::Environment::~Environment()
@@ -96,14 +97,14 @@ void Physics::Environment::doFrame(float Time)
 	// Check if the simulation was on hold
 	if (PauseTime > 0.0f) {
 		// If we were on hold, do all simulation while we were frozen on a single step
-		DynamicsWorld->stepSimulation(PauseTime / 1000.f, 1, PauseTime / 1000.f);
+		DynamicsWorld->stepSimulation(PauseTime / 1000.f, 16, PauseTime / 1000.f);
 
 		// We must not skip the current frame simulation, so dont exit yet!
 		PauseTime = 0.0f;
 	}
 
 	// Do our frame simulation
-	DynamicsWorld->stepSimulation(Time);
+	DynamicsWorld->stepSimulation(Time, 3, TimePerFrame);
 }
 
 void Physics::Environment::addSoftBody(std::shared_ptr<btSoftBody> SoftBody, int16_t Group, int16_t Mask)

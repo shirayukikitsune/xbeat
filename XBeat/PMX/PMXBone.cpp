@@ -98,7 +98,7 @@ void detail::BoneImpl::Initialize()
 		for (auto &Link : ikData->links) {
 			Link.bone = static_cast<detail::BoneImpl*>(m_model->GetBoneById(Link.boneIndex));
 			// Hack to fix models imported from PMD
-			if (Link.bone->name.japanese.find(L"ひざ") != std::wstring::npos) {
+			if (Link.bone->name.japanese.find(L"ひざ") != std::wstring::npos && Link.limitAngle == false) {
 				Link.limitAngle = true;
 				Link.limits.lowerLimit.setEulerZYX(0, 0, -DirectX::XM_PI);
 				Link.limits.upperLimit = btQuaternion::getIdentity();
