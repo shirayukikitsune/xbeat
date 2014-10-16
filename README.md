@@ -23,8 +23,8 @@ Currently, the project is under development and is not in a playable state yet.
 
 The features that are implemented so far are:
 
-  - PMX 2.0 and 2.1 model support, with a manager to list all available mods
-  - Morph type supported:
+  - PMX 2.0 and 2.1 model support, with a manager to list all available models
+  - Morph types supported:
     - Vertex
     - Material
 	- Bone
@@ -35,7 +35,7 @@ The features that are implemented so far are:
   - PostProcessing effect (only for the entire scene, to be done for each model)
   - Bone deformation
   - Vertex skinning on GPU
-  - VMD motion, for cameras and bone transformations (morphs to be done)
+  - VMD motion, including camera, bone transformations and morphs
 
 Compiling
 ---------
