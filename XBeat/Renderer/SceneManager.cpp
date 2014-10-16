@@ -221,7 +221,7 @@ bool SceneManager::LoadScene() {
 	}
 	stage->SetShader(lightShader);
 
-	auto model = m_modelManager->loadModel(L"Tda式ルカ水着ポニーテールL74");
+	auto model = m_modelManager->loadModel(L"2013 Racing Miku");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the first model", L"Error", MB_OK);
 		return false;
@@ -240,7 +240,7 @@ bool SceneManager::LoadScene() {
 #if 1
 	m_models[0]->GetRootBone()->Translate(btVector3(-7.5f, 0, 0));
 
-	model = m_modelManager->loadModel(L"門を開く者 アリス");
+	model = m_modelManager->loadModel(L"TDA Miku HS Ver 2.0");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the second model", L"Error", MB_OK);
 		return false;
@@ -265,14 +265,13 @@ bool SceneManager::LoadScene() {
 	assert(MotionManager != nullptr);
 #if 0
 	auto motion = MotionManager->loadMotion(L"./Data/Musics/rolling girl/camera.vmd");
-	//motion->attachCamera(camera);
+	motion->attachCamera(camera);
 
 	motion = MotionManager->loadMotion(L"./Data/Musics/rolling girl/rolling girl.vmd");
 	motion->attachModel(m_models[0]);
 	motion->attachModel(m_models[1]);
 #else
 	auto motion = MotionManager->loadMotion(L"./Data/Musics/Lily Lily Burning Night/Lily Lily Burning Night.vmd");
-	MotionManager->setFPS(30.0f);
 	motion->attachModel(m_models[0]);
 	motion->attachModel(m_models[1]);
 #endif

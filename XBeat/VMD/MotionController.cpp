@@ -20,7 +20,7 @@ using namespace VMD;
 
 MotionController::MotionController()
 {
-	FramesPerSecond = 60.f;
+	FramesPerSecond = 30.f;
 }
 
 

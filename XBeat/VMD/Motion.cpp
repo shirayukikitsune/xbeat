@@ -30,8 +30,6 @@ VMD::Motion::~Motion()
 void VMD::Motion::reset()
 {
 	CurrentFrame = 0.0f;
-	LastCameraKeyFrame = 0;
-	LastBoneKeyFrame = 0;
 	Finished = false;
 }
 
@@ -47,8 +45,10 @@ bool VMD::Motion::advanceFrame(float Frames)
 	if (!AttachedCameras.empty())
 		updateCamera(CurrentFrame);
 
-	if (!AttachedModels.empty())
+	if (!AttachedModels.empty()) {
 		updateBones(CurrentFrame);
+		updateMorphs(CurrentFrame);
+	}
 
 	return false;
 }
@@ -130,13 +130,18 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		BoneKeyFrame Frame;
 		int8_t InterpolationData[64];
 		float TempVector[4];
+		btQuaternion LocalCoordinate;
+		btMatrix3x3 Auxiliar;
 
 		Frame.BoneName = readSJISString(InputStream, 15);
 		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
 		InputStream.read((char*)TempVector, sizeof(float) * 3);
-		Frame.Translation = btVector3(TempVector[0], TempVector[1], TempVector[2]);
+		Frame.Translation = btVector3(TempVector[0], TempVector[1], -TempVector[2]);
 		InputStream.read((char*)TempVector, sizeof(float) * 4);
-		Frame.Rotation = btQuaternion(TempVector[0], TempVector[1], TempVector[2], TempVector[3]);
+		LocalCoordinate = btQuaternion(TempVector[0], TempVector[1], TempVector[2], TempVector[3]);
+		Auxiliar.setRotation(LocalCoordinate);
+		Auxiliar.getEulerZYX(TempVector[0], TempVector[1], TempVector[2]);
+		Frame.Rotation.setEulerZYX(-TempVector[0], -TempVector[1], TempVector[2]);
 		InputStream.read((char*)InterpolationData, 64);
 
 		parseBoneInterpolationData(Frame, InterpolationData);
@@ -167,10 +172,13 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 
 		MaxFrame = std::max(MaxFrame, (float)Frame.FrameCount);
 
-		MorphKeyFrames.push_back(Frame);
+		auto MorphFrame = MorphKeyFrames.find(Frame.MorphName);
+		if (MorphFrame == MorphKeyFrames.end())
+			MorphKeyFrames[Frame.MorphName] = { Frame };
+		else MorphKeyFrames[Frame.MorphName].emplace_back(Frame);
 	}
 
-	// Check for camera data
+	// Check if the camera data is present
 	if (InputStream.eof()) {
 		InputStream.close();
 		return true;
@@ -191,7 +199,9 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		Frame.Position = btVector3(TempVector[0], TempVector[1], TempVector[2]);
 
 		InputStream.read((char*)TempVector, sizeof(float) * 3);
-		Frame.Angles = btVector3(TempVector[0], TempVector[1], TempVector[2]);
+		btMatrix3x3 Auxiliar;
+		Auxiliar.setEulerZYX(-TempVector[0], -TempVector[1], TempVector[2]);
+		Auxiliar.getRotation(Frame.Rotation);
 
 		InputStream.read((char*)InterpolationData, 24);
 
@@ -212,11 +222,11 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 	return true;
 }
 
-void VMD::Motion::setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btVector3 &Angles)
+void VMD::Motion::setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btQuaternion &Rotation)
 {
 	for (auto &Camera : AttachedCameras) {
+		Camera->SetRotation(Rotation.get128());
 		Camera->SetPosition(Position.get128());
-		Camera->SetRotation(Angles.x(), Angles.y(), Angles.z(), true);
 		Camera->setFieldOfView(FieldOfView);
 		Camera->setFocalDistance(Distance);
 	}
@@ -233,42 +243,37 @@ void VMD::Motion::setBoneParameters(std::wstring BoneName, btVector3 &Translatio
 	}
 }
 
+void VMD::Motion::setMorphParameters(std::wstring MorphName, float MorphWeight)
+{
+	for (auto &Model : AttachedModels) {
+		Model->ApplyMorph(MorphName, MorphWeight);
+	}
+}
+
 // The following functions were extracted from MMDAgent project
 void VMD::Motion::updateCamera(float Frame)
 {
-	if (CameraKeyFrames.size() < 2) return;
+	if (CameraKeyFrames.empty()) return;
 
 	// Clamp frame to the last frame of the animation
-	if (Frame > (float)CameraKeyFrames.at(CameraKeyFrames.size() - 2).FrameCount) {
-		Frame = (float)CameraKeyFrames.at(CameraKeyFrames.size() - 2).FrameCount;
+	if (Frame > (float)CameraKeyFrames.back().FrameCount) {
+		Frame = (float)CameraKeyFrames.back().FrameCount;
 	}
 
 	// Find the next key frame
-	uint32_t NextKeyFrame = 0, CurrentKeyFrame = 0;
-	if (Frame >= CameraKeyFrames[LastCameraKeyFrame].FrameCount) {
-		for (uint32_t i = LastCameraKeyFrame; i < CameraKeyFrames.size(); ++i) {
-			if (Frame <= CameraKeyFrames[i].FrameCount) {
-				NextKeyFrame = i;
-				break;
-			}
-		}
-	}
-	else {
-		for (uint32_t i = 0; i <= LastCameraKeyFrame && i < CameraKeyFrames.size(); ++i) {
-			if (Frame <= CameraKeyFrames[i].FrameCount) {
-				NextKeyFrame = i;
-				break;
-			}
+	size_t NextKeyFrame = 0, CurrentKeyFrame = 0;
+	for (size_t i = 0; i < CameraKeyFrames.size(); ++i) {
+		if (Frame <= CameraKeyFrames[i].FrameCount) {
+			NextKeyFrame = i;
+			break;
 		}
 	}
 
 	// Value clamping
-	if (NextKeyFrame >= (uint32_t)CameraKeyFrames.size()) NextKeyFrame = CameraKeyFrames.size() - 1;
+	if (NextKeyFrame >= CameraKeyFrames.size()) NextKeyFrame = CameraKeyFrames.size() - 1;
 
 	if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 	else CurrentKeyFrame = NextKeyFrame - 1;
-
-	LastCameraKeyFrame = CurrentKeyFrame;
 
 	float Frame1Time = (float)CameraKeyFrames[CurrentKeyFrame].FrameCount;
 	float Frame2Time = (float)CameraKeyFrames[NextKeyFrame].FrameCount;
@@ -277,7 +282,7 @@ void VMD::Motion::updateCamera(float Frame)
 
 	// Do not use interpolation if this is the first key frame, the last keyframe or if the time difference is one frame (camera switch)
 	if (Frame1Time == Frame2Time || Frame <= Frame1Time || Frame2Time - Frame1Time <= 1.0f) {
-		setCameraParameters(Frame1.FovAngle, Frame1.Distance, Frame1.Position, Frame1.Angles);
+		setCameraParameters(Frame1.FovAngle, Frame1.Distance, Frame1.Position, Frame1.Rotation);
 		return;
 	}
 
@@ -285,9 +290,6 @@ void VMD::Motion::updateCamera(float Frame)
 	float Ratio = (Frame - Frame1Time) / (Frame2Time - Frame1Time);
 	uint32_t InterpolationIndex = (uint32_t)(Ratio * InterpolationTableSize);
 
-	auto doLinearInterpolation = [](float Ratio, float V1, float V2) {
-		return V1 * (1.0f - Ratio) + V2 * Ratio;
-	};
 	auto findRatio = [Ratio, InterpolationIndex](std::vector<float> &Table) {
 		if (Table.empty()) return Ratio;
 
@@ -298,11 +300,11 @@ void VMD::Motion::updateCamera(float Frame)
 	Position.setX(doLinearInterpolation(findRatio(Frame2.InterpolationData[0]), Frame1.Position.getX(), Frame2.Position.getX()));
 	Position.setY(doLinearInterpolation(findRatio(Frame2.InterpolationData[1]), Frame1.Position.getY(), Frame2.Position.getY()));
 	Position.setZ(doLinearInterpolation(findRatio(Frame2.InterpolationData[2]), Frame1.Position.getZ(), Frame2.Position.getZ()));
-	btVector3 Angles = Frame1.Angles.lerp(Frame2.Angles, findRatio(Frame2.InterpolationData[3]));
+	btQuaternion Rotation = Frame1.Rotation.slerp(Frame2.Rotation, findRatio(Frame2.InterpolationData[3]));
 	float Distance = doLinearInterpolation(findRatio(Frame2.InterpolationData[4]), Frame1.Distance, Frame2.Distance);
 	float FieldOfView = doLinearInterpolation(findRatio(Frame2.InterpolationData[5]), Frame1.FovAngle, Frame2.FovAngle);
 
-	setCameraParameters(FieldOfView, Distance, Position, Angles);
+	setCameraParameters(FieldOfView, Distance, Position, Rotation);
 }
 
 void VMD::Motion::updateBones(float Frame)
@@ -326,13 +328,13 @@ void VMD::Motion::updateBones(float Frame)
 		auto &BoneKeyFrames = BoneMotion->second;
 
 		// Clamp frame to the last frame of the animation
-		if (Frame > (float)BoneKeyFrames.at(BoneKeyFrames.size() - 1).FrameCount) {
-			Frame = (float)BoneKeyFrames.at(BoneKeyFrames.size() - 1).FrameCount;
+		if (Frame > (float)BoneKeyFrames.back().FrameCount) {
+			Frame = (float)BoneKeyFrames.back().FrameCount;
 		}
 
 		// Find the next key frame
-		uint32_t NextKeyFrame = 0, CurrentKeyFrame = 0;
-		for (uint32_t i = 0; i < BoneKeyFrames.size(); ++i) {
+		size_t NextKeyFrame = 0, CurrentKeyFrame = 0;
+		for (size_t i = 0; i < BoneKeyFrames.size(); ++i) {
 			if (Frame <= BoneKeyFrames[i].FrameCount) {
 				NextKeyFrame = i;
 				break;
@@ -340,12 +342,10 @@ void VMD::Motion::updateBones(float Frame)
 		}
 
 		// Value clamping
-		if (NextKeyFrame >= (uint32_t)BoneKeyFrames.size()) NextKeyFrame = BoneKeyFrames.size() - 1;
+		if (NextKeyFrame >= BoneKeyFrames.size()) NextKeyFrame = BoneKeyFrames.size() - 1;
 
 		if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 		else CurrentKeyFrame = NextKeyFrame - 1;
-
-		LastBoneKeyFrame = CurrentKeyFrame;
 
 		float Frame1Time = (float)BoneKeyFrames[CurrentKeyFrame].FrameCount;
 		float Frame2Time = (float)BoneKeyFrames[NextKeyFrame].FrameCount;
@@ -364,9 +364,6 @@ void VMD::Motion::updateBones(float Frame)
 		float Ratio = (Frame - Frame1Time) / (Frame2Time - Frame1Time);
 		uint32_t InterpolationIndex = (uint32_t)(Ratio * InterpolationTableSize);
 
-		auto doLinearInterpolation = [](float Ratio, float V1, float V2) {
-			return V1 * (1.0f - Ratio) + V2 * Ratio;
-		};
 		auto findRatio = [Ratio, InterpolationIndex](std::vector<float> &Table) {
 			if (Table.empty()) return Ratio;
 
@@ -383,6 +380,66 @@ void VMD::Motion::updateBones(float Frame)
 		setBoneParameters(Frame1.BoneName, Translation, Rotation);
 
 		++BoneMotion;
+	}
+}
+
+void VMD::Motion::updateMorphs(float CurrentFrame)
+{
+	for (auto MorphFrame = MorphKeyFrames.begin(); MorphFrame != MorphKeyFrames.end(); ) {
+		if (MorphFrame->second.size() == 1) {
+			if (MorphFrame->second.front().FrameCount > CurrentFrame) continue;
+
+			setMorphParameters(MorphFrame->second.front().MorphName, MorphFrame->second.front().Weight);
+			std::wstring key = MorphFrame->first;
+			++MorphFrame;
+			std::wstring nextKey;
+			if (MorphFrame != MorphKeyFrames.end()) {
+				nextKey = MorphFrame->first;
+			}
+			MorphFrame = MorphKeyFrames.find(nextKey);
+			MorphKeyFrames.erase(key);
+			continue;
+		}
+
+		auto &Frame = MorphFrame->second;
+
+		if (CurrentFrame > Frame.back().FrameCount)
+			CurrentFrame = (float)Frame.back().FrameCount;
+
+		// Find the next key frame
+		size_t NextKeyFrame = 0, CurrentKeyFrame = 0;
+		for (size_t i = 0; i < Frame.size(); ++i) {
+			if (CurrentFrame <= Frame[i].FrameCount) {
+				NextKeyFrame = i;
+				break;
+			}
+		}
+
+		// Value clamping
+		if (NextKeyFrame >= Frame.size()) NextKeyFrame = Frame.size() - 1;
+
+		if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
+		else CurrentKeyFrame = NextKeyFrame - 1;
+
+		float Frame1Time = (float)Frame[CurrentKeyFrame].FrameCount;
+		float Frame2Time = (float)Frame[NextKeyFrame].FrameCount;
+		auto& Frame1 = Frame[CurrentKeyFrame];
+		auto& Frame2 = Frame[NextKeyFrame];
+
+		if (Frame1Time == Frame2Time || CurrentFrame <= Frame1Time) {
+			setMorphParameters(Frame1.MorphName, Frame1.Weight);
+			return;
+		}
+		else if (CurrentFrame >= Frame2Time) {
+			setMorphParameters(Frame2.MorphName, Frame2.Weight);
+			return;
+		}
+
+		float Ratio = (CurrentFrame - Frame1Time) / (Frame2Time - Frame1Time);
+
+		setMorphParameters(Frame1.MorphName, doLinearInterpolation(Ratio, Frame1.Weight, Frame2.Weight));
+
+		++MorphFrame;
 	}
 }
 

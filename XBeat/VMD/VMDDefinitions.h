@@ -60,7 +60,7 @@ namespace VMD {
 		/// \brief The focal point
 		btVector3 Position;
 		/// \brief Rotation around the focal point
-		btVector3 Angles;
+		btQuaternion Rotation;
 		/// \brief Animation interpolation data
 		std::vector<float> InterpolationData[6];
 		/// \brief Field of View angle, in radians

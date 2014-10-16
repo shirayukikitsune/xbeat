@@ -49,11 +49,6 @@ public:
 	/// \brief Stops the simulated world
 	void shutdown();
 
-	/// \brief Sets the amount of Frames per Second
-	void setFPS(float FPS) { this->TimePerFrame = 1000.f / FPS; }
-	/// \brief Gets the amount of Frames per Second
-	float getFPS() { return TimePerFrame * 1000.0f; }
-
 	/// \brief Advances the simulation by a time step
 	///
 	/// \param [in] Time The time step to advance the simulation, in milliseconds
@@ -105,8 +100,6 @@ private:
 	SimulationState State;
 	/// \brief The time that the simulation is on hold
 	float PauseTime;
-	/// \brief The time span to advance per frame
-	float TimePerFrame;
 
 	/// \brief The soft bodies that are registered in this world
 	std::set<std::shared_ptr<btSoftBody>> SoftBodies;

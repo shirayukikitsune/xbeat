@@ -26,7 +26,6 @@ Physics::Environment::Environment()
 {
 	State = SimulationState::Running;
 	PauseTime = 0.0f;
-	TimePerFrame = 1.0f / 30.0f;
 }
 
 Physics::Environment::~Environment()
@@ -56,7 +55,7 @@ void Physics::Environment::initialize()
 	assert(DynamicsWorld != nullptr);
 
 	// Here the gravity force is multiplied by 10 due the approximation that 10u in PMD/PMX models = 1m
-	DynamicsWorld->setGravity(btVector3(0, -98.f, 0));
+	DynamicsWorld->setGravity(btVector3(0, -9.8f, 0));
 }
 
 // Before deleting the pointers to the bullet world, we must remove all registered bodies and contraints.
@@ -97,14 +96,18 @@ void Physics::Environment::doFrame(float Time)
 	// Check if the simulation was on hold
 	if (PauseTime > 0.0f) {
 		// If we were on hold, do all simulation while we were frozen on a single step
-		DynamicsWorld->stepSimulation(PauseTime / 1000.f, 16, PauseTime / 1000.f);
+		DynamicsWorld->stepSimulation(PauseTime / 1000.f, 1);
 
 		// We must not skip the current frame simulation, so dont exit yet!
 		PauseTime = 0.0f;
 	}
 
 	// Do our frame simulation
-	DynamicsWorld->stepSimulation(Time, 3, TimePerFrame);
+#ifdef DEBUG
+	DynamicsWorld->stepSimulation(Time, 1, 1 / 15.f);
+#else
+	DynamicsWorld->stepSimulation(Time);
+#endif
 }
 
 void Physics::Environment::addSoftBody(std::shared_ptr<btSoftBody> SoftBody, int16_t Group, int16_t Mask)

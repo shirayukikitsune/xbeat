@@ -66,18 +66,13 @@ namespace VMD {
 		/// \brief The motion frame count
 		float MaxFrame;
 
-		/// \brief The last camera key frame index
-		uint32_t LastCameraKeyFrame;
-		/// \brief The last bone key frame index
-		uint32_t LastBoneKeyFrame;
-
 		/// \brief Defines whether this motion has finished or not
 		bool Finished;
 
 		/// \brief The key frames of bone animations
 		std::map<std::wstring, std::vector<BoneKeyFrame>> BoneKeyFrames;
 		/// \brief The key frames of morphs animations
-		std::vector<MorphKeyFrame> MorphKeyFrames;
+		std::map<std::wstring, std::vector<MorphKeyFrame>> MorphKeyFrames;
 		/// \brief The key frames of camera animations
 		std::vector<CameraKeyFrame> CameraKeyFrames;
 
@@ -87,9 +82,13 @@ namespace VMD {
 		std::vector<std::shared_ptr<PMX::Model>> AttachedModels;
 
 		/// \brief Apply motion parameters to all attached cameras
-		void setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btVector3 &Angles);
+		void setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btQuaternion &Rotation);
 
+		/// \brief Apply bone deformation parameters to all attached models
 		void setBoneParameters(std::wstring BoneName, btVector3 &Translation, btQuaternion &Rotation);
+		
+		/// \brief Apply morph parameters to all attached models
+		void setMorphParameters(std::wstring MorphName, float MorphWeight);
 
 		/// \name Functions extracted from MMDAgent, http://www.mmdagent.jp/
 		/// @{
@@ -108,6 +107,10 @@ namespace VMD {
 		/// \brief Parses the bone interpolation data from the VMD file
 		void parseBoneInterpolationData(BoneKeyFrame &Frame, int8_t *InterpolationData);
 
+		/// \brief Sets morphs parameters according to the motion at the specified frame
+		void updateMorphs(float Frame);
+
+		/// \brief Generates the interpolation data table
 		void generateInterpolationTable(std::vector<float> &Table, float X1, float X2, float Y1, float Y2);
 
 		/// \brief Cubic Bézier curve interpolation function
@@ -120,6 +123,10 @@ namespace VMD {
 		/// \brief The derivative of the cubic Bézier curve
 		/// \sa float VMD::Motion::InterpolationFunction(float T, float P1, float P2)
 		float InterpolationFunctionDerivative(float T, float P1, float P2);
+
+		float doLinearInterpolation(float Ratio, float V1, float V2) {
+			return V1 * (1.0f - Ratio) + V2 * Ratio;
+		}
 
 		/// @}
 

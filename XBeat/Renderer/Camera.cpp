@@ -29,15 +29,8 @@ bool Camera::update(float Time)
 {
 	DirectX::XMVECTOR Up, LookAt;
 	Up = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), m_rotation);
-	LookAt = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), m_rotation);
-	LookAt = DirectX::XMVectorAdd(m_position, LookAt);
-
-#if 0
-	DirectX::XMVECTOR EyePosition = m_position;
-#else
-	DirectX::XMVECTOR EyePosition = DirectX::XMVector3Rotate(DirectX::XMVectorSet(FocalDistance, 0, 0, 0), m_rotation);
-	EyePosition = DirectX::XMVectorAdd(EyePosition, m_position);
-#endif
+	LookAt = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), m_rotation) + m_position;
+	DirectX::XMVECTOR EyePosition = DirectX::XMVectorScale(DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), m_rotation), FocalDistance) + m_position;
 
 	ViewMatrix = DirectX::XMMatrixLookAtLH(EyePosition, LookAt, Up);
 
