@@ -70,6 +70,10 @@ bool PMX::Model::LoadModel(const wstring &filename)
 			m_postPhysicsBones.push_back(bone);
 		else
 			m_prePhysicsBones.push_back(bone);
+
+		if (bone->IsIK()) {
+			m_ikBones.push_back(static_cast<detail::BoneImpl*>(bone));
+		}
 	}
 
 	auto sortFn = [](Bone* a, Bone* b) {
@@ -446,6 +450,10 @@ bool PMX::Model::Update(float msec)
 
 		for (auto &bone : m_postPhysicsBones) {
 			bone->Update();
+		}
+
+		for (auto &bone : m_ikBones) {
+			bone->PerformIK();
 		}
 	}
 

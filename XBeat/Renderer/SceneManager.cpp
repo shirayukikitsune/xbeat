@@ -149,8 +149,8 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	});
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_V), [this](void* param) {
 		for (auto model : m_models) {
-			auto bone = model->GetBoneByName(L"右腕");
-			if (bone) bone->Rotate(btVector3(0.0f, 0.0f, DirectX::XMConvertToRadians(45.0f)));
+			auto bone = model->GetBoneByName(L"右足ＩＫ");
+			if (bone) bone->Translate(btVector3(0.0f, 0.1f, 0.0f));
 		}
 	});
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
@@ -221,7 +221,7 @@ bool SceneManager::LoadScene() {
 	}
 	stage->SetShader(lightShader);
 
-	auto model = m_modelManager->loadModel(L"Tda式ミク・アペンド");
+	auto model = m_modelManager->loadModel(L"Tda式ルカ水着ポニーテールL74");
 	if (!model) {
 		MessageBox(wnd, L"Failed to load the first model", L"Error", MB_OK);
 		return false;
@@ -271,8 +271,10 @@ bool SceneManager::LoadScene() {
 	motion->attachModel(m_models[0]);
 	motion->attachModel(m_models[1]);
 #else
-	auto motion = MotionManager->loadMotion(L"./Data/Musics/Yellow/Yellow.vmd");
+	auto motion = MotionManager->loadMotion(L"./Data/Musics/Lily Lily Burning Night/Lily Lily Burning Night.vmd");
+	MotionManager->setFPS(30.0f);
 	motion->attachModel(m_models[0]);
+	motion->attachModel(m_models[1]);
 #endif
 
 	camera->SetPosition(0.0f, 10.0f, -30.f);
@@ -346,7 +348,7 @@ bool SceneManager::Frame(float frameTime)
 
 	MotionManager->advanceFrame(frameTime);
 
-#if 0
+#if 1
 	DirectX::XMFLOAT3 campos(0,0,0);
 
 	if (input->isKeyPressed(DIK_UPARROW)) {

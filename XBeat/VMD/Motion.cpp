@@ -263,7 +263,7 @@ void VMD::Motion::updateCamera(float Frame)
 	}
 
 	// Value clamping
-	if (NextKeyFrame >= CameraKeyFrames.size()) NextKeyFrame = CameraKeyFrames.size() - 1;
+	if (NextKeyFrame >= (uint32_t)CameraKeyFrames.size()) NextKeyFrame = CameraKeyFrames.size() - 1;
 
 	if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 	else CurrentKeyFrame = NextKeyFrame - 1;
@@ -326,8 +326,8 @@ void VMD::Motion::updateBones(float Frame)
 		auto &BoneKeyFrames = BoneMotion->second;
 
 		// Clamp frame to the last frame of the animation
-		if (Frame > (float)BoneKeyFrames.at(BoneKeyFrames.size() - 2).FrameCount) {
-			Frame = (float)BoneKeyFrames.at(BoneKeyFrames.size() - 2).FrameCount;
+		if (Frame > (float)BoneKeyFrames.at(BoneKeyFrames.size() - 1).FrameCount) {
+			Frame = (float)BoneKeyFrames.at(BoneKeyFrames.size() - 1).FrameCount;
 		}
 
 		// Find the next key frame
@@ -340,7 +340,7 @@ void VMD::Motion::updateBones(float Frame)
 		}
 
 		// Value clamping
-		if (NextKeyFrame >= BoneKeyFrames.size()) NextKeyFrame = BoneKeyFrames.size() - 1;
+		if (NextKeyFrame >= (uint32_t)BoneKeyFrames.size()) NextKeyFrame = BoneKeyFrames.size() - 1;
 
 		if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 		else CurrentKeyFrame = NextKeyFrame - 1;

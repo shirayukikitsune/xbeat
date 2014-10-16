@@ -317,20 +317,22 @@ void Loader::loadBones(Model *model, const char *&data)
 		}
 
 		if (b->m_flags & (uint16_t)BoneFlags::IK) {
-			b->ik.begin = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
-			b->ik.loopCount = readInfo<int>(data);
-			b->ik.angleLimit = readInfo<float>(data);
+			b->ikData = new IK;
+			b->ikData->targetIndex = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
+			b->ikData->loopCount = readInfo<int>(data);
+			b->ikData->angleLimit = readInfo<float>(data);
 
-			b->ik.links.resize(readInfo<int>(data));
-			for (auto &link : b->ik.links) {
-				link.bone = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
+			b->ikData->links.resize(readInfo<int>(data));
+			for (auto &link : b->ikData->links) {
+				link.boneIndex = readAsU32(m_sizeInfo->cbBoneIndexSize, data);
 				link.limitAngle = readInfo<bool>(data);
 				if (link.limitAngle) {
-					readVector<float>(link.limits.lower.m128_f32, 3, data);
-					readVector<float>(link.limits.upper.m128_f32, 3, data);
+					readVector<float>(link.limits.lower, 3, data);
+					readVector<float>(link.limits.upper, 3, data);
 				}
 			}
 		}
+		else b->ikData = nullptr;
 	}
 }
 

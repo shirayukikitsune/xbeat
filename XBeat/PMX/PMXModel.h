@@ -109,6 +109,7 @@ private:
 
 	std::vector<Bone*> m_prePhysicsBones;
 	std::vector<Bone*> m_postPhysicsBones;
+	std::vector<detail::BoneImpl*> m_ikBones;
 
 	friend detail::RootBone;
 

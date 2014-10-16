@@ -1,4 +1,4 @@
-#include "PMXBone.h"
+﻿#include "PMXBone.h"
 #include "PMXModel.h"
 #include "PMXMaterial.h"
 #include <cfloat>
@@ -56,7 +56,7 @@ void detail::RootBone::ResetTransform()
 
 void detail::BoneImpl::Initialize()
 {
-	m_inheritRotation = m_userRotation = m_morphRotation = btQuaternion::getIdentity();
+	m_inheritRotation = m_userRotation = m_morphRotation = m_ikRotation = btQuaternion::getIdentity();
 	m_inheritTranslation = m_userTranslation = m_morphTranslation = btVector3(0, 0, 0);
 
 	btVector3 up, axis, direction;
@@ -69,10 +69,10 @@ void detail::BoneImpl::Initialize()
 	}
 	else m_debugRotation = btQuaternion::getIdentity();
 
-	//m_inverse.SetRotationQuaternion(DirectX::XMQuaternionInverse(m_debugRotation));
 	m_inverse.setOrigin(-startPosition);
 	m_transform.setOrigin(startPosition);
-	
+	m_physicsTransform.setIdentity();
+
 	m_parent = m_model->GetBoneById(m_parentId);
 	m_parent->m_children.push_back(this);
 
@@ -82,7 +82,7 @@ void detail::BoneImpl::Initialize()
 
 		auto parent = dynamic_cast<detail::BoneImpl*>(GetParent());
 		if (parent) m_localAxis = parent->GetLocalAxis();
-	} 
+	}
 	else {
 		m_localAxis.r[0] = XMVectorSetW(localAxes.xDirection, 0.0f);
 		m_localAxis.r[2] = localAxes.zDirection;
@@ -90,6 +90,24 @@ void detail::BoneImpl::Initialize()
 		m_localAxis.r[2] = XMVectorSetW(XMVector3Cross(m_localAxis.r[0], m_localAxis.r[1]), 0.0f);
 		m_localAxis.r[3] = XMVectorSetW(axisTranslation, 1.0f);
 		m_localAxis = XMMatrixTranspose(m_localAxis);
+	}
+
+	if (ikData) {
+		ikData->targetBone = static_cast<detail::BoneImpl*>(m_model->GetBoneById(ikData->targetIndex));
+
+		for (auto &Link : ikData->links) {
+			Link.bone = static_cast<detail::BoneImpl*>(m_model->GetBoneById(Link.boneIndex));
+			// Hack to fix models imported from PMD
+			if (Link.bone->name.japanese.find(L"ひざ") != std::wstring::npos) {
+				Link.limitAngle = true;
+				Link.limits.lowerLimit.setEulerZYX(0, 0, -DirectX::XM_PI);
+				Link.limits.upperLimit = btQuaternion::getIdentity();
+			}
+			else if (Link.limitAngle) {
+				Link.limits.lowerLimit.setEulerZYX(Link.limits.lower[2], Link.limits.lower[1], Link.limits.lower[0]);
+				Link.limits.upperLimit.setEulerZYX(Link.limits.upper[2], Link.limits.upper[1], Link.limits.upper[0]);
+			}
+		}
 	}
 }
 
@@ -162,7 +180,9 @@ void detail::BoneImpl::Update()
 	}
 	else if (HasAnyFlag((uint16_t)BoneFlags::RotationAttached)) {
 		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
-		if (target) rotation *= target->m_inheritRotation;
+		if (target) {
+			rotation = rotation * target->m_inheritRotation * target->m_ikRotation;
+		}
 	}
 	rotation = btQuaternion::getIdentity().slerp(rotation, inherit.rate);
 
@@ -171,10 +191,9 @@ void detail::BoneImpl::Update()
 
 	translation = (translation + m_userTranslation + m_morphTranslation + GetOffsetPosition());
 
-	rotation = rotation * m_userRotation * m_morphRotation;
-	// TODO: add IK rotation
+	rotation = rotation * m_userRotation * m_morphRotation * m_ikRotation;
 
-	m_transform = parent->GetTransform() * btTransform(rotation, translation);
+	m_transform = HasAnyFlag((uint16_t)BoneFlags::LocallyAttached) ? btTransform(rotation, translation) : parent->GetTransform() * btTransform(rotation, translation);
 
 	m_dirty = false;
 }
@@ -249,6 +268,7 @@ void detail::BoneImpl::ResetTransform()
 
 void detail::BoneImpl::ApplyPhysicsTransform(btTransform &transform)
 {
+	m_physicsTransform = m_inverse * transform;
 	m_transform = transform;
 }
 
@@ -315,5 +335,88 @@ void detail::BoneImpl::setDirty() {
 
 	for (auto child : m_children) {
 		static_cast<BoneImpl*>(child)->setDirty();
+	}
+}
+
+void detail::BoneImpl::PerformIK() {
+	btVector3 Destination = this->GetPosition();
+	auto InitialRotation = ikData->targetBone->GetTransform().getRotation();
+
+	for (int Iteration = 0; Iteration < ikData->loopCount; ++Iteration) {
+		for (int Index = 0; Index < ikData->links.size(); ++Index) {
+			auto &Link = ikData->links[Index];
+			auto Bone = static_cast<detail::BoneImpl*>(Link.bone);
+			btVector3 CurrentPosition = Bone->GetPosition();
+			btVector3 TargetPosition = ikData->targetBone->GetPosition();
+
+			if (CurrentPosition == Destination || CurrentPosition == TargetPosition) continue;
+
+			btTransform TransformInverse = Link.bone->GetTransform().inverse();
+			btVector3 LocalDestination = TransformInverse(Destination);
+			btVector3 LocalTarget = TransformInverse(TargetPosition);
+
+			if (LocalDestination.distance2(LocalTarget) <= 0.0001f) {
+				Iteration = ikData->loopCount;
+				break;
+			}
+
+			LocalDestination.normalize();
+			LocalTarget.normalize();
+
+			auto Dot = LocalDestination.dot(LocalTarget);
+			if (Dot > 1.0f) continue;
+
+			auto Angle = acosf(Dot);
+			if (fabsf(Angle) < 0.00000001f) continue;
+
+			Angle = std::min(std::max(Angle, -ikData->angleLimit * DirectX::XM_PI), ikData->angleLimit * DirectX::XM_PI);
+
+			btVector3 Axis = LocalTarget.cross(LocalDestination);
+			if (Axis.length2() < 0.00000001f && Iteration != 0) continue;
+
+			Axis.normalize();
+
+			btQuaternion Rotation(Axis, Angle);
+			// clamp rotation values
+			if (Link.limitAngle) {
+#if 0
+				if (Iteration == 0) {
+					if (Angle < 0.0f)
+						Angle = -Angle;
+					Rotation.setRotation(btVector3(1.0f, 0.0f, 0.0f), Angle);
+				}
+				else {
+					btMatrix3x3 Matrix;
+					float x, y, z;
+					Matrix.setRotation(Rotation);
+					Matrix.getEulerZYX(z, y, x);
+
+					if (Axis.z() < 0.0f) {
+						x = std::min(x, Link.limits.upper[0]);
+						y = std::min(y, Link.limits.upper[1]);
+						z = std::min(z, Link.limits.upper[2]);
+					}
+					else {
+						x = std::max(x, Link.limits.lower[0]);
+						y = std::max(y, Link.limits.lower[1]);
+						z = std::max(z, Link.limits.lower[2]);
+					}
+
+					Rotation.setEulerZYX(z, y, x);
+				}
+#else
+				Rotation.setMin(Link.limits.upperLimit);
+				Rotation.setMax(Link.limits.lowerLimit);
+				Rotation.normalize();
+#endif
+			}
+			Bone->m_ikRotation = (Iteration == 0 ? Rotation : Bone->m_ikRotation * Rotation);
+			Bone->Update();
+
+			for (int UpdateIndex = Index; UpdateIndex >= 0; --UpdateIndex) {
+				ikData->links[UpdateIndex].bone->Update();
+			}
+			ikData->targetBone->Update();
+		}
 	}
 }

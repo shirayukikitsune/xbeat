@@ -45,6 +45,8 @@ public:
 	virtual bool IsRootBone() { return false; }
 	//! Returns the root bone
 	virtual Bone* GetRootBone() { return nullptr; }
+	//! Returns whether this is an IK bone
+	virtual bool IsIK() { return false; }
 
 	//! Gets the global transformation
 	btTransform GetTransform() { return m_transform; }
@@ -62,6 +64,9 @@ public:
 
 	//! Update the transformation each frame
 	virtual void Update() = 0;
+
+	//! Perform IK link
+	virtual void PerformIK() {}
 
 	//! Returns the flags for this bone
 	BoneFlags GetFlags() const { return (BoneFlags)m_flags; }
@@ -153,6 +158,8 @@ public:
 
 	virtual void Update();
 
+	virtual bool IsIK() { return HasAnyFlag((uint16_t)BoneFlags::IK); }
+
 	virtual void Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
 	virtual void Transform(const btTransform& transform, DeformationOrigin origin = DeformationOrigin::User);
 	virtual void Rotate(btVector3 axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
@@ -172,6 +179,8 @@ public:
 
 	virtual Bone* GetRootBone();
 
+	virtual void PerformIK();
+
 private:
 	bool m_dirty;
 
@@ -179,10 +188,11 @@ private:
 
 	std::list<std::pair<Morph*,float>> appliedMorphs;
 
-	btQuaternion m_inheritRotation, m_userRotation, m_morphRotation;
+	btQuaternion m_inheritRotation, m_userRotation, m_morphRotation, m_ikRotation;
 	btVector3 m_inheritTranslation, m_userTranslation, m_morphTranslation;
 	DirectX::XMMATRIX m_localAxis;
 	btQuaternion m_debugRotation;
+	btTransform m_physicsTransform;
 
 	Name name;
 	btVector3 startPosition;
@@ -200,7 +210,7 @@ private:
 		DirectX::XMVECTOR zDirection;
 	} localAxes;
 	int externalDeformationKey;
-	IK ik;
+	IK *ikData;
 
 	// Used for debug render
 	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;

@@ -21,6 +21,7 @@ namespace PMX {
 // Forward declarations here
 class RenderMaterial;
 class Bone;
+namespace detail { class BoneImpl; }
 struct Morph;
 
 struct Color {
@@ -299,18 +300,22 @@ struct Material{
 
 struct IK{
 	struct Node {
-		uint32_t bone;
+		uint32_t boneIndex;
 		bool limitAngle;
 		struct {
-			DirectX::XMVECTOR lower;
-			DirectX::XMVECTOR upper;
+			float lower[3];
+			float upper[3];
+			btQuaternion lowerLimit, upperLimit;
 		} limits;
+		detail::BoneImpl *bone;
 	};
 
-	uint32_t begin;
+	uint32_t targetIndex;
 	int loopCount;
 	float angleLimit;
 	std::vector<Node> links;
+
+	PMX::detail::BoneImpl *targetBone;
 };
 
 struct Morph{

@@ -298,6 +298,7 @@ technique11 Bloom
 	}
 }
 
+/*
 technique11 DepthOfField
 {
 	pass dof
@@ -317,6 +318,7 @@ technique11 DepthOfField
 		PixelShader = compile ps_5_0 verblurps();
 	}
 }
+*/
 
 technique11 EdgeDetection
 {
