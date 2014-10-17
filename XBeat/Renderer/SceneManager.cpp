@@ -109,34 +109,10 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 	m_font.reset(new DirectX::SpriteFont(d3d->GetDevice(), L"./Data/Fonts/unifont.spritefont"));
 
 	// Setup bindings
-	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_Z), [this](void* param) {
-		m_models[0]->ApplyMorph(L"ﾍﾞｰﾙ非表示1", 1.0f);
-		m_models[0]->ApplyMorph(L"ﾍﾞｰﾙ非表示2", 1.0f);
-		m_models[0]->ApplyMorph(L"薔薇非表示", 1.0f);
-		m_models[0]->ApplyMorph(L"肩服非表示", 1.0f);
-		m_models[0]->ApplyMorph(L"眼帯off", 1.0f);
-	});
-	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_A), [this](void* param) {
-		static float value = 0.0f;
-		static float increment = 0.01f;
-		value += increment;
-
-		if (value >= 1.0f) {
-			value = 1.0f;
-			increment = -0.01f;
-		}
-		else if (value <= 0.f) {
-			value = 0.f;
-			increment = 0.01f;
-		}
-
-		m_models[0]->ApplyMorph(L"翼羽ばたき", value);
-	});
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_S), [this](void* param) {
 		m_models[0]->ApplyMorph(L"ウィンク", 0.9f);
 	});
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_D), [this](void* param) { for (auto &model : m_models) model->GetRootBone()->Translate(btVector3(1.0f, 0.0f, 0.0f)); });
-	//input->AddBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_F), [this](void* param) { m_models[0]->GetBoneByName(L"右腕")->Rotate(btVector3(0.0f, 1.0f, 0.0f)); });
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_F), [this](void* param) {
 		for (auto &model : m_models) {
 			auto bone = model->GetBoneByName(L"右腕");
@@ -153,7 +129,6 @@ bool SceneManager::Initialize(int width, int height, HWND wnd, std::shared_ptr<I
 			if (bone) bone->Translate(btVector3(0.0f, 0.1f, 0.0f));
 		}
 	});
-	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnMouseUp, 0), [this](void* param) { m_models[0]->ApplyMorph(L"purple", 1.0f); });
 	input->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyPressed, DIK_G), [this](void* param) {
 		for (auto model : m_models) {
 			auto body = model->GetRigidBodyByName(L"後髪１");
@@ -466,12 +441,6 @@ bool SceneManager::RenderEffects(float frameTime)
 
 bool SceneManager::Render2DTextureScene(float frameTime)
 {
-	DirectX::XMMATRIX view, ortho, world;
-
-	camera->getViewMatrix(view);
-	world = DirectX::XMMatrixIdentity();
-	d3d->GetOrthoMatrix(ortho);
-
 	d3d->SetBackBufferRenderTarget();
 	d3d->BeginScene(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -479,7 +448,7 @@ bool SceneManager::Render2DTextureScene(float frameTime)
 
 	fullWindow->Render(d3d->GetDeviceContext());
 
-	if (!textureShader->Render(d3d->GetDeviceContext(), fullWindow->GetIndexCount(), world, view, ortho, m_postProcess->GetCurrentOutputView()))
+	if (!textureShader->Render(d3d->GetDeviceContext(), fullWindow->GetIndexCount(), m_postProcess->GetCurrentOutputView()))
 		return false;
 
 	d3d->End2D();

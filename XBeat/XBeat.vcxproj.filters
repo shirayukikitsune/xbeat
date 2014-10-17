@@ -133,6 +133,12 @@
     <ClCompile Include="VMD\MotionController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Renderer\Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Scenes\LoadingScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SystemClass.h">
@@ -265,6 +271,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="VMD\MotionController.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer\Scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Scenes\LoadingScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

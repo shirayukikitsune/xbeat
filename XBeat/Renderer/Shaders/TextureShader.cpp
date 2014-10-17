@@ -10,7 +10,6 @@ Texture::Texture(void)
 	vertexShader = nullptr;
 	pixelShader = nullptr;
 	layout = nullptr;
-	matrixBuffer = nullptr;
 	sampleState = nullptr;
 }
 
@@ -33,9 +32,9 @@ void Texture::Shutdown()
 	ShutdownShader();
 }
 
-bool Texture::Render(ID3D11DeviceContext *context, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture)
+bool Texture::Render(ID3D11DeviceContext *context, int indexCount, ID3D11ShaderResourceView *texture)
 {
-	if (!SetShaderParameters(context, world, view, projection, texture))
+	if (!SetShaderParameters(context, texture))
 		return false;
 
 	RenderShader(context, indexCount);
@@ -47,7 +46,6 @@ bool Texture::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstrin
 	HRESULT result;
 	D3D11_INPUT_ELEMENT_DESC polygonLayout[2];
 	UINT numElements;
-	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
 	SIZE_T vsbufsize, psbufsize;
 
@@ -91,17 +89,6 @@ bool Texture::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstrin
 		return false;
 	}
 
-	matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	matrixBufferDesc.ByteWidth = sizeof (MatrixBufferType);
-	matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	matrixBufferDesc.MiscFlags = 0;
-	matrixBufferDesc.StructureByteStride = 0;
-
-	result = device->CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
-	if (FAILED(result))
-		return false;
-
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -125,55 +112,14 @@ bool Texture::InitializeShader(ID3D11Device *device, HWND wnd, const std::wstrin
 
 void Texture::ShutdownShader() 
 {
-	if (sampleState) {
-		sampleState->Release();
-		sampleState = nullptr;
-	}
-
-	if (matrixBuffer) {
-		matrixBuffer->Release();
-		matrixBuffer = nullptr;
-	}
-
-	if (layout) {
-		layout->Release();
-		layout = nullptr;
-	}
-
-	if (pixelShader) {
-		pixelShader->Release();
-		pixelShader = nullptr;
-	}
-
-	if (vertexShader) {
-		vertexShader->Release();
-		vertexShader = nullptr;
-	}
+	DX_DELETEIF(sampleState);
+	DX_DELETEIF(layout);
+	DX_DELETEIF(pixelShader);
+	DX_DELETEIF(vertexShader);
 }
 
-bool Texture::SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture)
+bool Texture::SetShaderParameters(ID3D11DeviceContext *context, ID3D11ShaderResourceView *texture)
 {
-	HRESULT result;
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	MatrixBufferType *buffer;
-	UINT bufferNumber;
-
-	result = context->Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-		return false;
-
-	buffer = (MatrixBufferType*)mappedResource.pData;
-
-	buffer->world = DirectX::XMMatrixTranspose(world);
-	buffer->view = DirectX::XMMatrixTranspose(view);
-	buffer->projection = DirectX::XMMatrixTranspose(projection);
-
-	context->Unmap(matrixBuffer, 0);
-
-	bufferNumber = 0;
-	
-	context->VSSetConstantBuffers(bufferNumber, 1, &matrixBuffer);
-
 	context->PSSetShaderResources(0, 1, &texture);
 
 	return true;

@@ -1,0 +1,58 @@
+//===-- Renderer/Scene.h - Declares a class for scene handling ----*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares everything related to the scene class, which
+/// takes responsibility for user output.
+///
+//===------------------------------------------------------------------------===//
+
+#pragma once
+
+#include <memory>
+
+class Dispatcher;
+class ModelManager;
+namespace Input { class Manager; }
+
+namespace Renderer {
+	class D3DRenderer;
+
+	/// \brief Class that is base to all user output functionalities
+	class Scene
+	{
+	public:
+		Scene();
+		virtual ~Scene();
+
+		/// \brief Set the pointers to the general resouce managers that this scene may have access to
+		void setResources(std::shared_ptr<Dispatcher> EventDispatcher, std::shared_ptr<D3DRenderer> Renderer, std::shared_ptr<ModelManager> ModelHandler, std::shared_ptr<Input::Manager> InputManager);
+
+		/// \brief Load all resources for this scene
+		virtual bool initialize() = 0;
+
+		/// \brief Unload all resources for this scene
+		virtual void shutdown() = 0;
+
+		/// \brief Displays this scene
+		virtual bool render() = 0;
+
+		/// \brief Returns if this scene has done its job
+		virtual bool isFinished() = 0;
+
+	protected:
+		/// \name Resources that might be used by each subclass
+		/// @{
+		std::shared_ptr<Dispatcher> EventDispatcher;
+		std::shared_ptr<D3DRenderer> Renderer;
+		std::shared_ptr<ModelManager> ModelHandler;
+		std::shared_ptr<Input::Manager> InputManager;
+		/// @}
+	};
+}

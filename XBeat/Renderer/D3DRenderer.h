@@ -36,6 +36,8 @@ public:
 
 	void GetVideoCardInfo(char *name, int &memory);
 
+	D3D11_VIEWPORT& getViewport() { return viewport; }
+
 	void SetDepthAlways();
 	void SetDepthLessEqual();
 	void Begin2D();

@@ -20,18 +20,17 @@ public:
 
 	bool Initialize(ID3D11Device *device, HWND wnd);
 	void Shutdown();
-	bool Render(ID3D11DeviceContext *context, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture);
+	bool Render(ID3D11DeviceContext *context, int indexCount, ID3D11ShaderResourceView *texture);
 private:
 	bool InitializeShader(ID3D11Device *device, HWND wnd, const std::wstring &vsFile, const std::wstring &psFile);
 	void ShutdownShader();
 
-	bool SetShaderParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, ID3D11ShaderResourceView *texture);
+	bool SetShaderParameters(ID3D11DeviceContext *context, ID3D11ShaderResourceView *texture);
 	void RenderShader(ID3D11DeviceContext *context, int indexCount);
 
 	ID3D11VertexShader *vertexShader;
 	ID3D11PixelShader *pixelShader;
 	ID3D11InputLayout *layout;
-	ID3D11Buffer *matrixBuffer;
 	ID3D11SamplerState *sampleState;
 };
 
