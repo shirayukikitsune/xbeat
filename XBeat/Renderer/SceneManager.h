@@ -3,80 +3,67 @@
 #include <Windows.h>
 #include <memory>
 
-#include "D3DRenderer.h"
-#include "Camera.h"
-#include "../PMX/PMXModel.h"
-#include "Model.h"
-#include "Shaders/LightShader.h"
-#include "Light.h"
-#include "ViewFrustum.h"
-#include "D3DTextureRenderer.h"
-#include "../Input/InputManager.h"
-#include "OrthoWindowClass.h"
-#include "Shaders/Texture.h"
-#include "Shaders/PostProcessEffect.h"
-#include "../Physics/Environment.h"
-#include "SkyBox.h"
-#include "../Dispatcher.h"
 #include "SpriteFont.h"
-#include "../PMX/PMXShader.h"
-#include "../ModelManager.h"
-#include "../VMD/MotionController.h"
+
+class Dispatcher;
+class ModelManager;
+namespace Input { class Manager; }
+namespace Physics { class Environment; }
+namespace VMD { class MotionController; }
 
 namespace Renderer {
+	class D3DRenderer;
+	class D3DTextureRenderer;
+	class OrthoWindowClass;
+	class Scene;
+	namespace Shaders {
+		class Texture;
+		class PostProcessEffect;
+	}
 
-const bool FULL_SCREEN = false;
-const bool VSYNC_ENABLED = false;
-const float SCREEN_DEPTH = 500.0f;
-const float SCREEN_NEAR = 0.25f;
+	const bool FULL_SCREEN = false;
+	const bool VSYNC_ENABLED = false;
+	const float SCREEN_DEPTH = 500.0f;
+	const float SCREEN_NEAR = 0.25f;
 
-class SceneManager
-{
-public:
-	SceneManager();
-	virtual ~SceneManager();
+	class SceneManager
+	{
+	public:
+		SceneManager();
+		virtual ~SceneManager();
 
-	bool Initialize(int width, int height, HWND wnd, std::shared_ptr<Input::Manager> input, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher);
-	bool LoadScene();
-	void Shutdown();
-	bool Frame(float frameTime);
+		bool Initialize(int width, int height, HWND wnd, std::shared_ptr<Input::Manager> input, std::shared_ptr<Physics::Environment> physics, std::shared_ptr<Dispatcher> dispatcher);
+		void Shutdown();
+		bool Frame(float frameTime);
 
-	void LoadModel(std::wstring filename);
+	private:
+		bool Render(float frameTime);
+		bool RenderToTexture(float frameTime);
+		bool RenderScene(float frameTime);
+		bool RenderEffects(float frameTime);
+		bool Render2DTextureScene(float frameTime);
 
-	std::shared_ptr<D3DRenderer> GetRenderer() { return d3d; }
+		int screenWidth, screenHeight;
 
-private:
-	bool Render(float frameTime);
-	bool RenderToTexture(float frameTime);
-	bool RenderScene(float frameTime);
-	bool RenderEffects(float frameTime);
-	bool Render2DTextureScene(float frameTime);
+		HWND wnd;
 
-	int screenWidth, screenHeight;
+		std::unique_ptr<DirectX::SpriteFont> m_font;
+		std::unique_ptr<DirectX::SpriteBatch> m_batch;
+		std::unique_ptr<VMD::MotionController> MotionManager;
 
-	HWND wnd;
+		std::unique_ptr<Scene> CurrentScene;
+		std::unique_ptr<Scene> NextScene;
 
-	std::unique_ptr<DirectX::SpriteFont> m_font;
-	std::unique_ptr<DirectX::SpriteBatch> m_batch;
-	std::unique_ptr<ModelManager> m_modelManager;
-	std::unique_ptr<VMD::MotionController> MotionManager;
+		std::shared_ptr<ModelManager> m_modelManager;
 
-	std::shared_ptr<ViewFrustum> frustum;
-	std::shared_ptr<D3DRenderer> d3d;
-	std::shared_ptr<SkyBox> sky;
-	std::shared_ptr<Camera> camera;
-	std::vector<std::shared_ptr<PMX::Model>> m_models;
-	std::shared_ptr<Model> stage;
-	std::shared_ptr<Light> light;
-	std::shared_ptr<Shaders::Light> lightShader;
-	std::shared_ptr<Shaders::Texture> textureShader;
-	std::shared_ptr<Shaders::PostProcessEffect> m_postProcess;
-	std::vector<std::shared_ptr<PMX::PMXShader>> m_pmxShader;
-	std::shared_ptr<Input::Manager> input;
-	std::shared_ptr<Physics::Environment> physics;
-	std::shared_ptr<D3DTextureRenderer> renderTexture;
-	std::shared_ptr<OrthoWindowClass> fullWindow;
-	std::shared_ptr<Dispatcher> m_dispatcher;
-};
+		std::shared_ptr<D3DRenderer> d3d;
+		std::shared_ptr<Shaders::Texture> textureShader;
+		std::shared_ptr<Shaders::PostProcessEffect> m_postProcess;
+		std::shared_ptr<Input::Manager> input;
+		std::shared_ptr<Physics::Environment> physics;
+		std::shared_ptr<D3DTextureRenderer> renderTexture;
+		std::shared_ptr<OrthoWindowClass> fullWindow;
+		std::shared_ptr<Dispatcher> m_dispatcher;
+	};
 
 }

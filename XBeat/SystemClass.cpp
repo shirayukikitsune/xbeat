@@ -50,7 +50,7 @@ bool SystemClass::initialize()
 	}
 
 	// Sets the initial timer to zero
-	calculateFrameMsec();
+	calculateFrameTime();
 
 	RendererManager.reset(new Renderer::SceneManager);
 	assert(RendererManager);
@@ -62,9 +62,6 @@ bool SystemClass::initialize()
 		return false;
 
 	PhysicsWorld->initialize();
-
-	if (!RendererManager->LoadScene())
-		return false;
 
 	return true;
 }
@@ -101,14 +98,14 @@ void SystemClass::shutdown()
 
 bool SystemClass::doFrame()
 {
-	float frameTime = calculateFrameMsec();
+	float FrameTime = calculateFrameTime();
 
 	if (!InputManager->doFrame())
 		return false;
 
-	PhysicsWorld->doFrame(frameTime);
+	PhysicsWorld->doFrame(FrameTime);
 
-	if (!RendererManager->Frame(frameTime))
+	if (!RendererManager->Frame(FrameTime))
 		return false;
 
 	return true;
@@ -184,7 +181,7 @@ void SystemClass::shutdownWindow()
 	ApplicationInstance = NULL;
 }
 
-float SystemClass::calculateFrameMsec()
+float SystemClass::calculateFrameTime()
 {
 	static std::chrono::high_resolution_clock::time_point LastTime = std::chrono::high_resolution_clock::now();
 
@@ -192,7 +189,7 @@ float SystemClass::calculateFrameMsec()
 	std::chrono::duration<float> ElapsedSec = NowTime - LastTime;
 	LastTime = NowTime;
 
-	return ElapsedSec.count() * 1000.0f;
+	return ElapsedSec.count();
 }
 
 LRESULT CALLBACK SystemClass::messageHandler(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)

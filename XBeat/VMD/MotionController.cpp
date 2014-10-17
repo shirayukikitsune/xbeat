@@ -30,7 +30,7 @@ MotionController::~MotionController()
 
 void MotionController::advanceFrame(float Time)
 {
-	float FrameCount = Time * FramesPerSecond / 1000.f;
+	float FrameCount = Time * FramesPerSecond;
 
 	for (auto &Motion : KnownMotions) {
 		Motion->advanceFrame(FrameCount);

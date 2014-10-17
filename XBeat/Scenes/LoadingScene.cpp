@@ -27,7 +27,7 @@
 
 namespace fs = boost::filesystem;
 
-Scenes::Loading::Loading(std::future<void> &&Task)
+Scenes::Loading::Loading(std::future<bool> &&Task)
 	: LoadingTask(std::move(Task))
 {
 }

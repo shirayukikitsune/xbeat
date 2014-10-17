@@ -30,7 +30,7 @@ namespace Scenes {
 		: public Renderer::Scene
 	{
 	public:
-		Loading(std::future<void> &&Task);
+		Loading(std::future<bool> &&Task);
 		virtual ~Loading();
 
 		virtual bool initialize();
@@ -44,7 +44,7 @@ namespace Scenes {
 		virtual bool isFinished();
 
 	private:
-		std::future<void> LoadingTask;
+		std::future<bool> LoadingTask;
 		std::unique_ptr<Renderer::OrthoWindowClass> Window;
 		std::unique_ptr<Renderer::Texture> Texture;
 		std::unique_ptr<Renderer::Shaders::Texture> TextureShader;

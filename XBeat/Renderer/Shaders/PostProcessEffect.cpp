@@ -31,7 +31,7 @@ void PostProcessEffect::Shutdown()
 	ShutdownEffect();
 }
 
-bool PostProcessEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<Renderer::D3DTextureRenderer> renderTexture, std::shared_ptr<Renderer::OrthoWindowClass> window, float farZ, float nearZ)
+bool PostProcessEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int indexCount, std::shared_ptr<Renderer::D3DTextureRenderer> renderTexture, std::shared_ptr<Renderer::OrthoWindowClass> window, float farZ, float nearZ)
 {
 	ID3D11DeviceContext *context = d3d->GetDeviceContext();
 
@@ -48,7 +48,7 @@ bool PostProcessEffect::Render(std::shared_ptr<Renderer::D3DRenderer> d3d, int i
 	m_currentSceneVar->AsShaderResource()->SetResource(m_currentBackView);
 	m_defaultSamplerVar->AsSampler()->SetSampler(0, m_sampler);
 
-	if (!SetEffectParameters(context, world, view, projection, farZ, nearZ))
+	if (!SetEffectParameters(context, farZ, nearZ))
 		return false;
 
 	for (uint32_t group = 0; group < m_numGroups; group++) 
@@ -321,7 +321,7 @@ void PostProcessEffect::OutputErrorMessage(ID3DBlob *errorMessage, HWND wnd, con
 	MessageBox(wnd, L"Error compiling effect", file.c_str(), MB_OK);
 }
 
-bool PostProcessEffect::SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ)
+bool PostProcessEffect::SetEffectParameters(ID3D11DeviceContext *context, float farZ, float nearZ)
 {
 	static auto GaussianFunction = [](float sigmaSquared, float offset) { return (1.0f / sqrtf(2.0f * DirectX::XM_PI * sigmaSquared)) * expf(-(offset * offset) / (2 * sigmaSquared)); };
 	BlurSamplersBuffer *blurBuffer;

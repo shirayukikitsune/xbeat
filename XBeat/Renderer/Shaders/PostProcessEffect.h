@@ -37,7 +37,7 @@ public:
 
 	bool Initialize(ID3D11Device *device, HWND wnd, int width, int height);
 	void Shutdown();
-	bool Render(std::shared_ptr<D3DRenderer> d3d, int indexCount, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, std::shared_ptr<D3DTextureRenderer> renderTexture, std::shared_ptr<OrthoWindowClass> window, float farZ, float nearZ);
+	bool Render(std::shared_ptr<D3DRenderer> d3d, int indexCount, std::shared_ptr<D3DTextureRenderer> renderTexture, std::shared_ptr<OrthoWindowClass> window, float farZ, float nearZ);
 	ID3D11Texture2D *GetCurrentOutput();
 	ID3D11ShaderResourceView *GetCurrentOutputView();
 private:
@@ -45,7 +45,7 @@ private:
 	void ShutdownEffect();
 	void OutputErrorMessage(ID3DBlob *error, HWND wnd, const std::wstring &filename);
 
-	bool SetEffectParameters(ID3D11DeviceContext *context, DirectX::CXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection, float farZ, float nearZ);
+	bool SetEffectParameters(ID3D11DeviceContext *context, float farZ, float nearZ);
 
 	ID3DX11Effect *m_effect;
 	ID3D11SamplerState *m_sampler;

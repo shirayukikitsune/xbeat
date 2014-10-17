@@ -20,6 +20,7 @@
 class Dispatcher;
 class ModelManager;
 namespace Input { class Manager; }
+namespace Physics { class Environment; }
 
 namespace Renderer {
 	class D3DRenderer;
@@ -32,7 +33,7 @@ namespace Renderer {
 		virtual ~Scene();
 
 		/// \brief Set the pointers to the general resouce managers that this scene may have access to
-		void setResources(std::shared_ptr<Dispatcher> EventDispatcher, std::shared_ptr<D3DRenderer> Renderer, std::shared_ptr<ModelManager> ModelHandler, std::shared_ptr<Input::Manager> InputManager);
+		void setResources(std::shared_ptr<Dispatcher> EventDispatcher, std::shared_ptr<D3DRenderer> Renderer, std::shared_ptr<ModelManager> ModelHandler, std::shared_ptr<Input::Manager> InputManager, std::shared_ptr<Physics::Environment> Physics);
 
 		/// \brief Load all resources for this scene
 		///
@@ -60,6 +61,7 @@ namespace Renderer {
 		std::shared_ptr<D3DRenderer> Renderer;
 		std::shared_ptr<ModelManager> ModelHandler;
 		std::shared_ptr<Input::Manager> InputManager;
+		std::shared_ptr<Physics::Environment> Physics;
 		/// @}
 	};
 }

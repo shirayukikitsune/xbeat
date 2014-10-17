@@ -59,7 +59,7 @@ private:
 
 	/// \brief Calculates the time span, in milliseconds, between the start
 	/// of the last frame and the start of the current frame
-	float calculateFrameMsec();
+	float calculateFrameTime();
 
 	SystemClass();
 	SystemClass(const SystemClass &) = delete;
