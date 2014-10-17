@@ -18,7 +18,7 @@
 #include "Dispatcher.h"
 #include "Input/InputManager.h"
 // Renderer must be placed before Physics due to incompatibilities of Bullet and DirectX
-#include "Renderer/SceneManager.h"
+#include "Scenes/SceneManager.h"
 #include "Physics/Environment.h"
 
 #include <cassert>
@@ -52,13 +52,13 @@ bool SystemClass::initialize()
 	// Sets the initial timer to zero
 	calculateFrameTime();
 
-	RendererManager.reset(new Renderer::SceneManager);
-	assert(RendererManager);
+	SceneManager.reset(new Scenes::SceneManager);
+	assert(SceneManager);
 
 	PhysicsWorld.reset(new Physics::Environment);
 	assert(PhysicsWorld);
 
-	if (!RendererManager->Initialize(Width, Height, Window, InputManager, PhysicsWorld, EventDispatcher))
+	if (!SceneManager->initialize(Width, Height, Window, InputManager, PhysicsWorld, EventDispatcher))
 		return false;
 
 	PhysicsWorld->initialize();
@@ -89,7 +89,7 @@ void SystemClass::run()
 
 void SystemClass::shutdown()
 {
-	RendererManager.reset();
+	SceneManager.reset();
 	InputManager.reset();
 	EventDispatcher.reset();
 
@@ -105,13 +105,13 @@ bool SystemClass::doFrame()
 
 	PhysicsWorld->doFrame(FrameTime);
 
-	if (!RendererManager->Frame(FrameTime))
+	if (!SceneManager->runFrame(FrameTime))
 		return false;
 
 	return true;
 }
 
-void SystemClass::initializeWindow(int &width, int &height)
+void SystemClass::initializeWindow(int &Width, int &Height)
 {
 	assert(Window == NULL);
 
@@ -135,32 +135,32 @@ void SystemClass::initializeWindow(int &width, int &height)
 
 	RegisterClassEx(&WindowClass);
 
-	width = GetSystemMetrics(SM_CXSCREEN);
-	height = GetSystemMetrics(SM_CYSCREEN);
+	Width = GetSystemMetrics(SM_CXSCREEN);
+	Height = GetSystemMetrics(SM_CYSCREEN);
 
-	int posx = 0, posy = 0;
+	int XPosition = 0, YPosition = 0;
 
 	if (Renderer::FULL_SCREEN) {
 		DEVMODE DisplaySettings;
 		ZeroMemory(&DisplaySettings, sizeof DisplaySettings);
 		DisplaySettings.dmSize = sizeof DisplaySettings;
-		DisplaySettings.dmPelsWidth = (DWORD)width;
-		DisplaySettings.dmPelsHeight = (DWORD)height;
+		DisplaySettings.dmPelsWidth = (DWORD)Width;
+		DisplaySettings.dmPelsHeight = (DWORD)Height;
 		DisplaySettings.dmBitsPerPel = 32;
 		DisplaySettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 
 		ChangeDisplaySettings(&DisplaySettings, CDS_FULLSCREEN);
 	}
 	else {
-		posx = (width - 1280) / 2;
-		posy = (height - 720) / 2;
+		XPosition = (Width - 1280) / 2;
+		YPosition = (Height - 720) / 2;
 
-		width = 1280;
-		height = 720;
+		Width = 1280;
+		Height = 720;
 	}
 
 	Window = CreateWindowEx(WS_EX_APPWINDOW, ApplicationName, ApplicationName, WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP,
-		posx, posy, width, height, NULL, NULL, ApplicationInstance, NULL);
+		XPosition, YPosition, Width, Height, NULL, NULL, ApplicationInstance, NULL);
 
 	ShowWindow(Window, SW_SHOW);
 	SetForegroundWindow(Window);

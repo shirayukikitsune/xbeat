@@ -23,7 +23,7 @@
 class Dispatcher;
 namespace Input { class Manager; }
 namespace Physics { class Environment; }
-namespace Renderer { class SceneManager; }
+namespace Scenes { class SceneManager; }
 
 /// \brief An interface to initialize the engine
 class SystemClass
@@ -75,7 +75,7 @@ private:
 	/// \brief The instance of the Input::Manager
 	std::shared_ptr<Input::Manager> InputManager;
 	/// \brief The instance of the Renderer::SceneManager
-	std::shared_ptr<Renderer::SceneManager> RendererManager;
+	std::shared_ptr<Scenes::SceneManager> SceneManager;
 	/// \brief The instance of the Physics::Environment
 	std::shared_ptr<Physics::Environment> PhysicsWorld;
 	/// \brief The instance of the Dispatcher

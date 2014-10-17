@@ -176,8 +176,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Scenes\MenuScene.cpp" />
     <ClCompile Include="ModelManager.cpp" />
-    <ClCompile Include="Renderer\Scene.cpp" />
+    <ClCompile Include="Scenes\Scene.cpp" />
     <ClCompile Include="Scenes\LoadingScene.cpp" />
     <ClCompile Include="VMD\MotionController.cpp" />
     <ClCompile Include="VMD\Motion.cpp" />
@@ -202,7 +203,7 @@
     <ClCompile Include="Renderer\Camera.cpp" />
     <ClCompile Include="Renderer\D3DRenderer.cpp" />
     <ClCompile Include="Renderer\Light.cpp" />
-    <ClCompile Include="Renderer\SceneManager.cpp" />
+    <ClCompile Include="Scenes\SceneManager.cpp" />
     <ClCompile Include="Renderer\Model.cpp" />
     <ClCompile Include="Renderer\Shaders\LightShader.cpp" />
     <ClCompile Include="Renderer\Shaders\TextureShader.cpp" />
@@ -213,8 +214,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Dispatcher.h" />
+    <ClInclude Include="Scenes\MenuScene.h" />
     <ClInclude Include="ModelManager.h" />
-    <ClInclude Include="Renderer\Scene.h" />
+    <ClInclude Include="Scenes\Scene.h" />
     <ClInclude Include="Scenes\LoadingScene.h" />
     <ClInclude Include="VMD\MotionController.h" />
     <ClInclude Include="VMD\Motion.h" />
@@ -248,7 +250,7 @@
     <ClInclude Include="Renderer\Camera.h" />
     <ClInclude Include="Renderer\D3DRenderer.h" />
     <ClInclude Include="Renderer\Light.h" />
-    <ClInclude Include="Renderer\SceneManager.h" />
+    <ClInclude Include="Scenes\SceneManager.h" />
     <ClInclude Include="Renderer\Model.h" />
     <ClInclude Include="Renderer\PMX\PMXModel.h" />
     <ClInclude Include="Renderer\Shaders\LightShader.h" />

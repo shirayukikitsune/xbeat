@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "../Renderer/Scene.h"
+#include "Scene.h"
 
 #include <future>
 
@@ -27,7 +27,7 @@ namespace Renderer {
 namespace Scenes {
 
 	class Loading
-		: public Renderer::Scene
+		: public Scene
 	{
 	public:
 		Loading(std::future<bool> &&Task);
