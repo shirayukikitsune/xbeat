@@ -37,6 +37,8 @@ namespace Scenes {
 
 		virtual void shutdown();
 
+		virtual void frame(float FrameTime);
+
 		virtual bool render();
 
 		virtual bool isFinished();

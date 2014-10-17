@@ -35,10 +35,17 @@ namespace Renderer {
 		void setResources(std::shared_ptr<Dispatcher> EventDispatcher, std::shared_ptr<D3DRenderer> Renderer, std::shared_ptr<ModelManager> ModelHandler, std::shared_ptr<Input::Manager> InputManager);
 
 		/// \brief Load all resources for this scene
+		///
+		/// \remarks When this is called, all shared resources are already set, so they can be used already
 		virtual bool initialize() = 0;
 
 		/// \brief Unload all resources for this scene
+		///
+		/// \remarks When this is called, it is unknown the state of the shared resources, so try to not use them
 		virtual void shutdown() = 0;
+
+		/// \brief Does pre-rendering tasks
+		virtual void frame(float FrameTime) = 0;
 
 		/// \brief Displays this scene
 		virtual bool render() = 0;
@@ -47,7 +54,7 @@ namespace Renderer {
 		virtual bool isFinished() = 0;
 
 	protected:
-		/// \name Resources that might be used by each subclass
+		/// \name Shared resources that might be used by each subclass
 		/// @{
 		std::shared_ptr<Dispatcher> EventDispatcher;
 		std::shared_ptr<D3DRenderer> Renderer;

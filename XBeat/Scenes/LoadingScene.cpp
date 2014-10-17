@@ -81,8 +81,16 @@ bool Scenes::Loading::initialize()
 
 void Scenes::Loading::shutdown()
 {
+	Window.reset();
 	Texture.reset();
 	TextureShader.reset();
+}
+
+void Scenes::Loading::frame(float FrameTime)
+{
+	// TODO: What can be done here:
+	//  - "Now Loading" animations
+	//  - Minigames? :P
 }
 
 bool Scenes::Loading::render()
