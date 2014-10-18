@@ -42,7 +42,7 @@ namespace Scenes {
 		/// \brief Unload all resources for this scene
 		///
 		/// \remarks When this is called, it is unknown the state of the shared resources, so try to not use them
-		virtual void shutdown() = 0;
+		virtual void shutdown() {}
 
 		/// \brief Does pre-rendering tasks
 		virtual void frame(float FrameTime) = 0;

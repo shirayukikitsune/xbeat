@@ -24,7 +24,6 @@ class Dispatcher;
 class ModelManager;
 namespace Input { class Manager; }
 namespace Physics { class Environment; }
-namespace VMD { class MotionController; }
 
 namespace Renderer {
 	class D3DRenderer;
@@ -88,7 +87,6 @@ namespace Scenes {
 		std::unique_ptr<DirectX::SpriteFont> Font;
 		/// \brief The sprite batch to render the font
 		std::unique_ptr<DirectX::SpriteBatch> SpriteBatch;
-		std::unique_ptr<VMD::MotionController> MotionManager;
 
 		std::unique_ptr<Scene> CurrentScene;
 		std::unique_ptr<Scene> NextScene;

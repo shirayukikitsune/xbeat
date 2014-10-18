@@ -2,6 +2,7 @@
 
 #include "../ModelManager.h"
 #include "../Scenes/LoadingScene.h"
+#include "../Scenes/MenuScene.h"
 #include "../VMD/MotionController.h"
 #include "../Renderer/D3DRenderer.h"
 #include "../Renderer/Shaders/PostProcessEffect.h"
@@ -75,13 +76,16 @@ bool Scenes::SceneManager::initialize(int ScreenWidth, int ScreenHeight, HWND Wi
 	SetWindowText(WindowHandle, TEXT("XBeat"));
 #endif
 
-	MotionManager.reset(new VMD::MotionController);
-	assert(MotionManager);
+	NextScene.reset(new Scenes::Menu);
+	assert(NextScene);
+	NextScene->setResources(EventDispatcher, ModelHandler, InputManager, PhysicsEnvironment, Renderer);
 
 	// This is the task that will be executed when the loading screen is being shown.
 	std::packaged_task<bool()> WaitTask([this] {
 		// Load the model list
 		this->ModelHandler->loadList();
+
+		this->NextScene->initialize();
 
 		return true;
 	});
@@ -109,7 +113,6 @@ void Scenes::SceneManager::shutdown()
 		CurrentScene.reset();
 	}
 
-	MotionManager.reset();
 	Font.reset();
 	SpriteBatch.reset();
 
@@ -146,11 +149,10 @@ bool Scenes::SceneManager::runFrame(float FrameTime)
 #endif
 
 	if (CurrentScene && CurrentScene->isFinished()) {
+		// No need to call Scene::shutdown, CurrentScene will be deleted when this move occurs
 		CurrentScene = std::move(NextScene);
 		NextScene.reset();
 	}
-
-	MotionManager->advanceFrame(FrameTime);
 
 	if (CurrentScene) CurrentScene->frame(FrameTime);
 

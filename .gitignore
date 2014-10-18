@@ -180,5 +180,6 @@ Library_libpng/
 Library_zlib/
 *.nvuser
 XBeat/Data/ModelCache.dat
+XBeat/Data/Motions
 XBeat/Data/Musics
 XBeat/Doc

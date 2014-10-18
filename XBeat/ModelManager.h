@@ -26,6 +26,8 @@ namespace PMX { class Loader; class Model; }
 class ModelManager
 {
 public:
+	typedef std::map<std::wstring, boost::filesystem::path> ModelList;
+
 	ModelManager();
 	~ModelManager();
 
@@ -37,8 +39,11 @@ public:
 	/// \param [in] name The name of the model to be loaded
 	std::shared_ptr<PMX::Model> loadModel(const std::wstring &name);
 
+	/// \brief Returns a copy of the KnownModels
+	ModelList getKnownModels() const { return KnownModels; }
+
 private:
-	std::map<std::wstring, boost::filesystem::path> KnownModels;
+	ModelList KnownModels;
 	std::unique_ptr<PMX::Loader> ModelLoader;
 
 	/// \brief Loads the model list from the cache file

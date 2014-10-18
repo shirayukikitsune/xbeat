@@ -1,4 +1,4 @@
-//===-- Scenes/LoadingScene.h - Declares the class for the loading scene ----*- C++ -*-===//
+//===-- Scenes/MenuScene.h - Declares the class for the menu interaction ----*- C++ -*-===//
 //
 //                      The XBeat Project
 //
@@ -8,16 +8,59 @@
 //===----------------------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file declares everything related to the loading scene class 
+/// \brief This file declares everything related to the menu scene class 
 ///
 //===----------------------------------------------------------------------------------===//
 
 #pragma once
 
-class MenuScene
-{
-public:
-	MenuScene();
-	~MenuScene();
-};
+#include "Scene.h"
 
+#include <random>
+#include <string>
+#include <vector>
+
+namespace PMX {
+	class Model;
+	class PMXShader;
+}
+namespace Renderer {
+	class Camera;
+	class ViewFrustum;
+}
+namespace VMD { class Motion; }
+
+namespace Scenes {
+
+	class Menu
+		: public Scene
+	{
+	public:
+		Menu();
+		virtual ~Menu();
+
+		virtual bool initialize();
+
+		virtual void shutdown();
+
+		virtual void frame(float FrameTime);
+
+		virtual bool render();
+
+		virtual bool isFinished();
+
+	private:
+		std::unique_ptr<VMD::Motion> Motion;
+		std::unique_ptr<Renderer::Camera> Camera;
+		std::shared_ptr<Renderer::ViewFrustum> Frustum;
+
+		std::vector<std::wstring> KnownMotions;
+
+		std::shared_ptr<PMX::Model> Model;
+		std::shared_ptr<PMX::PMXShader> Shader;
+
+		std::mt19937 RandomGenerator;
+		float WaitTime;
+	};
+
+}

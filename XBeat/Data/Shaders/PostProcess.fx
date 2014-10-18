@@ -320,7 +320,7 @@ technique11 DepthOfField
 }
 */
 
-technique11 EdgeDetection
+/*technique11 EdgeDetection
 {
 	pass Edge
 	{
