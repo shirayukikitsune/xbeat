@@ -103,11 +103,7 @@ void Physics::Environment::doFrame(float Time)
 	}
 
 	// Do our frame simulation
-#ifdef DEBUG
-	DynamicsWorld->stepSimulation(Time, 1, 1 / 15.f);
-#else
 	DynamicsWorld->stepSimulation(Time);
-#endif
 }
 
 void Physics::Environment::addSoftBody(std::shared_ptr<btSoftBody> SoftBody, int16_t Group, int16_t Mask)

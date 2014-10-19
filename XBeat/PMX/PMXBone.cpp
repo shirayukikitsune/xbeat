@@ -167,21 +167,21 @@ void detail::BoneImpl::Update()
 
 	auto parent = GetParent();
 	if (HasAnyFlag((uint16_t)BoneFlags::LocallyAttached)) {
-		translation += parent->GetLocalTransform().getOrigin();
+		translation = parent->GetLocalTransform().getOrigin();
 	}
 	else if (HasAnyFlag((uint16_t)BoneFlags::TranslationAttached)) {
 		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
-		if (target) translation += target->m_inheritTranslation;
+		if (target) translation = target->m_inheritTranslation;
 	}
 	translation *= inherit.rate;
 
 	if (HasAnyFlag((uint16_t)BoneFlags::LocallyAttached)) {
-		rotation *= parent->GetLocalTransform().getRotation();
+		rotation = parent->GetLocalTransform().getRotation();
 	}
 	else if (HasAnyFlag((uint16_t)BoneFlags::RotationAttached)) {
 		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
 		if (target) {
-			rotation = rotation * target->m_inheritRotation * target->m_ikRotation;
+			rotation = target->m_inheritRotation * target->m_ikRotation;
 		}
 	}
 	rotation = btQuaternion::getIdentity().slerp(rotation, inherit.rate);
@@ -347,39 +347,39 @@ void detail::BoneImpl::PerformIK() {
 			auto &Link = ikData->links[Index];
 			auto Bone = static_cast<detail::BoneImpl*>(Link.bone);
 			btVector3 CurrentPosition = Bone->GetPosition();
-			btVector3 TargetPosition = ikData->targetBone->GetPosition();
+			btVector3 AffectedBonePosition = ikData->targetBone->GetPosition();
 
-			if (CurrentPosition == Destination || CurrentPosition == TargetPosition) continue;
+			if (CurrentPosition == Destination || CurrentPosition == AffectedBonePosition) continue;
 
 			btTransform TransformInverse = Link.bone->GetTransform().inverse();
 			btVector3 LocalDestination = TransformInverse(Destination);
-			btVector3 LocalTarget = TransformInverse(TargetPosition);
+			btVector3 LocalAffectedBonePosition = TransformInverse(AffectedBonePosition);
 
-			if (LocalDestination.distance2(LocalTarget) <= 0.0001f) {
+			if (LocalDestination.distance2(LocalAffectedBonePosition) <= 0.0001f) {
 				Iteration = ikData->loopCount;
 				break;
 			}
 
 			LocalDestination.normalize();
-			LocalTarget.normalize();
+			LocalAffectedBonePosition.normalize();
 
-			auto Dot = LocalDestination.dot(LocalTarget);
+			auto Dot = LocalDestination.dot(LocalAffectedBonePosition);
 			if (Dot > 1.0f) continue;
 
 			auto Angle = acosf(Dot);
-			if (fabsf(Angle) < 0.00000001f) continue;
+			if (fabsf(Angle) < 0.0001f) continue;
 
-			Angle = std::min(std::max(Angle, -ikData->angleLimit * DirectX::XM_PI), ikData->angleLimit * DirectX::XM_PI);
+			Angle = std::min(std::max(Angle, -ikData->angleLimit), ikData->angleLimit);
 
-			btVector3 Axis = LocalTarget.cross(LocalDestination);
-			if (Axis.length2() < 0.00000001f && Iteration != 0) continue;
+			btVector3 Axis = LocalAffectedBonePosition.cross(LocalDestination);
+			if (Axis.length2() < 0.0001f && Iteration != 0) continue;
 
 			Axis.normalize();
 
 			btQuaternion Rotation(Axis, Angle);
 			// clamp rotation values
 			if (Link.limitAngle) {
-#if 0
+#if 1
 				if (Iteration == 0) {
 					if (Angle < 0.0f)
 						Angle = -Angle;
@@ -389,20 +389,14 @@ void detail::BoneImpl::PerformIK() {
 					btMatrix3x3 Matrix;
 					float x, y, z;
 					Matrix.setRotation(Rotation);
-					Matrix.getEulerZYX(z, y, x);
+					Matrix.getEulerZYX(x, y, z);
 
-					if (Axis.z() < 0.0f) {
-						x = std::min(x, Link.limits.upper[0]);
-						y = std::min(y, Link.limits.upper[1]);
-						z = std::min(z, Link.limits.upper[2]);
-					}
-					else {
-						x = std::max(x, Link.limits.lower[0]);
-						y = std::max(y, Link.limits.lower[1]);
-						z = std::max(z, Link.limits.lower[2]);
-					}
+					x = std::min(std::max(x, Link.limits.lower[0]), Link.limits.upper[0]);
+					y = std::min(std::max(y, Link.limits.lower[1]), Link.limits.upper[1]);
+					z = std::min(std::max(z, Link.limits.lower[2]), Link.limits.upper[2]);
 
-					Rotation.setEulerZYX(z, y, x);
+					Matrix.setEulerZYX(x, y, z);
+					Matrix.getRotation(Rotation);
 				}
 #else
 				Rotation.setMin(Link.limits.upperLimit);
