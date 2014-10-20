@@ -1,23 +1,44 @@
-XBeat
-=====
+# XBeat
 
 XBeat is a PC clone of the game Project Diva, created originally for the Sony(r) PlayStation Portable(c).
 
-License
--------
+## License
 This software is licensed under the University of Illinois Open Source License.
 
 See LICENSE.txt for details.
 
-Computer Requisites
--------------------
+## Computer Requisites
 
   - To be able to run, it is required a DirectX 11 compatible graphics adapter, and it is recommended to use the latest available graphics driver, for best results.
   - A DirectAudio compatible sound card is also required.
   - A XInput compatible gamepad is recommended, but is not required (you may use a keyboard).
 
-Project Status
---------------
+
+## Using
+The source code distribution does not come with the data files, so you will need either to download them separatedly or create your own!
+
+The following sections will describe how to create your own data files.
+
+### Model files
+Adding a new model is a really simple task!
+
+All you have to do is drop its files into the Data/Models folder and the game will reload the cache automatically when either you enter the main menu or when you enter the model selection screen!
+
+### Loading Screens
+Every image file that can be loaded on Windows (i.e., when you click an image on Windows Explorer and it can be previewed or it has a thumbnail) may be used as a loading screen.
+This means that the most common file types can be used, like PNG, JPEG, BMP and others not-so-common, like TGA.
+
+To add a loading screen to the list of available screens, drop the desired images into the Data/Textures/Loading folder and the game will use them on the next loading screen!
+Note that *it can be done even while the game is running*, and it might be used on the next loading screen!
+
+### Main Menu
+For the main menu, a random model will be used from the list of known models. Also, every few seconds a new idle animation will be used.
+
+To add a new idle, just drop a VMD motion file into the Data/Motions/Idle folder.
+
+## Developers 
+
+### Project Status
 
 Currently, the project is under development and is not in a playable state yet.
 
@@ -37,8 +58,7 @@ The features that are implemented so far are:
   - Vertex skinning on GPU
   - VMD motion, including camera, bone transformations and morphs
 
-Compiling
----------
+### Compiling
 
 In order to compile, you need a C++11 enabled compiler - Microsoft Visual Studio 2013 is recommended and its solution is available with the source code.
 
@@ -47,8 +67,7 @@ There are some dependencies included with the source code, but it is also needed
   - Boost 1.55 or higher, available [here][1]
   - Bullet Physics 2.82 or higher, available [here][2]
   
-Coding Standards
-----------------
+### Coding Standards
 
 To make the source code more readable, we are (at least, trying to :P) adopting the LLVM coding standards, which can be seen [here][3].
 
