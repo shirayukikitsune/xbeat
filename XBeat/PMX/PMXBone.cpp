@@ -194,16 +194,12 @@ void detail::BoneImpl::Update()
 	rotation = rotation * m_userRotation * m_morphRotation * m_ikRotation;
 
 	m_transform = HasAnyFlag((uint16_t)BoneFlags::LocallyAttached) ? btTransform(rotation, translation) : parent->GetTransform() * btTransform(rotation, translation);
-
-	m_dirty = false;
 }
 
 void detail::BoneImpl::Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin)
 {
 	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable))
 		return;
-
-	setDirty();
 
 	btQuaternion local;
 	local.setEulerZYX(angles.x(), angles.y(), angles.z());
@@ -217,8 +213,6 @@ void detail::BoneImpl::Transform(const btTransform& transform, DeformationOrigin
 	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable))
 		return;
 
-	setDirty();
-
 	m_userRotation *= transform.getRotation();
 	m_userTranslation += transform.getOrigin();
 }
@@ -227,8 +221,6 @@ void detail::BoneImpl::Rotate(btVector3 axis, float angle, DeformationOrigin ori
 {
 	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable))
 		return;
-
-	setDirty();
 
 	btQuaternion local;
 	local.setRotation(axis, angle);
@@ -241,8 +233,6 @@ void detail::BoneImpl::Rotate(btVector3 angles, DeformationOrigin origin)
 	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Rotatable))
 		return;
 
-	setDirty();
-
 	btQuaternion local;
 	local.setEulerZYX(angles.x(), angles.y(), angles.z());
 
@@ -254,14 +244,11 @@ void detail::BoneImpl::Translate(btVector3 offset, DeformationOrigin origin)
 	if (origin == DeformationOrigin::User && !HasAllFlags((uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable))
 		return;
 
-	setDirty();
-
 	m_userTranslation += offset;
 }
 
 void detail::BoneImpl::ResetTransform()
 {
-	setDirty();
 	m_userTranslation.setZero();
 	m_userRotation = btQuaternion::getIdentity();
 }
@@ -286,8 +273,6 @@ void detail::BoneImpl::ApplyMorph(Morph *morph, float weight)
 		else
 			i->second = weight;
 	}
-
-	setDirty();
 
 	// Now calculate the transformations
 	DirectX::XMVECTOR position = DirectX::XMVectorZero(), rotation = DirectX::XMQuaternionIdentity();
@@ -328,14 +313,6 @@ bool XM_CALLCONV detail::BoneImpl::Render(DirectX::FXMMATRIX world, DirectX::CXM
 
 Bone* detail::BoneImpl::GetRootBone() { 
 	return m_model->GetRootBone();
-}
-
-void detail::BoneImpl::setDirty() {
-	m_dirty = true;
-
-	for (auto child : m_children) {
-		static_cast<BoneImpl*>(child)->setDirty();
-	}
 }
 
 void detail::BoneImpl::PerformIK() {
@@ -389,13 +366,13 @@ void detail::BoneImpl::PerformIK() {
 					btMatrix3x3 Matrix;
 					float x, y, z;
 					Matrix.setRotation(Rotation);
-					Matrix.getEulerZYX(x, y, z);
+					Matrix.getEulerZYX(z, y, x);
 
 					x = std::min(std::max(x, Link.limits.lower[0]), Link.limits.upper[0]);
 					y = std::min(std::max(y, Link.limits.lower[1]), Link.limits.upper[1]);
 					z = std::min(std::max(z, Link.limits.lower[2]), Link.limits.upper[2]);
 
-					Matrix.setEulerZYX(x, y, z);
+					Matrix.setEulerZYX(z, y, x);
 					Matrix.getRotation(Rotation);
 				}
 #else
@@ -404,7 +381,7 @@ void detail::BoneImpl::PerformIK() {
 				Rotation.normalize();
 #endif
 			}
-			Bone->m_ikRotation = (Iteration == 0 ? Rotation : Bone->m_ikRotation * Rotation);
+			Bone->m_ikRotation = (Iteration == 0 ? Rotation : Rotation * Bone->m_ikRotation);
 			Bone->Update();
 
 			for (int UpdateIndex = Index; UpdateIndex >= 0; --UpdateIndex) {

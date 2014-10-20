@@ -182,10 +182,6 @@ public:
 	virtual void PerformIK();
 
 private:
-	bool m_dirty;
-
-	void setDirty();
-
 	std::list<std::pair<Morph*,float>> appliedMorphs;
 
 	btQuaternion m_inheritRotation, m_userRotation, m_morphRotation, m_ikRotation;
