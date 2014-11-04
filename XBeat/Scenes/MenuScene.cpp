@@ -1,7 +1,22 @@
+﻿//===-- Scenes/MenuScene.cpp - Defines the class for the menu interaction ----*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===-----------------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file defines everything related to the menu scene class 
+///
+//===-----------------------------------------------------------------------------------===//
+
 #include "MenuScene.h"
 
 #include "SceneManager.h"
 #include "../ModelManager.h"
+#include "../Input/InputManager.h"
 #include "../PMX/PMXModel.h"
 #include "../PMX/PMXShader.h"
 #include "../Renderer/Camera.h"
@@ -18,6 +33,7 @@ Scenes::Menu::Menu()
 {
 	std::random_device RandomDevice;
 	RandomGenerator.seed(RandomDevice());
+	Paused = false;
 }
 
 Scenes::Menu::~Menu()
@@ -51,6 +67,7 @@ bool Scenes::Menu::initialize()
 	}
 
 	// Select a model to be displayed
+#if 0
 	auto ModelList = ModelHandler->getKnownModels();
 	do {
 		size_t Index = RandomGenerator() % ModelList.size();
@@ -62,6 +79,10 @@ bool Scenes::Menu::initialize()
 			}
 		}
 	} while (!Model);
+#else
+	Model = ModelHandler->loadModel(L"星熊勇儀（振袖）");
+	Model->SetDebugFlags(PMX::Model::DebugFlags::RenderBones);
+#endif
 	Model->SetShader(Shader);
 
 	DirectX::XMMATRIX View, Projection;
@@ -105,10 +126,10 @@ void Scenes::Menu::frame(float FrameTime)
 
 			Motion->attachModel(Model);
 
-			WaitTime = (float)RandomGenerator() / (float)RandomGenerator.max() * 15.0f;
+			//WaitTime = (float)RandomGenerator() / (float)RandomGenerator.max() * 15.0f;
 		}
-		else {
-			if (WaitTime <= 0.0f)
+		else if (!Paused) {
+			if (WaitTime == 0.0f)
 				Motion->advanceFrame(FrameTime * 30.0f);
 			else WaitTime -= FrameTime;
 		}
@@ -132,4 +153,17 @@ bool Scenes::Menu::render()
 bool Scenes::Menu::isFinished()
 {
 	return false;
+}
+
+void Scenes::Menu::onAttached()
+{
+	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_R), [this](void *unused) {
+		this->Motion->reset();
+	});
+	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_E), [this](void *unused) {
+		this->Paused = false;
+	});
+	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_W), [this](void *unused) {
+		this->Paused = true;
+	});
 }

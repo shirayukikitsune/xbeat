@@ -49,6 +49,8 @@ namespace Scenes {
 
 		virtual bool isFinished();
 
+		virtual void onAttached();
+
 	private:
 		std::unique_ptr<VMD::Motion> Motion;
 		std::unique_ptr<Renderer::Camera> Camera;
@@ -61,6 +63,7 @@ namespace Scenes {
 
 		std::mt19937 RandomGenerator;
 		float WaitTime;
+		bool Paused;
 	};
 
 }

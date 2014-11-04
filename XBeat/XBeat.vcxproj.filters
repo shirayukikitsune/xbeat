@@ -323,6 +323,7 @@
     <None Include="Data\Shaders\PMX\Classes.hlsli">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\Textures\Sky\miramar.dds" />

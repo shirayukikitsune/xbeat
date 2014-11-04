@@ -34,7 +34,7 @@ public:
 	Bone* GetBoneByName(const std::wstring &JPname);
 	Bone* GetBoneByENName(const std::wstring &ENname);
 	Bone* GetBoneById(uint32_t id);
-	__forceinline Bone* GetRootBone() { return rootBone; }
+	Bone* GetRootBone() { return rootBone; }
 
 	void ApplyMorph(const std::wstring &JPname, float weight);
 	void ApplyMorph(Morph *morph, float weight);
@@ -51,10 +51,10 @@ public:
 		};
 	};
 
-	__forceinline DebugFlags::Flags GetDebugFlags() { return (DebugFlags::Flags)m_debugFlags; }
-	__forceinline void SetDebugFlags(DebugFlags::Flags value) { m_debugFlags |= value; }
-	__forceinline void ToggleDebugFlags(DebugFlags::Flags value) { m_debugFlags ^= value; }
-	__forceinline void UnsetDebugFlags(DebugFlags::Flags value) { m_debugFlags &= ~value; }
+	DebugFlags::Flags GetDebugFlags() { return (DebugFlags::Flags)m_debugFlags; }
+	void SetDebugFlags(DebugFlags::Flags value) { m_debugFlags |= value; }
+	void ToggleDebugFlags(DebugFlags::Flags value) { m_debugFlags ^= value; }
+	void UnsetDebugFlags(DebugFlags::Flags value) { m_debugFlags &= ~value; }
 
 	Material* GetMaterialById(uint32_t id);
 	RenderMaterial* GetRenderMaterialById(uint32_t id);
@@ -64,9 +64,9 @@ public:
 	virtual bool Update(float msec);
 	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<Renderer::ViewFrustum> frustum);
 
-	std::shared_ptr<Renderer::D3DRenderer> m_d3d;
-
 	virtual bool LoadModel(const std::wstring &filename);
+
+	void Reset();
 
 private:
 	std::vector<Vertex*> vertices;
@@ -88,6 +88,8 @@ private:
 	uint64_t lastpos;
 
 	std::vector<std::shared_ptr<Renderer::Texture>> renderTextures;
+
+	std::shared_ptr<Renderer::D3DRenderer> m_d3d;
 
 	std::wstring basePath;
 

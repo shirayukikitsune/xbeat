@@ -401,6 +401,7 @@
     <Text Include="Data\Models\cube.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\README.md" />
     <None Include="Data\Shaders\PMX\Classes.hlsli" />
     <None Include="packages.config" />
   </ItemGroup>

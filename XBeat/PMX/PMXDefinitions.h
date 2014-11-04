@@ -305,7 +305,6 @@ struct IK{
 		struct {
 			float lower[3];
 			float upper[3];
-			btQuaternion lowerLimit, upperLimit;
 		} limits;
 		detail::BoneImpl *bone;
 	};
@@ -316,6 +315,7 @@ struct IK{
 	std::vector<Node> links;
 
 	PMX::detail::BoneImpl *targetBone;
+	float chainLength;
 };
 
 struct Morph{

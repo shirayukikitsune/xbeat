@@ -460,6 +460,14 @@ bool PMX::Model::Update(float msec)
 	return true;
 }
 
+void PMX::Model::Reset()
+{
+	for (auto &bone : bones) {
+		bone->ClearIK();
+		bone->ResetTransform();
+	}
+}
+
 void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum)
 {
 	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
@@ -478,7 +486,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 			auto &shaderBone = shader->GetBone(bone->GetId());
 			shaderBone.position = bone->GetStartPosition().get128();
 			auto t = bone->GetLocalTransform();
-			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition().get128(), t.getRotation().get128(), t.getOrigin().get128()));
+			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition().get128(), bone->getRotation().get128(), t.getOrigin().get128()));
 		}
 
 		shader->UpdateBoneBuffer(context);

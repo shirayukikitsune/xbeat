@@ -59,6 +59,8 @@ public:
 	virtual btVector3 GetPosition() { return GetTransform().getOrigin(); }
 	//! Returns the initial position of the bone
 	virtual btVector3 GetStartPosition() = 0;
+	//! Returns the rotation of this bone
+	btQuaternion getRotation() { return GetTransform().getRotation(); }
 
 	virtual void ApplyPhysicsTransform(btTransform &transform) {}
 
@@ -67,6 +69,8 @@ public:
 
 	//! Perform IK link
 	virtual void PerformIK() {}
+	//! Clear IK information
+	virtual void ClearIK() {}
 
 	//! Returns the flags for this bone
 	BoneFlags GetFlags() const { return (BoneFlags)m_flags; }
@@ -79,6 +83,9 @@ public:
 	int32_t GetDeformationOrder() const { return m_deformationOrder; }
 
 	std::vector<Bone*> m_children;
+	void UpdateChildren();
+
+	void setSimulated() { Simulated = true; }
 
 private:
 	const uint32_t m_id;
@@ -93,6 +100,7 @@ protected:
 		m_deformationOrder = 0;
 		m_transform.setIdentity();
 		m_inverse.setIdentity();
+		Simulated = false;
 	}
 
 	//! Disallow copy and move constructors
@@ -106,6 +114,8 @@ protected:
 	uint32_t m_parentId;
 
 	btTransform m_transform, m_inverse;
+
+	bool Simulated;
 };
 
 namespace detail {
@@ -180,15 +190,20 @@ public:
 	virtual Bone* GetRootBone();
 
 	virtual void PerformIK();
+	virtual void ClearIK() { m_ikRotation = btQuaternion::getIdentity(); }
 
 private:
 	std::list<std::pair<Morph*,float>> appliedMorphs;
+
+	/**
+	 * @returns the squared length of this bone
+	 */
+	float getLength();
 
 	btQuaternion m_inheritRotation, m_userRotation, m_morphRotation, m_ikRotation;
 	btVector3 m_inheritTranslation, m_userTranslation, m_morphTranslation;
 	DirectX::XMMATRIX m_localAxis;
 	btQuaternion m_debugRotation;
-	btTransform m_physicsTransform;
 
 	Name name;
 	btVector3 startPosition;

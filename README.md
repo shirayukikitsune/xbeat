@@ -1,6 +1,6 @@
 # XBeat
 
-XBeat is a PC clone of the game Project Diva, created originally for the Sony(r) PlayStation Portable(c).
+XBeat is a PC clone of the game Project Diva, created originally for the Sony&reg; PlayStation Portable&copy;.
 
 ## License
 This software is licensed under the University of Illinois Open Source License.

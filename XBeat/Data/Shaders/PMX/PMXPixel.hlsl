@@ -45,7 +45,7 @@ PixelOutput main(PixelInput input)
 		halves[i] = normalize(input.viewDirection - lightDirections[i]);
 	}
 
-	float3 dotL = mul(-lightDirections, input.normal);
+	float3 dotL = max(mul(-lightDirections, input.normal), float3(0.75f, 0.75f, 0.75f));
 	float3 dotH = mul(halves, input.normal);
 	float3 zeroL = step(0, dotL);
 	float3 diffuse = zeroL * dotL;

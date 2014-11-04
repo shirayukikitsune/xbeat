@@ -37,7 +37,7 @@ namespace Renderer {
 	/// \name Things that are going to be moved from here and placed in a settings class
 	/// @{
 	const bool FULL_SCREEN = false;
-	const bool VSYNC_ENABLED = false;
+	const bool VSYNC_ENABLED = true;
 	const float SCREEN_DEPTH = 500.0f;
 	const float SCREEN_NEAR = 0.25f;
 	/// @}

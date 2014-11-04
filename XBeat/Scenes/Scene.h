@@ -53,6 +53,12 @@ namespace Scenes {
 		/// \brief Returns if this scene has done its job
 		virtual bool isFinished() = 0;
 
+		/// \brief Event fired when the current scene is switched to this
+		virtual void onAttached() {}
+
+		/// \brief Event fired when the current scene is switched out of this
+		virtual void onDeattached() {}
+
 	protected:
 		/// \name Shared resources that might be used by each subclass
 		/// @{

@@ -149,9 +149,13 @@ bool Scenes::SceneManager::runFrame(float FrameTime)
 #endif
 
 	if (CurrentScene && CurrentScene->isFinished()) {
+		CurrentScene->onDeattached();
+
 		// No need to call Scene::shutdown, CurrentScene will be deleted when this move occurs
 		CurrentScene = std::move(NextScene);
 		NextScene.reset();
+
+		if (CurrentScene) CurrentScene->onAttached();
 	}
 
 	if (CurrentScene) CurrentScene->frame(FrameTime);

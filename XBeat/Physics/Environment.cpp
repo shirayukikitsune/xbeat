@@ -55,7 +55,7 @@ void Physics::Environment::initialize()
 	assert(DynamicsWorld != nullptr);
 
 	// Here the gravity force is multiplied by 10 due the approximation that 10u in PMD/PMX models = 1m
-	DynamicsWorld->setGravity(btVector3(0, -9.8f, 0));
+	DynamicsWorld->setGravity(btVector3(0, -98.f, 0));
 }
 
 // Before deleting the pointers to the bullet world, we must remove all registered bodies and contraints.

@@ -101,18 +101,6 @@
     <ClCompile Include="VectorTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Motion.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\XBeat\Renderer\PMX\PMXLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\XBeat\Renderer\PMX\PMXModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\XBeat\Renderer\PMX\PMXSoftBody.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\XBeat\Renderer\CameraClass.cpp">
       <Filter>Source Files\Renderer</Filter>
     </ClCompile>
@@ -131,9 +119,6 @@
     <ClCompile Include="..\XBeat\Renderer\Model.cpp">
       <Filter>Source Files\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="..\XBeat\Renderer\PMX\PMXBone.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\XBeat\Renderer\OrthoWindowClass.cpp">
       <Filter>Source Files\Renderer</Filter>
     </ClCompile>
@@ -145,9 +130,6 @@
     </ClCompile>
     <ClCompile Include="..\XBeat\Renderer\ViewFrustum.cpp">
       <Filter>Source Files\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\XBeat\Renderer\Shaders\MMDEffect.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\XBeat\Renderer\Shaders\LightShader.cpp">
       <Filter>Source Files\Renderer</Filter>

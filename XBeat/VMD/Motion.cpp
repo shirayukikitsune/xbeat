@@ -46,6 +46,9 @@ bool VMD::Motion::advanceFrame(float Frames)
 		updateCamera(CurrentFrame);
 
 	if (!AttachedModels.empty()) {
+		for (auto &Model : AttachedModels)
+			Model->Reset();
+
 		updateBones(CurrentFrame);
 		updateMorphs(CurrentFrame);
 	}
@@ -115,9 +118,8 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		return Output;
 	};
 
-#if 0
-	char * ModelName = new char[Version * 10];
-	InputStream.read(ModelName, Version * 10);
+#if 1
+	std::wstring ModelName = readSJISString(InputStream, Version * 10);
 #else
 	// Skips the model name for the animation
 	InputStream.seekg(Version * 10, std::ios::cur);
@@ -130,18 +132,13 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		BoneKeyFrame Frame;
 		int8_t InterpolationData[64];
 		float TempVector[4];
-		btQuaternion LocalCoordinate;
-		btMatrix3x3 Auxiliar;
 
 		Frame.BoneName = readSJISString(InputStream, 15);
 		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
 		InputStream.read((char*)TempVector, sizeof(float) * 3);
-		Frame.Translation = btVector3(TempVector[0], TempVector[1], -TempVector[2]);
+		Frame.Translation = btVector3(TempVector[0], TempVector[1], TempVector[2]);
 		InputStream.read((char*)TempVector, sizeof(float) * 4);
-		LocalCoordinate = btQuaternion(TempVector[0], TempVector[1], TempVector[2], TempVector[3]);
-		Auxiliar.setRotation(LocalCoordinate);
-		Auxiliar.getEulerZYX(TempVector[0], TempVector[1], TempVector[2]);
-		Frame.Rotation.setEulerZYX(-TempVector[0], -TempVector[1], TempVector[2]);
+		Frame.Rotation = btQuaternion(TempVector[0], TempVector[1], TempVector[2], TempVector[3]);
 		InputStream.read((char*)InterpolationData, 64);
 
 		parseBoneInterpolationData(Frame, InterpolationData);
@@ -199,9 +196,7 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		Frame.Position = btVector3(TempVector[0], TempVector[1], TempVector[2]);
 
 		InputStream.read((char*)TempVector, sizeof(float) * 3);
-		btMatrix3x3 Auxiliar;
-		Auxiliar.setEulerZYX(-TempVector[0], -TempVector[1], TempVector[2]);
-		Auxiliar.getRotation(Frame.Rotation);
+		Frame.Rotation.setEulerZYX(TempVector[0], TempVector[1], TempVector[2]);
 
 		InputStream.read((char*)InterpolationData, 24);
 
@@ -237,7 +232,6 @@ void VMD::Motion::setBoneParameters(std::wstring BoneName, btVector3 &Translatio
 	for (auto &Model : AttachedModels) {
 		auto bone = Model->GetBoneByName(BoneName);
 		if (bone) {
-			bone->ResetTransform();
 			bone->Transform(btTransform(Rotation, Translation), PMX::DeformationOrigin::Internal);
 		}
 	}

@@ -1,10 +1,19 @@
 ﻿#include "PMXBone.h"
-#include "PMXModel.h"
+
 #include "PMXMaterial.h"
-#include <cfloat>
+#include "PMXModel.h"
+
 #include <algorithm>
+#include <cfloat>
 
 using namespace PMX;
+
+void Bone::UpdateChildren() {
+	for (auto &Child : m_children) {
+		Child->Update();
+		Child->UpdateChildren();
+	}
+}
 
 void detail::RootBone::Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin)
 {
@@ -71,7 +80,6 @@ void detail::BoneImpl::Initialize()
 
 	m_inverse.setOrigin(-startPosition);
 	m_transform.setOrigin(startPosition);
-	m_physicsTransform.setIdentity();
 
 	m_parent = m_model->GetBoneById(m_parentId);
 	m_parent->m_children.push_back(this);
@@ -94,27 +102,27 @@ void detail::BoneImpl::Initialize()
 
 	if (ikData) {
 		ikData->targetBone = static_cast<detail::BoneImpl*>(m_model->GetBoneById(ikData->targetIndex));
+		ikData->chainLength = 0.0f;
 
 		for (auto &Link : ikData->links) {
 			Link.bone = static_cast<detail::BoneImpl*>(m_model->GetBoneById(Link.boneIndex));
 			// Hack to fix models imported from PMD
 			if (Link.bone->name.japanese.find(L"ひざ") != std::wstring::npos && Link.limitAngle == false) {
 				Link.limitAngle = true;
-				Link.limits.lowerLimit.setEulerZYX(0, 0, -DirectX::XM_PI);
-				Link.limits.upperLimit = btQuaternion::getIdentity();
+				Link.limits.lower[0] = -DirectX::XM_PI;
+				Link.limits.lower[1] = Link.limits.lower[2] = Link.limits.upper[0] = Link.limits.upper[1] = Link.limits.upper[2] = 0.0f;
 			}
-			else if (Link.limitAngle) {
-				Link.limits.lowerLimit.setEulerZYX(Link.limits.lower[2], Link.limits.lower[1], Link.limits.lower[0]);
-				Link.limits.upperLimit.setEulerZYX(Link.limits.upper[2], Link.limits.upper[1], Link.limits.upper[0]);
-			}
+			ikData->chainLength += Link.bone->getLength();
 		}
 	}
 }
 
 void detail::BoneImpl::InitializeDebug(std::shared_ptr<Renderer::D3DRenderer> d3d)
 {
-	if (!HasAnyFlag((uint16_t)BoneFlags::IK) && HasAnyFlag((uint16_t)BoneFlags::View))
+	/*if (!HasAnyFlag((uint16_t)BoneFlags::IK) && HasAnyFlag((uint16_t)BoneFlags::View))
 		m_primitive = DirectX::GeometricPrimitive::CreateCylinder(d3d->GetDeviceContext());
+	else */if (HasAnyFlag((uint16_t)BoneFlags::IK))
+		m_primitive = DirectX::GeometricPrimitive::CreateSphere(d3d->GetDeviceContext(), 2.5f);
 }
 
 void detail::BoneImpl::Terminate()
@@ -144,15 +152,29 @@ btVector3 detail::BoneImpl::GetEndPosition()
 		p = other->GetPosition();
 	}
 	else {
-		p = GetTransform()(btVector3(this->size.length[0], this->size.length[1], this->size.length[2]));
+		p = btVector3(this->size.length[0], this->size.length[1], this->size.length[2]);
+		p = GetTransform() * p;
 	}
 
 	return p;
 }
 
+float detail::BoneImpl::getLength()
+{
+	if (!HasAnyFlag((uint16_t)BoneFlags::Attached)) {
+		return sqrtf(size.length[0] * size.length[0] + size.length[1] * size.length[1] + size.length[2] * size.length[2]);
+	}
+
+	auto other = static_cast<detail::BoneImpl*>(m_model->GetBoneById(this->size.attachTo));
+	return other->startPosition.distance(startPosition);
+}
+
 btVector3 detail::BoneImpl::GetPosition()
 {
-	return GetTransform() * startPosition;
+	detail::BoneImpl* parent = dynamic_cast<detail::BoneImpl*>(GetParent());
+	if (!parent) return GetLocalTransform() * startPosition;
+
+	return parent->m_transform * GetOffsetPosition();
 }
 
 btVector3 detail::BoneImpl::GetStartPosition()
@@ -178,10 +200,12 @@ void detail::BoneImpl::Update()
 	if (HasAnyFlag((uint16_t)BoneFlags::LocallyAttached)) {
 		rotation = parent->GetLocalTransform().getRotation();
 	}
-	else if (HasAnyFlag((uint16_t)BoneFlags::RotationAttached)) {
-		auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
-		if (target) {
-			rotation = target->m_inheritRotation * target->m_ikRotation;
+	else {
+		if (HasAnyFlag((uint16_t)BoneFlags::RotationAttached)) {
+			auto target = dynamic_cast<BoneImpl*>(m_model->GetBoneById(this->inherit.from));
+			if (target) {
+				rotation = target->m_inheritRotation;
+			}
 		}
 	}
 	rotation = btQuaternion::getIdentity().slerp(rotation, inherit.rate);
@@ -191,7 +215,8 @@ void detail::BoneImpl::Update()
 
 	translation = (translation + m_userTranslation + m_morphTranslation + GetOffsetPosition());
 
-	rotation = rotation * m_userRotation * m_morphRotation * m_ikRotation;
+	rotation = m_ikRotation * m_morphRotation * m_userRotation * rotation;
+	rotation.normalize();
 
 	m_transform = HasAnyFlag((uint16_t)BoneFlags::LocallyAttached) ? btTransform(rotation, translation) : parent->GetTransform() * btTransform(rotation, translation);
 }
@@ -255,7 +280,6 @@ void detail::BoneImpl::ResetTransform()
 
 void detail::BoneImpl::ApplyPhysicsTransform(btTransform &transform)
 {
-	m_physicsTransform = m_inverse * transform;
 	m_transform = transform;
 }
 
@@ -295,17 +319,9 @@ bool XM_CALLCONV detail::BoneImpl::Render(DirectX::FXMMATRIX world, DirectX::CXM
 
 	if (m_primitive)
 	{
-		float lensq = (GetEndPosition() - GetPosition()).length2();
-		if (lensq == 0) {
-			return true;
-		}
+		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, 0.3f, 0.3f, 1), DirectX::XMVectorZero(), getRotation().get128(), GetPosition().get128());
 
-		btTransform t(m_debugRotation, startPosition);
-		t *= m_transform;
-
-		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, sqrtf(lensq), 0.3f, 1), DirectX::XMVectorZero(), t.getRotation().get128(), t.getOrigin().get128());
-
-		m_primitive->Draw(w, view, projection);
+		m_primitive->Draw(w, view, projection, DirectX::Colors::Red);
 	}
 
 	return true;
@@ -316,78 +332,119 @@ Bone* detail::BoneImpl::GetRootBone() {
 }
 
 void detail::BoneImpl::PerformIK() {
-	btVector3 Destination = this->GetPosition();
-	auto InitialRotation = ikData->targetBone->GetTransform().getRotation();
+	if (!ikData || ikData->links.empty() || ikData->links[0].bone->Simulated)
+		return;
+
+	btVector3 TargetPosition = this->GetPosition();
+	btVector3 RootPosition = ikData->links.back().bone->GetPosition();
+
+	btVector3 EndPosition = ikData->targetBone->GetPosition();
+	// Check if the last joint position is close to the target point
+	if (EndPosition.distance(TargetPosition) < 0.001f) {
+		return;
+	}
+
+	// Determine if the target position is reachable
+	if (RootPosition.distance(TargetPosition) > ikData->chainLength) {
+		// If unreachable, move the target point to a reachable point colinear to the root bone position and the original target point
+		TargetPosition = (TargetPosition - RootPosition).normalized() * ikData->chainLength + RootPosition;
+		assert(RootPosition.distance(TargetPosition) <= ikData->chainLength + 0.0001f);
+	}
+
+	btQuaternion OldRotation = ikData->targetBone->getRotation();
 
 	for (int Iteration = 0; Iteration < ikData->loopCount; ++Iteration) {
-		for (int Index = 0; Index < ikData->links.size(); ++Index) {
-			auto &Link = ikData->links[Index];
-			auto Bone = static_cast<detail::BoneImpl*>(Link.bone);
-			btVector3 CurrentPosition = Bone->GetPosition();
-			btVector3 AffectedBonePosition = ikData->targetBone->GetPosition();
+		btVector3 EndPosition = ikData->targetBone->GetPosition();
+		// Check if the last joint position is close to the target point
+		if (EndPosition.distance(TargetPosition) < 0.001f) {
+			return;
+		}
 
-			if (CurrentPosition == Destination || CurrentPosition == AffectedBonePosition) continue;
+		// Here we are assuming that all bones of the chain are interconnected
+		std::vector<btVector3> TargetPositions;
+		// The first position of the vector is the root of the chain, and the last, the target point
+		for (int Index = ikData->links.size() - 1; Index >= 0; --Index) {
+			TargetPositions.emplace_back(ikData->links[Index].bone->GetPosition());
+		}
+		
+		TargetPositions.emplace_back(TargetPosition);
 
-			btTransform TransformInverse = Link.bone->GetTransform().inverse();
-			btVector3 LocalDestination = TransformInverse(Destination);
-			btVector3 LocalAffectedBonePosition = TransformInverse(AffectedBonePosition);
+		auto performInnerIteraction = [](btVector3 &ParentBonePosition, btVector3 &P1, btVector3 &P2, IK::Node &Link, bool Reverse) {
+			float Distance = P1.distance(P2);
+			float Ratio = Link.bone->getLength() / Distance;
 
-			if (LocalDestination.distance2(LocalAffectedBonePosition) <= 0.0001f) {
-				Iteration = ikData->loopCount;
-				break;
-			}
+			P1 = P2.lerp(P1, Ratio);
 
-			LocalDestination.normalize();
-			LocalAffectedBonePosition.normalize();
+			// Now apply rotation constraints if needed
+			if (!Link.limitAngle || ParentBonePosition.isZero())
+				return;
 
-			auto Dot = LocalDestination.dot(LocalAffectedBonePosition);
-			if (Dot > 1.0f) continue;
+			btVector3 Direction = (P1 - P2).normalize();
+			btVector3 BoneDirection = (Link.bone->GetEndPosition() - Link.bone->GetPosition()).normalize();
+			if (!Reverse) BoneDirection = -BoneDirection;
 
-			auto Angle = acosf(Dot);
-			if (fabsf(Angle) < 0.0001f) continue;
-
-			Angle = std::min(std::max(Angle, -ikData->angleLimit), ikData->angleLimit);
-
-			btVector3 Axis = LocalAffectedBonePosition.cross(LocalDestination);
-			if (Axis.length2() < 0.0001f && Iteration != 0) continue;
-
+			float Angle = btAcos(Direction.dot(BoneDirection));
+			if (Angle < 0.0001f) return;
+			btVector3 Axis = BoneDirection.cross(Direction);
+			if (Axis.length2() < 0.0000001f) return;
 			Axis.normalize();
 
 			btQuaternion Rotation(Axis, Angle);
-			// clamp rotation values
-			if (Link.limitAngle) {
-#if 1
-				if (Iteration == 0) {
-					if (Angle < 0.0f)
-						Angle = -Angle;
-					Rotation.setRotation(btVector3(1.0f, 0.0f, 0.0f), Angle);
-				}
-				else {
-					btMatrix3x3 Matrix;
-					float x, y, z;
-					Matrix.setRotation(Rotation);
-					Matrix.getEulerZYX(z, y, x);
+			btMatrix3x3 Auxiliar;
+			Auxiliar.setRotation(Rotation);
+			float x, y, z;
+			Auxiliar.getEulerZYX(z, y, x);
 
-					x = std::min(std::max(x, Link.limits.lower[0]), Link.limits.upper[0]);
-					y = std::min(std::max(y, Link.limits.lower[1]), Link.limits.upper[1]);
-					z = std::min(std::max(z, Link.limits.lower[2]), Link.limits.upper[2]);
+			btClamp(x, Link.limits.lower[0], Link.limits.upper[0]);
+			btClamp(y, Link.limits.lower[1], Link.limits.upper[1]);
+			btClamp(z, Link.limits.lower[2], Link.limits.upper[2]);
 
-					Matrix.setEulerZYX(z, y, x);
-					Matrix.getRotation(Rotation);
-				}
-#else
-				Rotation.setMin(Link.limits.upperLimit);
-				Rotation.setMax(Link.limits.lowerLimit);
-				Rotation.normalize();
-#endif
-			}
-			Bone->m_ikRotation = (Iteration == 0 ? Rotation : Rotation * Bone->m_ikRotation);
-			Bone->Update();
+			Rotation.setEulerZYX(z, y, x);
 
-			for (int UpdateIndex = Index; UpdateIndex >= 0; --UpdateIndex) {
-				ikData->links[UpdateIndex].bone->Update();
-			}
-			ikData->targetBone->Update();
+			P1 = quatRotate(Rotation, P1 - P2) + P2;
+		};
+
+		btVector3 P0;
+		// Stage 1: Forward reaching
+		for (int Index = TargetPositions.size() - 2; Index >= 0; --Index) {
+			auto& Link = ikData->links[ikData->links.size() - Index - 1];
+			performInnerIteraction(P0, TargetPositions[Index], TargetPositions[Index + 1], Link, false);
+			P0 = TargetPositions[Index + 1];
 		}
+
+		// Set the root position its initial position
+		TargetPositions[0] = RootPosition;
+
+		// Stage 2: Backward reaching
+		P0.setZero();
+		for (int Index = 0; Index < TargetPositions.size() - 1; ++Index) {
+			auto& Link = ikData->links[ikData->links.size() - Index - 1];
+			performInnerIteraction(P0, TargetPositions[Index + 1], TargetPositions[Index], Link, true);
+			P0 = TargetPositions[Index];
+		}
+
+		// Apply the new positions as rotations
+		for (int Index = 0; Index < TargetPositions.size() - 1; ++Index) {
+			auto& Link = ikData->links[ikData->links.size() - Index - 1];
+			btVector3 position = Link.bone->GetPosition();
+
+			btVector3 CurrentDirection = (Link.bone->GetEndPosition() - position).normalized();
+			btVector3 DesiredDirection = (TargetPositions[Index + 1] - position).normalized();
+
+			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
+			float Dot = CurrentDirection.dot(DesiredDirection);
+			// No need to update if position is too close
+			if (Axis.length2() < 0.000001f || Dot > 0.999999f) continue;
+			
+			Axis.normalize();
+			float Angle = btAcos(Dot);
+
+			Link.bone->m_ikRotation *= btQuaternion(Axis, Angle);
+
+			Link.bone->Update();
+
+			position = Link.bone->GetPosition();
+		}
+		ikData->targetBone->Update();
 	}
 }

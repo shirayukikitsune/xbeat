@@ -65,8 +65,10 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 		mass = 0.0f;
 	}
 
-	if (body->targetBone != -1)
+	if (body->targetBone != -1) {
 		m_bone = model->GetBoneById(body->targetBone);
+		if (m_bone && body->mode != RigidBodyMode::Static) m_bone->setSimulated();
+	}
 	else m_bone = nullptr;
 
 	btMatrix3x3 bm;
