@@ -234,12 +234,11 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 		rendermaterials[k].dirty |= RenderMaterial::DirtyFlags::Textures;
 		rendermaterials[k].materialIndex = k;
 		rendermaterials[k].indexCount = this->materials[k]->indexCount;
-		rendermaterials[k].avgColor = DirectX::XMFLOAT4(this->materials[k]->ambient.red+this->materials[k]->diffuse.red, this->materials[k]->ambient.green + this->materials[k]->diffuse.green, this->materials[k]->ambient.blue + this->materials[k]->diffuse.blue, this->materials[k]->diffuse.alpha);
 	}
 
 	// Initialize bone buffers
 	for (auto &bone : bones) {
-		dynamic_cast<detail::BoneImpl*>(bone)->InitializeDebug(d3d);
+		reinterpret_cast<detail::BoneImpl*>(bone)->InitializeDebug(d3d);
 	}
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -538,7 +537,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
 		for (auto &bone : bones)
-			dynamic_cast<detail::BoneImpl*>(bone)->Render(world, view, projection);
+			reinterpret_cast<detail::BoneImpl*>(bone)->Render(world, view, projection);
 	}
 	context->RSSetState(m_d3d->GetRasterState(0));
 }
@@ -602,7 +601,7 @@ void PMX::Model::ReleaseTexture()
 PMX::Bone* PMX::Model::GetBoneByName(const std::wstring &JPname)
 {
 	for (auto bone : bones) {
-		if (dynamic_cast<detail::BoneImpl*>(bone)->GetName().japanese.compare(JPname) == 0)
+		if (reinterpret_cast<detail::BoneImpl*>(bone)->GetName().japanese.compare(JPname) == 0)
 			return bone;
 	}
 
@@ -612,7 +611,7 @@ PMX::Bone* PMX::Model::GetBoneByName(const std::wstring &JPname)
 PMX::Bone* PMX::Model::GetBoneByENName(const std::wstring &ENname)
 {
 	for (auto bone : bones) {
-		if (dynamic_cast<detail::BoneImpl*>(bone)->GetName().english.compare(ENname) == 0)
+		if (reinterpret_cast<detail::BoneImpl*>(bone)->GetName().english.compare(ENname) == 0)
 			return bone;
 	}
 
@@ -757,7 +756,7 @@ void PMX::Model::applyBoneMorph(Morph *morph, float weight)
 {
 	for (auto i : morph->data) {
 		Bone *bone = bones[i.bone.index];
-		dynamic_cast<detail::BoneImpl*>(bone)->ApplyMorph(morph, weight);
+		reinterpret_cast<detail::BoneImpl*>(bone)->ApplyMorph(morph, weight);
 	}
 }
 

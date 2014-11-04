@@ -35,7 +35,6 @@ public:
 	uint32_t materialIndex, startIndex;
 	int indexCount;
 	uint32_t dirty;
-	DirectX::XMFLOAT4 avgColor;
 
 	MaterialMorph* getAdditiveMorph();
 	MaterialMorph* getMultiplicativeMorph();

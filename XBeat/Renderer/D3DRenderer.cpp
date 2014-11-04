@@ -139,7 +139,7 @@ bool D3DRenderer::Initialize(int width, int height, bool vsync, HWND wnd, bool f
 	// Discard back buffer after presenting
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-	swapChainDesc.Flags = 0;
+	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	UINT deviceFlags = 0;
 #ifdef _DEBUG
@@ -319,56 +319,27 @@ void D3DRenderer::Shutdown()
 		swapChain->SetFullscreenState(false, NULL);
 
 	for (auto &state : blendState) {
-		if (state != nullptr)
-			state->Release();
-		state = nullptr;
+		DX_DELETEIF(state);
 	}
 
 	for (auto &state : rasterState) {
-		if (state != nullptr)
-			state->Release();
-
-		state = nullptr;
+		DX_DELETEIF(state);
 	}
 
 	if (depthResourceView)
 		depthResourceView = nullptr;
 
-	if (depthStencilView) {
-		depthStencilView->Release();
-		depthStencilView = nullptr;
-	}
+	DX_DELETEIF(depthStencilView);
 
 	for (auto &state : depthStencilState) {
-		if (state != nullptr)
-			state->Release();
-		state = nullptr;
+		DX_DELETEIF(state);
 	}
 
-	if (depthStencilBuffer) {
-		depthStencilBuffer->Release();
-		depthStencilBuffer = nullptr;
-	}
-
-	if (renderTarget) {
-		renderTarget->Release();
-		renderTarget = nullptr;
-	}
-
-	if (deviceContext) {
-		deviceContext->Release();
-		deviceContext = nullptr;
-	}
-
-	if (device) {
-		device->Release();
-		device = nullptr;
-	}
-
-	if (swapChain) {
-		swapChain->Release();
-		swapChain = nullptr;
-	}
+	DX_DELETEIF(depthStencilBuffer);
+	DX_DELETEIF(renderTarget);
+	DX_DELETEIF(deviceContext);
+	DX_DELETEIF(device);
+	DX_DELETEIF(swapChain);
 }
 
 void D3DRenderer::BeginScene(float R, float G, float B, float A)

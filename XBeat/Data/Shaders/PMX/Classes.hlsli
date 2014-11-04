@@ -63,7 +63,6 @@ struct VertexOutput
 	uint material : MATERIAL0;
 };
 
-typedef VertexInput GeometryIO;
 typedef VertexOutput PixelInput;
 
 struct PixelOutput
@@ -71,3 +70,4 @@ struct PixelOutput
 	float4 color : SV_Target;
 	float depth : SV_Depth;
 };
+

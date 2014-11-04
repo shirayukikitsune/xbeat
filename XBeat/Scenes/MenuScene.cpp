@@ -80,7 +80,7 @@ bool Scenes::Menu::initialize()
 		}
 	} while (!Model);
 #else
-	Model = ModelHandler->loadModel(L"星熊勇儀（振袖）");
+	Model = ModelHandler->loadModel(L"Lat Cyber Miku 2014");
 	Model->SetDebugFlags(PMX::Model::DebugFlags::RenderBones);
 #endif
 	Model->SetShader(Shader);

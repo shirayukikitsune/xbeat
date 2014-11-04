@@ -332,23 +332,23 @@ Bone* detail::BoneImpl::GetRootBone() {
 }
 
 void detail::BoneImpl::PerformIK() {
-	if (!ikData || ikData->links.empty() || ikData->links[0].bone->Simulated)
+	if (!ikData || ikData->links.empty() || ikData->links[0].bone->Simulated || ikData->chainLength <= 0.00001f)
 		return;
 
 	btVector3 TargetPosition = this->GetPosition();
 	btVector3 RootPosition = ikData->links.back().bone->GetPosition();
-
-	btVector3 EndPosition = ikData->targetBone->GetPosition();
-	// Check if the last joint position is close to the target point
-	if (EndPosition.distance(TargetPosition) < 0.001f) {
-		return;
-	}
 
 	// Determine if the target position is reachable
 	if (RootPosition.distance(TargetPosition) > ikData->chainLength) {
 		// If unreachable, move the target point to a reachable point colinear to the root bone position and the original target point
 		TargetPosition = (TargetPosition - RootPosition).normalized() * ikData->chainLength + RootPosition;
 		assert(RootPosition.distance(TargetPosition) <= ikData->chainLength + 0.0001f);
+	}
+
+	btVector3 EndPosition = ikData->targetBone->GetPosition();
+	// Check if the last joint position is close to the target point
+	if (EndPosition.distance(TargetPosition) < 0.001f) {
+		return;
 	}
 
 	btQuaternion OldRotation = ikData->targetBone->getRotation();
@@ -371,6 +371,10 @@ void detail::BoneImpl::PerformIK() {
 
 		auto performInnerIteraction = [](btVector3 &ParentBonePosition, btVector3 &P1, btVector3 &P2, IK::Node &Link, bool Reverse) {
 			float Distance = P1.distance(P2);
+			if (Distance <= 0.00001f) {
+				P1 = P2;
+				return;
+			}
 			float Ratio = Link.bone->getLength() / Distance;
 
 			P1 = P2.lerp(P1, Ratio);
@@ -401,7 +405,7 @@ void detail::BoneImpl::PerformIK() {
 
 			Rotation.setEulerZYX(z, y, x);
 
-			P1 = quatRotate(Rotation, P1 - P2) + P2;
+			P1 = quatRotate(Rotation, BoneDirection) * Link.bone->getLength() + P2;
 		};
 
 		btVector3 P0;
