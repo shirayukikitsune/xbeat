@@ -26,7 +26,7 @@ Physics::PMXMotionState::PMXMotionState(PMX::Bone *AssociatedBone, const btTrans
 
 void Physics::PMXMotionState::getWorldTransform(btTransform &WorldTransform) const
 {
-	WorldTransform = InitialTransform * AssociatedBone->GetLocalTransform();
+	WorldTransform = InitialTransform * AssociatedBone->getLocalTransform();
 }
 
 void Physics::PMXMotionState::setWorldTransform(const btTransform &WorldTransform)

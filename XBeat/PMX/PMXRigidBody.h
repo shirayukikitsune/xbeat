@@ -17,7 +17,8 @@ public:
 
 	const Name& GetName() const { return m_name; }
 
-	void Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, PMX::Model *model, Loader::RigidBody* body);
+	void Initialize(std::shared_ptr<Physics::Environment> physics, PMX::Model *model, Loader::RigidBody* body);
+	void InitializeDebug(ID3D11DeviceContext *Context);
 	void Shutdown();
 
 	bool XM_CALLCONV Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
@@ -30,6 +31,16 @@ public:
 	btRigidBody* getBody() { return (btRigidBody*)*this; }
 
 	bool isDynamic() { return m_mode == RigidBodyMode::Dynamic; }
+
+#if defined _M_IX86 && defined _MSC_VER
+	void *__cdecl operator new(size_t count) {
+		return _aligned_malloc(count, 16);
+	}
+
+	void __cdecl operator delete(void *object) {
+		_aligned_free(object);
+	}
+#endif
 
 private:
 	Bone* m_bone;

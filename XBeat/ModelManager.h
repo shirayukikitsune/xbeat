@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 
+namespace Physics { class Environment; }
 namespace PMX { class Loader; class Model; }
 
 /// \brief Class that manages all PMX::Model in the Data folder
@@ -36,8 +37,9 @@ public:
 
 	/// \brief Loads a particular model from the list, by its name
 	///
-	/// \param [in] name The name of the model to be loaded
-	std::shared_ptr<PMX::Model> loadModel(const std::wstring &name);
+	/// \param [in] Name The name of the model to be loaded
+	/// \param [in] Physics The physics environment
+	std::shared_ptr<PMX::Model> loadModel(const std::wstring &Name, std::shared_ptr<Physics::Environment> Physics);
 
 	/// \brief Returns a copy of the KnownModels
 	ModelList getKnownModels() const { return KnownModels; }

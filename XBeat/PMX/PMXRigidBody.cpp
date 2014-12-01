@@ -15,27 +15,24 @@ RigidBody::~RigidBody()
 {
 }
 
-void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, Model *model, Loader::RigidBody *body)
+void RigidBody::Initialize(std::shared_ptr<Physics::Environment> physics, Model *model, Loader::RigidBody *body)
 {
 	btVector3 inertia;
 
 	m_size = DirectX::XMFloat3ToBtVector3(body->size);
 
-	switch (body->shape) {
+	switch (m_shapeType) {
 	case RigidBodyShape::Box:
 		m_shape.reset(new btBoxShape(m_size));
-		m_primitive = DirectX::GeometricPrimitive::CreateCube(context);
 		break;
 	case RigidBodyShape::Sphere:
-		m_shape.reset(new btSphereShape(body->size.x));
-		m_primitive = DirectX::GeometricPrimitive::CreateSphere(context);
+		m_shape.reset(new btSphereShape(m_size.x()));
 		break;
 	case RigidBodyShape::Capsule:
-		m_shape.reset(new btCapsuleShape(body->size.x, body->size.y));
-		m_primitive = DirectX::GeometricPrimitive::CreateCylinder(context);
+		m_shape.reset(new btCapsuleShape(m_size.x(), m_size.y()));
 		break;
 	}
-
+	
 	switch (body->group) {
 	case 0: m_color = DirectX::Colors::White; break;
 	case 1: m_color = DirectX::Colors::Blue; break;
@@ -107,6 +104,21 @@ void RigidBody::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics
 	physics->addRigidBody(m_body, m_groupId, m_groupMask);
 }
 
+void RigidBody::InitializeDebug(ID3D11DeviceContext *Context)
+{
+	switch (m_shapeType) {
+	case RigidBodyShape::Box:
+		m_primitive = DirectX::GeometricPrimitive::CreateCube(Context);
+		break;
+	case RigidBodyShape::Sphere:
+		m_primitive = DirectX::GeometricPrimitive::CreateSphere(Context);
+		break;
+	case RigidBodyShape::Capsule:
+		m_primitive = DirectX::GeometricPrimitive::CreateCylinder(Context);
+		break;
+	}
+}
+
 bool XM_CALLCONV RigidBody::Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection)
 {
 	DirectX::XMMATRIX w;
@@ -131,12 +143,12 @@ void RigidBody::Update()
 	btTransform tr = m_body->getCenterOfMassTransform();
 	switch (m_mode) {
 	case RigidBodyMode::AlignedDynamic: {
-		tr.setOrigin(m_bone->GetTransform().getOrigin());
+		tr.setOrigin(m_bone->getTransform().getOrigin());
 		break;
 	}
 	}
 
-	m_bone->ApplyPhysicsTransform(tr);
+	m_bone->applyPhysicsTransform(tr);
 }
 
 RigidBody::operator btRigidBody*()

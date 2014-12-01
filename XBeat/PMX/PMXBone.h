@@ -1,105 +1,119 @@
 #pragma once
 
 #include "PMXDefinitions.h"
+#include "PMXLoader.h"
 #include "../Renderer/D3DRenderer.h"
-#include "GeometricPrimitive.h" // From DirectX Toolkit
-#include <list>
+
+#include <vector>
 
 namespace PMX {
 
-class Loader;
 class Model;
 class RigidBody;
 
 class Bone
 {
 public:
+	static Bone* createBone(Model *Model, uint32_t Id, BoneType Type);
+
 	//! Applies a rotation around Euler angles and a translation
-	virtual void Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void transform(const btVector3& Angles, const btVector3& Offset, DeformationOrigin Origin = DeformationOrigin::User) = 0;
 	//! Applies a btTransform
-	virtual void Transform(const btTransform& transform, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void transform(const btTransform& Transform, DeformationOrigin Origin = DeformationOrigin::User) = 0;
 	//! Rotates around an axis
-	virtual void Rotate(btVector3 axis, float angle, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void rotate(const btVector3& Axis, float Angle, DeformationOrigin Origin = DeformationOrigin::User) = 0;
 	//! Rotates using euler angles
-	virtual void Rotate(btVector3 angles, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void rotate(const btVector3& Angles, DeformationOrigin Origin = DeformationOrigin::User) = 0;
+	//! Rotates using a quaternion
+	virtual void rotate(const btQuaternion& Rotation, DeformationOrigin Origin = DeformationOrigin::User) = 0;
 	//! Apply a translation
-	virtual void Translate(btVector3 offset, DeformationOrigin origin = DeformationOrigin::User) = 0;
+	virtual void translate(const btVector3& Offset, DeformationOrigin Origin = DeformationOrigin::User) = 0;
 	//! Resets the bone to the original position
-	virtual void ResetTransform() = 0;
+	virtual void resetTransform() = 0;
 
 	//! Initialize the bone
-	virtual void Initialize() = 0;
+	virtual void initialize(Loader::Bone *Data) = 0;
+	//! Initialize the debug renderer
+	virtual void initializeDebug(ID3D11DeviceContext *Context) {}
 	//! Prepare for destruction
-	virtual void Terminate() = 0;
+	virtual void terminate() = 0;
+
+	//! Debug render
+	virtual void XM_CALLCONV render(DirectX::FXMMATRIX World, DirectX::CXMMATRIX View, DirectX::CXMMATRIX Projection) {}
 
 	//! Returns the parent bone ID
-	uint32_t GetParentId() { return m_parentId; }
+	uint32_t getParentId() { return ParentId; }
 	//! Returns the parent bone
-	Bone* GetParent() { return m_parent; }
+	Bone* getParent() { return Parent; }
 	//! Return this bone ID
-	uint32_t GetId() { return m_id; }
+	uint32_t getId() { return Id; }
 	//! Return the parent model
-	Model* GetModel() { return m_model; }
+	Model* getModel() { return Model; }
+
+	//! Returns the name of this bone
+	const Name& getName() const { return Name; }
 
 	//! Returns whether this is the root bone or not
-	virtual bool IsRootBone() { return false; }
+	virtual bool isRootBone() { return false; }
 	//! Returns the root bone
-	virtual Bone* GetRootBone() { return nullptr; }
+	virtual Bone* getRootBone() { return nullptr; }
 	//! Returns whether this is an IK bone
-	virtual bool IsIK() { return false; }
+	virtual bool isIK() { return false; }
 
 	//! Gets the global transformation
-	btTransform GetTransform() { return m_transform; }
+	btTransform getTransform() { return Transform; }
 	//! Gets the local transformation
-	btTransform GetLocalTransform() { return m_inverse * m_transform; }
+	btTransform getLocalTransform() { return Inverse * Transform; }
 	//! Gets the inverse transformation
-	btTransform GetInverseTransform() { return m_inverse; }
+	btTransform getInverseTransform() { return Inverse; }
 
 	//! Returns the position of the bone
-	virtual btVector3 GetPosition() { return GetTransform().getOrigin(); }
+	virtual btVector3 getPosition() { return getTransform().getOrigin(); }
 	//! Returns the initial position of the bone
-	virtual btVector3 GetStartPosition() = 0;
+	virtual btVector3 getStartPosition() = 0;
 	//! Returns the rotation of this bone
-	btQuaternion getRotation() { return GetTransform().getRotation(); }
+	btQuaternion getRotation() { return getTransform().getRotation(); }
 
-	virtual void ApplyPhysicsTransform(btTransform &transform) {}
+	virtual void applyMorph(Morph *Morph, float Weight) {}
+
+	virtual void applyPhysicsTransform(btTransform &Transform) {}
 
 	//! Update the transformation each frame
-	virtual void Update() = 0;
+	virtual void update() = 0;
 
 	//! Perform IK link
-	virtual void PerformIK() {}
+	virtual void performIK() {}
 	//! Clear IK information
-	virtual void ClearIK() {}
+	virtual void clearIK() {}
 
 	//! Returns the flags for this bone
-	BoneFlags GetFlags() const { return (BoneFlags)m_flags; }
+	BoneFlags getFlags() const { return (BoneFlags)Flags; }
 	//! Check if this bone has all of the specified flags
-	bool HasAllFlags(uint16_t flag) const { return (m_flags & flag) == flag; }
+	bool hasAllFlags(uint16_t Flag) const { return (Flags & Flag) == Flag; }
 	//! Check if this bone has any of the specified flags
-	bool HasAnyFlag(uint16_t flag) const { return (m_flags & flag) != 0; }
+	bool hasAnyFlag(uint16_t Flag) const { return (Flags & Flag) != 0; }
 
 	//! Returns the physical deformation order
-	int32_t GetDeformationOrder() const { return m_deformationOrder; }
+	int32_t getDeformationOrder() const { return DeformationOrder; }
 
 	std::vector<Bone*> m_children;
-	void UpdateChildren();
+	void updateChildren();
 
-	void setSimulated() { Simulated = true; }
+	void setSimulated(bool State = true) { Simulated = State; }
+	bool isSimulated() { return Simulated; }
 
 private:
-	const uint32_t m_id;
+	const uint32_t Id;
 
 protected:
-	Bone(Model *model, uint32_t id)
-		: m_id(id) {
-		m_model = model;
-		m_parent = nullptr;
-		m_parentId = -1;
-		m_flags = 0;
-		m_deformationOrder = 0;
-		m_transform.setIdentity();
-		m_inverse.setIdentity();
+	Bone(Model *Model, uint32_t Id)
+		: Id(Id), Model(Model) {
+		Parent = nullptr;
+		ParentId = -1;
+		Flags = 0;
+		DeformationOrder = 0;
+		Transform.setIdentity();
+		Inverse.setIdentity();
 		Simulated = false;
 	}
 
@@ -107,129 +121,15 @@ protected:
 	Bone(const Bone &other) = delete;
 	Bone(Bone &&other) = delete;
 
-	Model *m_model;
-	Bone *m_parent;
-	uint16_t m_flags;
-	int32_t m_deformationOrder;
-	uint32_t m_parentId;
+	Name Name;
+	Model *Model;
+	Bone *Parent;
+	uint16_t Flags;
+	int32_t DeformationOrder;
+	uint32_t ParentId;
 
-	btTransform m_transform, m_inverse;
+	btTransform Transform, Inverse;
 
 	bool Simulated;
 };
-
-namespace detail {
-class RootBone
-	: public Bone
-{
-public:
-	RootBone(Model *model) : Bone(model, -1) {
-		m_flags = (uint16_t)BoneFlags::Manipulable | (uint16_t)BoneFlags::Movable | (uint16_t)BoneFlags::Rotatable;
-	}
-
-	virtual bool IsRootBone() { return true; }
-
-	virtual Bone* GetRootBone() { return this; }
-
-	virtual btVector3 GetStartPosition() { return btVector3(0, 0, 0); }
-
-	// Nothing to do with these
-	virtual void Initialize() {};
-	virtual void Terminate() {};
-	virtual void Update() {};
-
-	virtual void Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Transform(const btTransform& transform, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(btVector3 axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(btVector3 angles, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Translate(btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void ResetTransform();
-};
-
-class BoneImpl
-	: public Bone
-{
-public:
-	BoneImpl(Model *model, uint32_t id) : Bone(model, id){};
-	~BoneImpl(void);
-
-	friend class Loader;
-
-	virtual btVector3 GetPosition();
-
-	const Name& GetName() const { return name; }
-	const DirectX::XMVECTOR& GetAxisTranslation() const { return axisTranslation; }
-
-	virtual void Initialize();
-	void InitializeDebug(std::shared_ptr<Renderer::D3DRenderer> d3d);
-	virtual void Terminate();
-
-	DirectX::XMMATRIX XM_CALLCONV GetLocalAxis();
-
-	virtual void Update();
-
-	virtual bool IsIK() { return HasAnyFlag((uint16_t)BoneFlags::IK); }
-
-	virtual void Transform(btVector3 angles, btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Transform(const btTransform& transform, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(btVector3 axis, float angle, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Rotate(btVector3 angles, DeformationOrigin origin = DeformationOrigin::User);
-	virtual void Translate(btVector3 offset, DeformationOrigin origin = DeformationOrigin::User);
-
-	virtual void ResetTransform();
-	
-	void ApplyMorph(Morph *morph, float weight);
-	virtual void ApplyPhysicsTransform(btTransform &transform);
-
-	bool XM_CALLCONV Render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
-
-	btVector3 GetOffsetPosition();
-	btVector3 GetEndPosition();
-	virtual btVector3 GetStartPosition();
-
-	virtual Bone* GetRootBone();
-
-	virtual void PerformIK();
-	virtual void ClearIK() { m_ikRotation = btQuaternion::getIdentity(); }
-
-private:
-	std::list<std::pair<Morph*,float>> appliedMorphs;
-
-	/**
-	 * @returns the squared length of this bone
-	 */
-	float getLength();
-
-	btQuaternion m_inheritRotation, m_userRotation, m_morphRotation, m_ikRotation;
-	btVector3 m_inheritTranslation, m_userTranslation, m_morphTranslation;
-	DirectX::XMMATRIX m_localAxis;
-	btQuaternion m_debugRotation;
-
-	Name name;
-	btVector3 startPosition;
-	union {
-		float length[3];
-		uint32_t attachTo;
-	} size;
-	struct {
-		uint32_t from;
-		float rate;
-	} inherit;
-	DirectX::XMVECTOR axisTranslation;
-	struct {
-		DirectX::XMVECTOR xDirection;
-		DirectX::XMVECTOR zDirection;
-	} localAxes;
-	int externalDeformationKey;
-	IK *ikData;
-
-	// Used for debug render
-	std::unique_ptr<DirectX::GeometricPrimitive> m_primitive;
-
-#ifdef PMX_TEST
-	friend class PMXTest::BoneTest;
-#endif
-};
-
-}
 }

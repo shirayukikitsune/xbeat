@@ -51,6 +51,8 @@ namespace Scenes {
 
 		virtual void onAttached();
 
+		virtual void onDeattached();
+
 	private:
 		std::unique_ptr<VMD::Motion> Motion;
 		std::unique_ptr<Renderer::Camera> Camera;

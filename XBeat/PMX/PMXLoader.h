@@ -1,45 +1,115 @@
+//===-- PMX/PMXLoader.h - Declares the PMX loading class ------------*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===--------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares the PMX::Loader class
+///
+//===--------------------------------------------------------------------------===//
+
 #pragma once
 
-#include <string>
+#include "PMXDefinitions.h"
+
+#include <exception>
 #include <fstream>
 #include <istream>
-#include <exception>
-
-#include "PMXDefinitions.h"
+#include <string>
 
 namespace PMX {
 
 class Model;
 
 class Loader {
-	struct Header {
-		char abMagic[4];
-		float fVersion;
-	} *m_header;
+	struct FileHeader {
+		/**
+		 * \brief Stores the file identifier
+		 */
+		char Magic[4];
+		/**
+		 * \brief Stores the type version
+		 */
+		float Version;
+	} *Header;
 
-	struct SizeInfo {
-		uint8_t cbSize;
-		uint8_t cbEncoding;
-		uint8_t cbUVVectorSize;
-		uint8_t cbVertexIndexSize;
-		uint8_t cbTextureIndexSize;
-		uint8_t cbMaterialIndexSize;
-		uint8_t cbBoneIndexSize;
-		uint8_t cbMorphIndexSize;
-		uint8_t cbRigidBodyIndexSize;
-	} *m_sizeInfo;
+	struct FileSizeInfo {
+		/**
+		 * \brief The size of this structure
+		 */
+		uint8_t Size;
+		/**
+		 * \brief The encoding used for strings
+		 */
+		uint8_t Encoding;
+		/**
+		 * \brief The amount of UV components
+		 */
+		uint8_t UVVectorSize;
+		/**
+		 * \brief The size of the vertex index, in bytes
+		 */
+		uint8_t VertexIndexSize;
+		/**
+		 * \brief The size of the texture index, in bytes
+		 */
+		uint8_t TextureIndexSize;
+		/**
+		 * \brief The size of the material index, in bytes
+		 */
+		uint8_t MaterialIndexSize;
+		/**
+		 * \brief The size of the bone index, in bytes
+		 */
+		uint8_t BoneIndexSize;
+		/**
+		 * \brief The size of the morph index, in bytes
+		 */
+		uint8_t MorphIndexSize;
+		/**
+		 * \brief The size of the rigid body index, in bytes
+		 */
+		uint8_t RigidBodyIndexSize;
+	} *SizeInfo;
 
 public:
 	class Exception : public std::exception
 	{
-		std::string msg;
+		std::string Message;
 
 	public:
-		Exception(const std::string &_msg) throw() : msg(_msg) {}
+		Exception(const std::string &Message) throw() : Message(Message) {}
 
 		virtual const char* what() const throw() {
-			return msg.c_str();
+			return Message.c_str();
 		}
+	};
+
+	struct Bone {
+		Name Name;
+		DirectX::XMFLOAT3 InitialPosition;
+		uint32_t Parent;
+		int DeformationOrder;
+		uint16_t Flags;
+		union {
+			float Length[3];
+			uint32_t AttachTo;
+		} Size;
+		struct {
+			uint32_t From;
+			float Rate;
+		} Inherit;
+		DirectX::XMFLOAT3 AxisTranslation;
+		struct {
+			DirectX::XMFLOAT3 X;
+			DirectX::XMFLOAT3 Z;
+		} LocalAxes;
+		int ExternalDeformationKey;
+		IK *IkData;
 	};
 
 	struct RigidBody{
@@ -74,14 +144,18 @@ public:
 		} data;
 	};
 
-	bool FromFile(Model* model, const std::wstring &filename);
-	bool FromStream(Model* model, std::istream &in);
-	bool FromMemory(Model* model, const char *&data);
-	ModelDescription GetDescription(const std::wstring &filename);
+	bool loadFromFile(Model* model, const std::wstring &filename);
+	bool loadFromStream(Model* model, std::istream &in);
+	bool loadFromMemory(Model* model, const char *&data);
+	ModelDescription getDescription(const std::wstring &filename);
+
+	std::vector<Loader::Bone> Bones;
+	std::vector<Loader::RigidBody> RigidBodies;
+	std::vector<Loader::Joint> Joints;
 
 private:
-	Header* loadHeader(const char *&data);
-	SizeInfo* loadSizeInfo(const char *&data);
+	FileHeader* loadHeader(const char *&data);
+	FileSizeInfo* loadSizeInfo(const char *&data);
 	void loadDescription(ModelDescription &desc, const char *&data);
 	void loadVertexData(Model* model, const char *&data);
 	void loadIndexData(Model* model, const char *&data);

@@ -14,10 +14,11 @@ public:
 	Joint();
 	~Joint();
 
-	bool Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, PMX::Model *model, Loader::Joint *joint);
+	bool Initialize(std::shared_ptr<Physics::Environment> physics, PMX::Model *model, Loader::Joint *joint);
+	void InitializeDebug(ID3D11DeviceContext *context);
 	void Shutdown(std::shared_ptr<Physics::Environment> physics);
 
-	void Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection);
+	void XM_CALLCONV Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection);
 
 	std::shared_ptr<btTypedConstraint> GetConstraint() { return m_constraint; }
 

@@ -68,6 +68,16 @@ public:
 
 	void Reset();
 
+#if defined _M_IX86 && defined _MSC_VER
+	void *__cdecl operator new(size_t count) {
+		return _aligned_malloc(count, 16);
+	}
+
+	void __cdecl operator delete(void *object) {
+		_aligned_free(object);
+	}
+#endif
+
 private:
 	std::vector<Vertex*> vertices;
 
@@ -77,9 +87,8 @@ private:
 	std::vector<Bone*> bones;
 	std::vector<Morph*> morphs;
 	std::vector<Frame*> frames;
-	std::vector<Loader::RigidBody*> bodies;
-	std::vector<Loader::Joint*> joints;
 	std::vector<SoftBody*> softBodies;
+	std::vector<RigidBody*> RigidBodies;
 
 	Bone *rootBone;
 
@@ -111,9 +120,7 @@ private:
 
 	std::vector<Bone*> m_prePhysicsBones;
 	std::vector<Bone*> m_postPhysicsBones;
-	std::vector<detail::BoneImpl*> m_ikBones;
-
-	friend detail::RootBone;
+	std::vector<Bone*> m_ikBones;
 
 protected:
 	virtual bool InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d);
@@ -131,9 +138,6 @@ private:
 	void applyBoneMorph(Morph* morph, float weight);
 	void applyFlipMorph(Morph* morph, float weight);
 	void applyImpulseMorph(Morph* morph, float weight);
-
-	bool loadModel(const std::wstring &filename);
-	bool loadModel(std::istream &data);
 
 	friend class Loader;
 #ifdef PMX_TEST

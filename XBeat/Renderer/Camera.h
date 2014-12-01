@@ -49,6 +49,16 @@ namespace Renderer {
 		/// \brief Gets the focal distance
 		float getFocalDistance() { return FocalDistance; }
 
+#if defined _M_IX86 && defined _MSC_VER
+		void *__cdecl operator new(size_t count) {
+			return _aligned_malloc(count, 16);
+		}
+
+		void __cdecl operator delete(void *object) {
+			_aligned_free(object);
+		}
+#endif
+
 	private:
 		/// \brief The view matrix
 		DirectX::XMMATRIX ViewMatrix;

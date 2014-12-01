@@ -42,7 +42,7 @@ PMX::Model::Model(void)
 
 	m_indexBuffer = m_vertexBuffer = m_materialBuffer = nullptr;
 
-	rootBone = new detail::RootBone(this);
+	rootBone = PMX::Bone::createBone(this, -1, BoneType::Root);
 }
 
 
@@ -53,35 +53,62 @@ PMX::Model::~Model(void)
 
 bool PMX::Model::LoadModel(const wstring &filename)
 {
-	if (!loadModel(filename))
+	Loader *loader = new Loader;
+	
+	if (!loader->loadFromFile(this, filename))
 		return false;
 
 	basePath = filename.substr(0, filename.find_last_of(L"\\/") + 1);
 
-	for (auto &body : softBodies)
-	{
-		body->Create(m_physics, this);
+	// Initialize the bones
+	rootBone->initialize(nullptr);
+	for (uint32_t Id = 0; Id < loader->Bones.size(); ++Id) {
+		auto Bone = Bone::createBone(this, Id, (loader->Bones[Id].Flags & (uint16_t)BoneFlags::IK) != 0 ? BoneType::IK : BoneType::Regular);
+		bones.push_back(Bone);
 	}
 
-	rootBone->Initialize();
-	for (auto &bone : bones) {
-		bone->Initialize();
-		if (bone->HasAnyFlag((uint16_t)BoneFlags::PostPhysicsDeformation))
-			m_postPhysicsBones.push_back(bone);
+	for (auto &Bone : bones) {
+		Bone->initialize(&loader->Bones[Bone->getId()]);
+		if (Bone->hasAnyFlag((uint16_t)BoneFlags::PostPhysicsDeformation))
+			m_postPhysicsBones.push_back(Bone);
 		else
-			m_prePhysicsBones.push_back(bone);
+			m_prePhysicsBones.push_back(Bone);
 
-		if (bone->IsIK()) {
-			m_ikBones.push_back(static_cast<detail::BoneImpl*>(bone));
+		if (Bone->isIK()) {
+			m_ikBones.push_back(Bone);
 		}
 	}
 
 	auto sortFn = [](Bone* a, Bone* b) {
-		return a->GetDeformationOrder() < b->GetDeformationOrder() || (a->GetDeformationOrder() == b->GetDeformationOrder() && a->GetId() < b->GetId());
+		return a->getDeformationOrder() < b->getDeformationOrder() || (a->getDeformationOrder() == b->getDeformationOrder() && a->getId() < b->getId());
 	};
 
 	std::sort(m_prePhysicsBones.begin(), m_prePhysicsBones.end(), sortFn);
 	std::sort(m_postPhysicsBones.begin(), m_postPhysicsBones.end(), sortFn);
+
+	// Initialize the rigid bodies
+	for (auto &Body : loader->RigidBodies) {
+		std::shared_ptr<RigidBody> RigidBody(new RigidBody);
+		assert(RigidBody != nullptr);
+		m_rigidBodies.emplace_back(RigidBody);
+
+		RigidBody->Initialize(m_physics, this, &Body);
+	}
+
+	// Initialize the constraints
+	for (auto &Joint : loader->Joints) {
+		std::shared_ptr<PMX::Joint> Constraint(new PMX::Joint);
+		assert(Constraint != nullptr);
+		m_joints.emplace_back(Constraint);
+
+		Constraint->Initialize(m_physics, this, &Joint);
+	}
+
+	// Initialize the soft bodies
+	for (auto &body : softBodies)
+	{
+		body->Create(m_physics, this);
+	}
 
 	return true;
 }
@@ -126,11 +153,8 @@ void PMX::Model::ReleaseModel()
 	}
 	frames.shrink_to_fit();
 
-	for (std::vector<PMX::RigidBody*>::size_type i = 0; i < bodies.size(); i++) {
-		delete bodies[i];
-		bodies[i] = nullptr;
-	}
-	bodies.shrink_to_fit();
+	m_rigidBodies.clear();
+	m_rigidBodies.shrink_to_fit();
 
 	for (auto &joint : m_joints) {
 		joint->Shutdown(m_physics);
@@ -238,7 +262,7 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 
 	// Initialize bone buffers
 	for (auto &bone : bones) {
-		reinterpret_cast<detail::BoneImpl*>(bone)->InitializeDebug(d3d);
+		bone->initializeDebug(d3d->GetDeviceContext());
 	}
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -284,33 +308,15 @@ bool PMX::Model::InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d)
 	m_indexBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, 6, "PMX IB");
 #endif
 
-	// Build the physics bodies
-	m_rigidBodies.resize(bodies.size());
-	for (uint32_t i = 0; i < bodies.size(); i++) {
-		m_rigidBodies[i].reset(new RigidBody);
-		m_rigidBodies[i]->Initialize(d3d->GetDeviceContext(), m_physics, this, bodies[i]);
-
-		// Free some memory, since we won't use the loader structure anymore
-		delete bodies[i];
-		bodies[i] = nullptr;
+	// Initialize rigid body debug info
+	for (auto &Body : m_rigidBodies) {
+		Body->InitializeDebug(d3d->GetDeviceContext());
 	}
 
-	// Clear our vector size;
-	bodies.clear();
-	bodies.shrink_to_fit();
-
-	// Add the joints
-	m_joints.resize(joints.size());
-	for (uint32_t i = 0; i < joints.size(); i++) {
-		m_joints[i].reset(new Joint);
-		if (!m_joints[i]->Initialize(d3d->GetDeviceContext(), m_physics, this, joints[i]))
-			return false;
-
-		delete joints[i];
-		joints[i] = nullptr;
+	// Initialize joints debug info
+	for (auto &Joint : m_joints) {
+		Joint->InitializeDebug(d3d->GetDeviceContext());
 	}
-	joints.clear();
-	joints.shrink_to_fit();
 
 	return true;
 }
@@ -328,36 +334,6 @@ void PMX::Model::ShutdownBuffers()
 	}
 
 	rendermaterials.resize(0);
-}
-
-bool PMX::Model::loadModel(const wstring &filename)
-{
-	ifstream ifs;
-	ifs.open(filename, ios::binary);
-	if (!ifs.good())
-		return false;
-
-	bool ret = loadModel(ifs);
-	ifs.close();
-
-	return ret;
-}
-
-bool PMX::Model::loadModel(istream &ifs)
-{
-	Loader *loader = new Loader;
-	try {
-		if (!loader->FromStream(this, ifs)) {
-			delete loader;
-			return false;
-		}
-	}
-	catch (std::exception &) {
-		//cout << e.what() << endl;
-		delete loader;
-		return false;
-	}
-	return true;
 }
 
 bool PMX::Model::updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *context)
@@ -440,7 +416,7 @@ bool PMX::Model::Update(float msec)
 {
 	if ((m_debugFlags & DebugFlags::DontUpdatePhysics) == 0) {
 		for (auto &bone : m_prePhysicsBones) {
-			bone->Update();
+			bone->update();
 		}
 
 		for (auto &body : m_rigidBodies) {
@@ -448,11 +424,11 @@ bool PMX::Model::Update(float msec)
 		}
 
 		for (auto &bone : m_postPhysicsBones) {
-			bone->Update();
+			bone->update();
 		}
 
 		for (auto &bone : m_ikBones) {
-			bone->PerformIK();
+			bone->performIK();
 		}
 	}
 
@@ -461,9 +437,13 @@ bool PMX::Model::Update(float msec)
 
 void PMX::Model::Reset()
 {
+	for (auto &morph : morphs) {
+		ApplyMorph(morph, 0.0f);
+	}
+
 	for (auto &bone : bones) {
-		bone->ClearIK();
-		bone->ResetTransform();
+		bone->clearIK();
+		bone->resetTransform();
 	}
 }
 
@@ -482,10 +462,10 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		auto shader = std::dynamic_pointer_cast<PMXShader>(m_shader);
 
 		for (auto & bone : bones) {
-			auto &shaderBone = shader->GetBone(bone->GetId());
-			shaderBone.position = bone->GetStartPosition().get128();
-			auto t = bone->GetLocalTransform();
-			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->GetStartPosition().get128(), bone->getRotation().get128(), t.getOrigin().get128()));
+			auto &shaderBone = shader->GetBone(bone->getId());
+			shaderBone.position = bone->getStartPosition().get128();
+			auto t = bone->getLocalTransform();
+			shaderBone.transform = DirectX::XMMatrixTranspose(DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSplatOne(), bone->getStartPosition().get128(), t.getRotation().get128(), t.getOrigin().get128()));
 		}
 
 		shader->UpdateBoneBuffer(context);
@@ -520,7 +500,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 	DirectX::XMMATRIX view = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.view);
 	DirectX::XMMATRIX projection = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.projection);
-	DirectX::XMMATRIX world = DirectX::XMMatrixRotationQuaternion(rootBone->GetTransform().getRotation().get128()) * DirectX::XMMatrixTranslationFromVector(rootBone->GetTransform().getOrigin().get128());
+	DirectX::XMMATRIX world = DirectX::XMMatrixRotationQuaternion(rootBone->getTransform().getRotation().get128()) * DirectX::XMMatrixTranslationFromVector(rootBone->getTransform().getOrigin().get128());
 
 	context->RSSetState(m_d3d->GetRasterState(1));
 	if (m_debugFlags & DebugFlags::RenderJoints) {
@@ -537,7 +517,7 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 
 	if (m_debugFlags & DebugFlags::RenderBones) {
 		for (auto &bone : bones)
-			reinterpret_cast<detail::BoneImpl*>(bone)->Render(world, view, projection);
+			bone->render(world, view, projection);
 	}
 	context->RSSetState(m_d3d->GetRasterState(0));
 }
@@ -601,7 +581,7 @@ void PMX::Model::ReleaseTexture()
 PMX::Bone* PMX::Model::GetBoneByName(const std::wstring &JPname)
 {
 	for (auto bone : bones) {
-		if (reinterpret_cast<detail::BoneImpl*>(bone)->GetName().japanese.compare(JPname) == 0)
+		if (bone->getName().japanese.compare(JPname) == 0)
 			return bone;
 	}
 
@@ -611,7 +591,7 @@ PMX::Bone* PMX::Model::GetBoneByName(const std::wstring &JPname)
 PMX::Bone* PMX::Model::GetBoneByENName(const std::wstring &ENname)
 {
 	for (auto bone : bones) {
-		if (reinterpret_cast<detail::BoneImpl*>(bone)->GetName().english.compare(ENname) == 0)
+		if (bone->getName().english.compare(ENname) == 0)
 			return bone;
 	}
 
@@ -756,7 +736,7 @@ void PMX::Model::applyBoneMorph(Morph *morph, float weight)
 {
 	for (auto i : morph->data) {
 		Bone *bone = bones[i.bone.index];
-		reinterpret_cast<detail::BoneImpl*>(bone)->ApplyMorph(morph, weight);
+		bone->applyMorph(morph, weight);
 	}
 }
 

@@ -232,7 +232,7 @@ void VMD::Motion::setBoneParameters(std::wstring BoneName, btVector3 &Translatio
 	for (auto &Model : AttachedModels) {
 		auto bone = Model->GetBoneByName(BoneName);
 		if (bone) {
-			bone->Transform(btTransform(Rotation, Translation), PMX::DeformationOrigin::Internal);
+			bone->transform(btTransform(Rotation, Translation), PMX::DeformationOrigin::Motion);
 		}
 	}
 }
@@ -303,19 +303,11 @@ void VMD::Motion::updateCamera(float Frame)
 
 void VMD::Motion::updateBones(float Frame)
 {
-	for (auto BoneMotion = BoneKeyFrames.begin(); BoneMotion != BoneKeyFrames.end(); ) {
+	for (auto BoneMotion = BoneKeyFrames.begin(); BoneMotion != BoneKeyFrames.end(); ++BoneMotion) {
 		if (BoneMotion->second.size() == 1) {
 			if (BoneMotion->second.front().FrameCount > Frame) continue;
 
 			setBoneParameters(BoneMotion->first, BoneMotion->second.front().Translation, BoneMotion->second.front().Rotation);
-			std::wstring key = BoneMotion->first;
-			BoneMotion++;
-			std::wstring nextKey;
-			if (BoneMotion != BoneKeyFrames.end()) {
-				nextKey = BoneMotion->first;
-			}
-			BoneMotion = BoneKeyFrames.find(nextKey);
-			BoneKeyFrames.erase(key);
 			continue;
 		}
 
@@ -372,26 +364,16 @@ void VMD::Motion::updateBones(float Frame)
 		Rotation = Frame1.Rotation.slerp(Frame2.Rotation, findRatio(Frame2.InterpolationData[3]));
 
 		setBoneParameters(Frame1.BoneName, Translation, Rotation);
-
-		++BoneMotion;
 	}
 }
 
 void VMD::Motion::updateMorphs(float CurrentFrame)
 {
-	for (auto MorphFrame = MorphKeyFrames.begin(); MorphFrame != MorphKeyFrames.end(); ) {
+	for (auto MorphFrame = MorphKeyFrames.begin(); MorphFrame != MorphKeyFrames.end(); ++MorphFrame) {
 		if (MorphFrame->second.size() == 1) {
 			if (MorphFrame->second.front().FrameCount > CurrentFrame) continue;
 
 			setMorphParameters(MorphFrame->second.front().MorphName, MorphFrame->second.front().Weight);
-			std::wstring key = MorphFrame->first;
-			++MorphFrame;
-			std::wstring nextKey;
-			if (MorphFrame != MorphKeyFrames.end()) {
-				nextKey = MorphFrame->first;
-			}
-			MorphFrame = MorphKeyFrames.find(nextKey);
-			MorphKeyFrames.erase(key);
 			continue;
 		}
 
@@ -432,8 +414,6 @@ void VMD::Motion::updateMorphs(float CurrentFrame)
 		float Ratio = (CurrentFrame - Frame1Time) / (Frame2Time - Frame1Time);
 
 		setMorphParameters(Frame1.MorphName, doLinearInterpolation(Ratio, Frame1.Weight, Frame2.Weight));
-
-		++MorphFrame;
 	}
 }
 

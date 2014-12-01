@@ -57,6 +57,16 @@ public:
 	BoneBufferType& GetBone(int index) { return m_bones[index]; }
 	bool UpdateBoneBuffer(ID3D11DeviceContext *context);
 
+#if defined _M_IX86 && defined _MSC_VER
+	void *__cdecl operator new(size_t count) {
+		return _aligned_malloc(count, 16);
+	}
+
+	void __cdecl operator delete(void *object) {
+		_aligned_free(object);
+	}
+#endif
+
 private:
 	ID3D11Buffer *m_materialBuffer, *m_tmpMatBuffer;
 	ID3D11ShaderResourceView *m_materialSrv;

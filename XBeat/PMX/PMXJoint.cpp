@@ -12,7 +12,7 @@ Joint::~Joint()
 {
 }
 
-bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::Environment> physics, Model *model, Loader::Joint *joint)
+bool Joint::Initialize(std::shared_ptr<Physics::Environment> physics, Model *model, Loader::Joint *joint)
 {
 	auto pmxBodyA = model->GetRigidBodyById(joint->data.bodyA);
 	auto pmxBodyB = model->GetRigidBodyById(joint->data.bodyB);
@@ -132,19 +132,24 @@ bool Joint::Initialize(ID3D11DeviceContext *context, std::shared_ptr<Physics::En
 
 	physics->addConstraint(m_constraint);
 
-	m_primitive = DirectX::GeometricPrimitive::CreateCube(context, 0.5f);
 	m_type = joint->type;
 
 	return true;
+}
+
+void Joint::InitializeDebug(ID3D11DeviceContext *context)
+{
+	m_primitive = DirectX::GeometricPrimitive::CreateCube(context, 0.5f);
 }
 
 void Joint::Shutdown(std::shared_ptr<Physics::Environment> physics)
 {
 	physics->removeConstraint(m_constraint);
 	m_constraint.reset();
+	m_primitive.reset();
 }
 
-void Joint::Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection)
+void XM_CALLCONV Joint::Render(DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection)
 {
 	DirectX::XMMATRIX world;
 	if (m_type == JointType::Spring6DoF) {

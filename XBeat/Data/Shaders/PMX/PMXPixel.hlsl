@@ -74,9 +74,9 @@ PixelOutput main(PixelInput input)
 	textureColor = lerp(textureColor, textureColor, materials[input.material].weight);
 	color = materials[input.material].ambient;
 
-	LightingOutput lighting = ComputeLights(input.viewDirection, -input.normal, lightCount, materials[input.material].diffuse.rgb, materials[input.material].specular.rgb, materials[input.material].specular.a);
+	LightingOutput lighting = ComputeLights(input.viewDirection, input.normal, lightCount, materials[input.material].diffuse.rgb, materials[input.material].specular.rgb, materials[input.material].specular.a);
 
-	color.rgb += max(lighting.Diffuse, float3(0.25f, 0.25f, 0.25f));
+	color.rgb += lighting.Diffuse;
 
 	// Multiply the texture pixel and the input color to get the final result.
 	if ((materials[input.material].flags & 0x08) == 0)

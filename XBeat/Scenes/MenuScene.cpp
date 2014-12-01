@@ -47,12 +47,12 @@ bool Scenes::Menu::initialize()
 	if (!Shader->InitializeBuffers(Renderer->GetDevice(), nullptr))
 		return false;
 	Shader->SetLightCount(1);
-	Shader->SetLights(DirectX::XMVectorSet(0.5f, 0.5f, 0.5f, 1.0f), DirectX::XMVectorSet(0.5f, 0.5f, 0.5f, 1.0f), DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f), DirectX::XMVectorSet(-1.0f, -1.0f, 1.0f, 0.0f), DirectX::XMVectorZero(), 0);
+	Shader->SetLights(DirectX::XMVectorSplatOne(), DirectX::XMVectorSplatOne(), DirectX::XMVectorSplatOne(), DirectX::XMVectorSet(-1.0f, -1.0f, 1.0f, 0.0f), DirectX::XMVectorZero(), 0);
 
 	auto &Viewport = Renderer->getViewport();
 	Camera.reset(new Renderer::Camera(DirectX::XM_PIDIV4, (float)Viewport.Width / (float)Viewport.Height, Renderer::SCREEN_NEAR, Renderer::SCREEN_DEPTH));
 	assert(Camera);
-	Camera->SetPosition(0.0f, 10.0f, 0.0f);
+	Camera->SetPosition(0, 10.0f, 0.0f);
 
 	Frustum.reset(new Renderer::ViewFrustum);
 	assert(Frustum);
@@ -80,7 +80,7 @@ bool Scenes::Menu::initialize()
 		}
 	} while (!Model);
 #else
-	Model = ModelHandler->loadModel(L"Lat Cyber Miku 2014");
+	Model = ModelHandler->loadModel(L"DT Type 2020 Miku", Physics);
 	Model->SetDebugFlags(PMX::Model::DebugFlags::RenderBones);
 #endif
 	Model->SetShader(Shader);
@@ -115,25 +115,35 @@ void Scenes::Menu::shutdown()
 
 void Scenes::Menu::frame(float FrameTime)
 {
+#if 1
 	// Check if a new motion should be loaded
 	if (!KnownMotions.empty()) {
 		if (!Motion || Motion->isFinished()) {
-			Motion.reset(new VMD::Motion);
+			// Set the model to its initial state
+			Model->Reset();
 
+			// Add a waiting time 
+			if (Motion != nullptr)
+				WaitTime = (float)RandomGenerator() / (float)RandomGenerator.max() * 15.0f;
+
+			// Initialize a new random VMD motion
+			Motion.reset(new VMD::Motion);
 			std::shuffle(KnownMotions.begin(), KnownMotions.end(), RandomGenerator);
 
 			Motion->loadFromFile(KnownMotions.front());
 
 			Motion->attachModel(Model);
-
-			//WaitTime = (float)RandomGenerator() / (float)RandomGenerator.max() * 15.0f;
 		}
 		else if (!Paused) {
-			if (WaitTime == 0.0f)
+			if (WaitTime <= 0.0f)
 				Motion->advanceFrame(FrameTime * 30.0f);
-			else WaitTime -= FrameTime;
+			else 
+				WaitTime -= FrameTime;
 		}
 	}
+#endif
+
+	Model->Update(FrameTime);
 }
 
 bool Scenes::Menu::render()
@@ -144,7 +154,7 @@ bool Scenes::Menu::render()
 
 	if (!Shader->Update(0, Context))
 		return false;
-	Model->Update(0);
+	
 	Model->Render(Context, Frustum);
 
 	return true;
@@ -158,7 +168,9 @@ bool Scenes::Menu::isFinished()
 void Scenes::Menu::onAttached()
 {
 	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_R), [this](void *unused) {
-		this->Motion->reset();
+		if (this->Motion)
+			this->Motion->reset();
+		this->Model->Reset();
 	});
 	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_E), [this](void *unused) {
 		this->Paused = false;
@@ -166,4 +178,17 @@ void Scenes::Menu::onAttached()
 	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_W), [this](void *unused) {
 		this->Paused = true;
 	});
+	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_X), [this](void *unused) {
+		this->Model->GetBoneByName(L"右足ＩＫ")->translate(btVector3(0, 0, -1.0f));
+	});
+	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_Z), [this](void *unused) {
+		this->Model->GetBoneByName(L"右足ＩＫ")->translate(btVector3(0, 2.5f, 0));
+	});
+}
+
+void Scenes::Menu::onDeattached()
+{
+	InputManager->removeBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_R));
+	InputManager->removeBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_E));
+	InputManager->removeBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_W));
 }

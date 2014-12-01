@@ -39,6 +39,16 @@ namespace Physics
 		/// \brief This function does nothing, since this class is used to update the rigid body when the bone is deformed and is not affected by the physics world
 		virtual void setWorldTransform(const btTransform &WorldTransform);
 
+#if defined _M_IX86 && defined _MSC_VER
+		void *__cdecl operator new(size_t count){
+			return _aligned_malloc(count, 16);
+		}
+
+			void __cdecl operator delete(void *object) {
+			_aligned_free(object);
+		}
+#endif
+
 	private:
 		PMX::Bone *AssociatedBone;
 		btTransform InitialTransform;

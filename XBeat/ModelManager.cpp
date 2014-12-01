@@ -47,15 +47,16 @@ void ModelManager::loadList()
 	saveToCache(CacheFilePath, ModelPath);
 }
 
-std::shared_ptr<PMX::Model> ModelManager::loadModel(const std::wstring &name)
+std::shared_ptr<PMX::Model> ModelManager::loadModel(const std::wstring &Name, std::shared_ptr<Physics::Environment> Physics)
 {
-	auto Path = KnownModels.find(name);
+	auto Path = KnownModels.find(Name);
 
 	if (Path == KnownModels.end())
 		return nullptr;
 
 	std::shared_ptr<PMX::Model> Model(new PMX::Model);
 	assert(Model);
+	Model->SetPhysics(Physics);
 
 	if (!Model->LoadModel(Path->second.wstring()))
 		return nullptr;
@@ -126,8 +127,12 @@ void ModelManager::loadInternal(const boost::filesystem::path &Path) {
 		// Validates the PMX model extension
 		else if (fs::is_regular_file(PathIterator->status()) && PathIterator->path().has_extension()) {
 			if (boost::iequals(PathIterator->path().extension().generic_wstring(), L".pmx")) {
-				auto desc = ModelLoader->GetDescription(PathIterator->path().wstring());
-				KnownModels[desc.name.japanese] = PathIterator->path();
+				try {
+					auto desc = ModelLoader->getDescription(PathIterator->path().wstring());
+					KnownModels[desc.name.japanese] = PathIterator->path();
+				}
+				catch (PMX::Loader::Exception &e) {
+				}
 			}
 		}
 	}

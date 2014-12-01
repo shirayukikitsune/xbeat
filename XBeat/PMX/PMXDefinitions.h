@@ -104,6 +104,12 @@ enum struct VertexWeightMethod : uint8_t {
 	Count
 };
 
+enum struct BoneType {
+	Root,
+	Regular,
+	IK,
+};
+
 enum struct BoneFlags : uint16_t {
 	Attached = 0x0001,
 	Rotatable = 0x0002,
@@ -123,6 +129,7 @@ enum struct BoneFlags : uint16_t {
 enum struct DeformationOrigin {
 	User,
 	Morph,
+	Motion,
 	Inheritance,
 	Internal
 };
@@ -275,6 +282,16 @@ struct Vertex {
 	DirectX::XMVECTOR MorphOffset;
 
 	uint32_t index;
+
+#if defined _M_IX86 && defined _MSC_VER
+	void *__cdecl operator new(size_t count) {
+		return _aligned_malloc(count, 16);
+	}
+
+	void __cdecl operator delete(void *object) {
+		_aligned_free(object);
+	}
+#endif
 };
 
 struct Material{
@@ -298,7 +315,7 @@ struct Material{
 	int indexCount;
 };
 
-struct IK{
+struct IK {
 	struct Node {
 		uint32_t boneIndex;
 		bool limitAngle;
@@ -306,16 +323,12 @@ struct IK{
 			float lower[3];
 			float upper[3];
 		} limits;
-		detail::BoneImpl *bone;
 	};
 
 	uint32_t targetIndex;
 	int loopCount;
 	float angleLimit;
 	std::vector<Node> links;
-
-	PMX::detail::BoneImpl *targetBone;
-	float chainLength;
 };
 
 struct Morph{

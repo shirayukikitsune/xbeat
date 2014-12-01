@@ -25,6 +25,16 @@ public:
 	int GetTextureWidth();
 	int GetTextureHeight();
 
+#if defined _M_IX86 && defined _MSC_VER
+	void *__cdecl operator new(size_t count) {
+		return _aligned_malloc(count, 16);
+	}
+
+	void __cdecl operator delete(void *object) {
+		_aligned_free(object);
+	}
+#endif
+
 private:
 	ID3D11Texture2D *m_renderTargetTexture;
 	ID3D11RenderTargetView *m_renderTargetView;

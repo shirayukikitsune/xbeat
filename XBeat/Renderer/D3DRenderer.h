@@ -55,6 +55,16 @@ public:
 	ID3D11ShaderResourceView* GetDepthResourceView();
 	ID3D11RenderTargetView* renderTarget;
 
+#if defined _M_IX86 && defined _MSC_VER
+	void *__cdecl operator new(size_t count) {
+		return _aligned_malloc(count, 16);
+	}
+
+	void __cdecl operator delete(void *object) {
+		_aligned_free(object);
+	}
+#endif
+
 private:
 	bool FindBestRefreshRate(int width, int height, uint32_t &numerator, uint32_t &denominator);
 
