@@ -1,13 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Library_MMDFiles", "Library_MMDFiles\Library_MMDFiles.vcxproj", "{08C504D6-E965-4F03-983D-F89E61F6FDC3}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Library_MMDAgent", "Library_MMDAgent\Library_MMDAgent.vcxproj", "{8F5C492B-1FDD-4FD5-8191-528A4A0A4D86}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PMXTest", "PMXTest\PMXTest.vcxproj", "{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XBeat", "XBeat\XBeat.vcxproj", "{8AC3E65B-8262-4382-9E79-4B5BB78B7875}"
 EndProject
@@ -45,13 +43,6 @@ Global
 		{8F5C492B-1FDD-4FD5-8191-528A4A0A4D86}.Profile|x64.ActiveCfg = Release|Win32
 		{8F5C492B-1FDD-4FD5-8191-528A4A0A4D86}.Release|Win32.ActiveCfg = Release|Win32
 		{8F5C492B-1FDD-4FD5-8191-528A4A0A4D86}.Release|x64.ActiveCfg = Release|Win32
-		{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}.Debug|Win32.ActiveCfg = Debug|Win32
-		{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}.Debug|x64.ActiveCfg = Debug|x64
-		{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}.Profile|Win32.ActiveCfg = Release|Win32
-		{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}.Profile|Win32.Build.0 = Release|Win32
-		{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}.Profile|x64.ActiveCfg = Release|Win32
-		{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}.Release|Win32.ActiveCfg = Release|Win32
-		{FD36DF51-E8B2-4602-AE20-F03CC70F64AF}.Release|x64.ActiveCfg = Release|x64
 		{8AC3E65B-8262-4382-9E79-4B5BB78B7875}.Debug|Win32.ActiveCfg = Debug|Win32
 		{8AC3E65B-8262-4382-9E79-4B5BB78B7875}.Debug|Win32.Build.0 = Debug|Win32
 		{8AC3E65B-8262-4382-9E79-4B5BB78B7875}.Debug|x64.ActiveCfg = Debug|x64

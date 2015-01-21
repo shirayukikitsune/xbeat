@@ -66,25 +66,6 @@ bool Scenes::Menu::initialize()
 		}
 	}
 
-	// Select a model to be displayed
-#if 0
-	auto ModelList = ModelHandler->getKnownModels();
-	do {
-		size_t Index = RandomGenerator() % ModelList.size();
-		for (auto &ModelPath : ModelList) {
-			if (Index-- == 0) {
-				Model = ModelHandler->loadModel(ModelPath.first);
-				ModelList.erase(ModelPath.first);
-				break;
-			}
-		}
-	} while (!Model);
-#else
-	Model = ModelHandler->loadModel(L"DT Type 2020 Miku", Physics);
-	Model->SetDebugFlags(PMX::Model::DebugFlags::RenderBones);
-#endif
-	Model->SetShader(Shader);
-
 	DirectX::XMMATRIX View, Projection;
 	Camera->setFocalDistance(-35.0f);
 	Camera->update(0.0f);
@@ -99,6 +80,25 @@ bool Scenes::Menu::initialize()
 	// Initializes the model
 	// Pause the physics environment, to prevent resource race
 	Physics->pause();
+	// Select a model to be displayed
+#if 0
+	auto ModelList = ModelHandler->getKnownModels();
+	do {
+		size_t Index = RandomGenerator() % ModelList.size();
+		for (auto &ModelPath : ModelList) {
+			if (Index-- == 0) {
+				Model = ModelHandler->loadModel(ModelPath.first);
+				ModelList.erase(ModelPath.first);
+				break;
+			}
+		}
+	} while (!Model);
+#else
+	Model = ModelHandler->loadModel(L"Tda式改変WIMミク ver.2.9", Physics);
+	Model->SetDebugFlags(PMX::Model::DebugFlags::RenderBones);
+#endif
+	Model->SetShader(Shader);
+
 	if (!Model->Initialize(Renderer, Physics))
 		return false;
 	Physics->resume();

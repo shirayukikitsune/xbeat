@@ -234,6 +234,19 @@ void detail::BoneImpl::initialize(Loader::Bone *Data)
 	InheritTransform = UserTransform = MorphTransform = btTransform::getIdentity();
 	IkRotation = btQuaternion::getIdentity();
 
+	DeformationOrder = Data->DeformationOrder;
+	ParentId = Data->Parent;
+	Flags = Data->Flags;
+	Name = Data->Name;
+	if (hasAnyFlag(((uint16_t)BoneFlags::RotationAttached | (uint16_t)BoneFlags::TranslationAttached))) {
+		InheritFrom = dynamic_cast<BoneImpl*>(Model->GetBoneById(Data->Inherit.From));
+		InheritRate = Data->Inherit.Rate;
+	}
+	else {
+		InheritFrom = nullptr;
+		InheritRate = 1.0f;
+	}
+
 	InitialPosition = DirectX::XMFloat3ToBtVector3(Data->InitialPosition);
 
 	Inverse.setOrigin(-getStartPosition());
@@ -299,10 +312,11 @@ btVector3 detail::BoneImpl::getEndPosition(bool transform)
 	btVector3 p;
 
 	if (hasAnyFlag((uint16_t)BoneFlags::Attached)) {
-		p = transform ? AttachedTo->getPosition() : AttachedTo->getStartPosition();
+		if (AttachedTo) p = transform ? AttachedTo->getPosition() : AttachedTo->getStartPosition();
+		else p = transform ? getPosition() : getStartPosition();
 	}
 	else {
-		p = btVector3();
+		p = EndPosition;
 		if (transform) p = quatRotate(Transform.getRotation(), p) + getPosition();
 	}
 
@@ -351,7 +365,7 @@ void detail::BoneImpl::update()
 
 	InheritTransform = btTransform(Rotation, Translation);
 
-	Translation = (Translation + UserTransform.getOrigin() + MorphTransform.getOrigin() + getOffsetPosition());
+	Translation += UserTransform.getOrigin() + MorphTransform.getOrigin() + getOffsetPosition();
 
 	Rotation *= UserTransform.getRotation();
 	Rotation *= MorphTransform.getRotation();
@@ -495,7 +509,6 @@ void detail::IKBone::initialize(Loader::Bone *Data) {
 		assert(NewNode.Bone != nullptr);
 
 		NewNode.Limited = Link.limitAngle;
-		std::copy(&NewNode.Limits.Lower[0], &NewNode.Limits.Upper[3], &Link.limits.lower[0]);
 
 		// Hack to fix models imported from PMD
 		if (NewNode.Bone->getName().japanese.find(L"ひざ") != std::wstring::npos && NewNode.Limited == false) {
@@ -503,6 +516,15 @@ void detail::IKBone::initialize(Loader::Bone *Data) {
 			NewNode.Limits.Lower[0] = -DirectX::XM_PI;
 			NewNode.Limits.Lower[1] = NewNode.Limits.Lower[2] = NewNode.Limits.Upper[0] = NewNode.Limits.Upper[1] = NewNode.Limits.Upper[2] = 0.0f;
 		}
+		else {
+			NewNode.Limits.Lower[0] = Link.limits.lower[0];
+			NewNode.Limits.Lower[1] = Link.limits.lower[1];
+			NewNode.Limits.Lower[2] = Link.limits.lower[2];
+			NewNode.Limits.Upper[0] = Link.limits.upper[0];
+			NewNode.Limits.Upper[1] = Link.limits.upper[1];
+			NewNode.Limits.Upper[2] = Link.limits.upper[2];
+		}
+
 		ChainLength += NewNode.Bone->getLength();
 		Links.emplace_back(NewNode);
 	}
@@ -521,7 +543,7 @@ void detail::IKBone::terminate()
 	Primitive.reset();
 }
 
-#if 1
+#if 0
 void detail::IKBone::performIK() {
 	if (TargetBone->isSimulated())
 		return;
@@ -529,12 +551,14 @@ void detail::IKBone::performIK() {
 	btVector3 TargetPosition = getPosition();
 	btVector3 RootPosition = Links.back().Bone->getPosition();
 
+#if 1
 	// Determine if the target position is reachable
 	if (RootPosition.distance(TargetPosition) > ChainLength) {
 		// If unreachable, move the target point to a reachable point colinear to the root bone position and the original target point
 		TargetPosition = (TargetPosition - RootPosition).normalized() * ChainLength + RootPosition;
 		assert(RootPosition.distance(TargetPosition) <= ChainLength + 0.0001f);
 	}
+#endif
 
 	btQuaternion OldRotation = TargetBone->getRotation();
 
@@ -554,7 +578,7 @@ void detail::IKBone::performIK() {
 		
 		TargetPositions.emplace_back(TargetPosition);
 
-		auto performInnerIteraction = [](btVector3 &ParentBonePosition, btVector3 &LinkPosition, btVector3 &TargetPosition, Node &Link, bool Reverse) {
+		auto performInnerIteraction = [this](btVector3 &ParentBonePosition, btVector3 &LinkPosition, btVector3 &TargetPosition, Node &Link, bool Reverse) {
 			float Distance = LinkPosition.distance(TargetPosition);
 			if (Distance <= 0.00001f) {
 				LinkPosition = TargetPosition;
@@ -566,12 +590,35 @@ void detail::IKBone::performIK() {
 
 			LinkPosition = TargetPosition.lerp(LinkPosition, Ratio);
 
-#if 1
 			// Now apply rotation constraints if needed
 			if (!Link.Limited || ParentBonePosition.isZero())
 				return;
 
-			btVector3 LineDirection = (TargetPosition - ParentBonePosition).normalize();
+			btVector3 LineDirection = (ParentBonePosition - TargetPosition).normalize();
+
+#if 0
+			btVector3 LocalDirection = (LinkPosition - TargetPosition).normalize();
+			float Dot = LocalDirection.dot(LineDirection);
+			if (Dot > 0.999999f) return;
+
+			btVector3 Axis = LocalDirection.cross(LineDirection);
+			if (Axis.length2() < 0.0000001f) return;
+
+			float Angle = acosf(Dot);
+			if (fabsf(Angle) < 0.0001f) return;
+
+			float x, y, z;
+			btMatrix3x3 Rotation;
+			Rotation.setRotation(btQuaternion(Axis.normalized(), Angle));
+			Rotation.getEulerZYX(y, x, z);
+
+			btClamp(x, Link.Limits.Lower[0], Link.Limits.Upper[0]);
+			btClamp(y, Link.Limits.Lower[1], Link.Limits.Upper[1]);
+			btClamp(z, Link.Limits.Lower[2], Link.Limits.Upper[2]);
+
+			Rotation.setEulerZYX(y, x, z);
+			LinkPosition = (LocalDirection * Rotation) * BoneLength + TargetPosition;
+#else
 			btVector3 Origin = LineDirection.dot(LinkPosition - TargetPosition) * LineDirection;
 			float DistanceToOrigin = Origin.length();
 			Origin += TargetPosition;
@@ -615,12 +662,35 @@ void detail::IKBone::performIK() {
 			LocalPosition.setX(powf(-1.0f, Quadrant) * (fabsf(X) < fabsf(LocalPosition.x()) ? fabsf(X) : fabsf(LocalPosition.x())));
 			LocalPosition.setZ(powf(-1.0f, Quadrant) * (fabsf(Y) < fabsf(LocalPosition.z()) ? fabsf(Y) : fabsf(LocalPosition.z())));
 
-			LinkPosition = (quatRotate(YRotation.inverse(), LocalPosition) + Origin).lerp(LinkPosition, BoneLength / DistanceToOrigin);
+			auto DesiredPosition = (quatRotate(YRotation.inverse(), LocalPosition) + Origin).lerp(LinkPosition, BoneLength / DistanceToOrigin);
+			btVector3 CurrentDirection = (LinkPosition - ParentBonePosition).normalized();
+			btVector3 DesiredDirection = (DesiredPosition - ParentBonePosition).normalized();
+			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
+			float Dot = CurrentDirection.dot(DesiredDirection);
+			if (Axis.length2() < 0.000001f) {
+				LinkPosition = DesiredPosition;
+				return;
+			}
+
+			Axis.normalize();
+			float Angle = btAcos(Dot);
+
+			btMatrix3x3 Aux;
+			Aux.setRotation(btQuaternion(Axis, Angle));
+			float x, y, z;
+			Aux.getEulerZYX(z, y, x);
+
+			btClamp(x, Link.Limits.Lower[0], Link.Limits.Upper[0]);
+			btClamp(y, Link.Limits.Lower[1], Link.Limits.Upper[1]);
+			btClamp(z, Link.Limits.Lower[2], Link.Limits.Upper[2]);
+
+			Aux.setEulerZYX(z, y, x);
+			LinkPosition = (CurrentDirection * Aux) * BoneLength + ParentBonePosition;
 #endif
 		};
 
 		// Stage 1: Forward reaching
-		btVector3 P0(0, 0, 0);
+		btVector3 P0 = Links.back().Bone->getParent()->getPosition();
 		for (int Index = TargetPositions.size() - 2; Index >= 0; --Index) {
 			auto& Link = Links[Links.size() - Index - 1];
 			performInnerIteraction(P0, TargetPositions[Index], TargetPositions[Index + 1], Link, false);
@@ -638,12 +708,13 @@ void detail::IKBone::performIK() {
 			P0 = TargetPositions[Index];
 		}
 
+#if 1
 		// Apply the new positions as rotations
 		for (int Index = TargetPositions.size() - 2; Index >= 0; --Index) {
 			auto& Link = Links[Links.size() - Index - 1];
 			btVector3 position = Link.Bone->getPosition();
 
-			btVector3 CurrentDirection = (Link.Bone->getEndPosition(true) - position).normalized();
+			btVector3 CurrentDirection = (Link.Bone->getEndPosition() - position).normalized();
 			btVector3 DesiredDirection = (TargetPositions[Index + 1] - position).normalized();
 
 			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
@@ -660,6 +731,7 @@ void detail::IKBone::performIK() {
 
 			position = Link.Bone->getPosition();
 		}
+#endif
 		TargetBone->update();
 	}
 
@@ -667,49 +739,48 @@ void detail::IKBone::performIK() {
 	TargetBone->update();
 }
 #else
-void detail::BoneImpl::PerformIK() {
-	btVector3 Destination = this->GetPosition();
-	btVector3 RootPosition = ikData->links.back().bone->GetPosition();
+void detail::IKBone::performIK() {
+	btVector3 Destination = getPosition();
+	btVector3 RootPosition = Links.back().Bone->getPosition();
 
-	auto InitialRotation = ikData->targetBone->GetTransform().getRotation();
+	auto InitialRotation = TargetBone->getRotation();
 
 #if 1
 	// Determine if the target position is reachable
-	if (RootPosition.distance(Destination) > ikData->chainLength) {
+	if (RootPosition.distance(Destination) > ChainLength) {
 		// If unreachable, move the target point to a reachable point colinear to the root bone position and the original target point
-		Destination = (Destination - RootPosition).normalized() * ikData->chainLength + RootPosition;
-		assert(RootPosition.distance(Destination) <= ikData->chainLength + 0.0001f);
+		Destination = (Destination - RootPosition).normalized() * ChainLength + RootPosition;
+		assert(RootPosition.distance(Destination) <= ChainLength + 0.0001f);
 	}
 #endif
 
-	for (int Iteration = 0; Iteration < ikData->loopCount; ++Iteration) {
-		for (int Index = 0; Index < ikData->links.size(); ++Index) {
-			auto &Link = ikData->links[Index];
-			auto Bone = static_cast<detail::BoneImpl*>(Link.bone);
-			btVector3 CurrentPosition = Bone->GetPosition();
-			btVector3 AffectedBonePosition = ikData->targetBone->GetPosition();
+	for (int Iteration = 0; Iteration < LoopCount; ++Iteration) {
+		for (int Index = 0; Index < Links.size(); ++Index) {
+			auto &Link = Links[Index];
+			btVector3 CurrentPosition = Link.Bone->getPosition();
+			btVector3 AffectedBonePosition = TargetBone->getPosition();
 
 			if (CurrentPosition == Destination || CurrentPosition == AffectedBonePosition) continue;
 
-			btTransform TransformInverse = Link.bone->GetTransform().inverse();
+			btTransform TransformInverse = Link.Bone->getTransform().inverse();
 			btVector3 LocalDestination = TransformInverse(Destination);
 			btVector3 LocalAffectedBonePosition = TransformInverse(AffectedBonePosition);
 
 			if (LocalDestination.distance2(LocalAffectedBonePosition) <= 0.0001f) {
-				Iteration = ikData->loopCount;
+				Iteration = LoopCount;
 				break;
 			}
 
 			LocalDestination.normalize();
 			LocalAffectedBonePosition.normalize();
 
-			auto Dot = LocalDestination.dot(LocalAffectedBonePosition);
+			auto Dot = LocalAffectedBonePosition.dot(LocalDestination);
 			if (Dot > 1.0f) continue;
 
 			auto Angle = acosf(Dot);
 			if (fabsf(Angle) < 0.0001f) continue;
 
-			btClamp(Angle, -ikData->angleLimit, ikData->angleLimit);
+			btClamp(Angle, -AngleLimit, AngleLimit);
 
 			btVector3 Axis = LocalAffectedBonePosition.cross(LocalDestination);
 			if (Axis.length2() < 0.0001f && Iteration != 0) continue;
@@ -718,12 +789,10 @@ void detail::BoneImpl::PerformIK() {
 
 			btQuaternion Rotation(Axis, Angle);
 			// clamp rotation values
-			if (Link.limitAngle) {
+			if (Link.Limited) {
 #if 0
 				if (Iteration == 0) {
-					if (Angle < 0.0f)
-						Angle = -Angle;
-					Bone->m_ikRotation.setRotation(btVector3(1.0f, 0.0f, 0.0f), Angle);
+					IkRotation.setRotation(btVector3(1.0f, 0.0f, 0.0f), fabsf(Angle));
 				}
 				else
 #endif
@@ -733,7 +802,7 @@ void detail::BoneImpl::PerformIK() {
 					Matrix.setRotation(Rotation);
 					Matrix.getEulerZYX(z, y, x);
 					float cx, cy, cz;
-					Matrix.setRotation(Bone->getRotation());
+					Matrix.setRotation(Link.Bone->getRotation());
 					Matrix.getEulerZYX(cz, cy, cx);
 
 #if 0
@@ -744,37 +813,36 @@ void detail::BoneImpl::PerformIK() {
 					btClamp(y, Link.limits.lower[1], Link.limits.upper[1]);
 					btClamp(z, Link.limits.lower[2], Link.limits.upper[2]);
 #else
-					if (x + cx > Link.limits.upper[0])
-						x = Link.limits.upper[0] - cx;
-					if (x + cx < Link.limits.lower[0])
-						x = Link.limits.lower[0] - cx;
+					if (x + cx > Link.Limits.Upper[0])
+						x = Link.Limits.Upper[0] - cx;
+					if (x + cx < Link.Limits.Lower[0])
+						x = Link.Limits.Lower[0] - cx;
 
-					if (y + cy > Link.limits.upper[1])
-						y = Link.limits.upper[1] - cy;
-					if (y + cy < Link.limits.lower[1])
-						y = Link.limits.lower[1] - cy;
+					if (y + cy > Link.Limits.Upper[1])
+						y = Link.Limits.Upper[1] - cy;
+					if (y + cy < Link.Limits.Lower[1])
+						y = Link.Limits.Lower[1] - cy;
 
-					if (z + cz > Link.limits.upper[2])
-						z = Link.limits.upper[2] - cz;
-					if (z + cz < Link.limits.lower[2])
-						z = Link.limits.lower[2] - cz;
+					if (z + cz > Link.Limits.Upper[2])
+						z = Link.Limits.Upper[2] - cz;
+					if (z + cz < Link.Limits.Lower[2])
+						z = Link.Limits.Lower[2] - cz;
 #endif
-					//Rotation.setEulerZYX(z, y, x);
 
-					Bone->m_ikRotation.setEulerZYX(z, y, x);
+					Link.Bone->IkRotation.setEulerZYX(z, y, x);
 				}
 			}
 			else 
-				Bone->m_ikRotation *= Rotation;
+				Link.Bone->IkRotation *= Rotation;
 
 			for (int UpdateIndex = Index; UpdateIndex >= 0; --UpdateIndex) {
-				ikData->links[UpdateIndex].bone->Update();
+				Links[UpdateIndex].Bone->update();
 			}
-			ikData->targetBone->Update();
+			TargetBone->update();
 		}
 	}
 
-	ikData->targetBone->m_ikRotation = InitialRotation * ikData->targetBone->getRotation().inverse();
-	ikData->targetBone->Update();
+	TargetBone->IkRotation = InitialRotation * TargetBone->getRotation().inverse();
+	TargetBone->update();
 }
 #endif
