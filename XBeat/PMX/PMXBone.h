@@ -73,6 +73,8 @@ public:
 	virtual btVector3 getStartPosition() = 0;
 	//! Returns the rotation of this bone
 	btQuaternion getRotation() { return getTransform().getRotation(); }
+	//! Returns the IK component of the rotation of this bone
+	virtual btQuaternion getIKRotation() { return btQuaternion::getIdentity(); }
 
 	virtual void applyMorph(Morph *Morph, float Weight) {}
 
@@ -102,6 +104,8 @@ public:
 	void setSimulated(bool State = true) { Simulated = State; }
 	bool isSimulated() { return Simulated; }
 
+	btTransform Transform;
+
 private:
 	const uint32_t Id;
 
@@ -128,7 +132,7 @@ protected:
 	int32_t DeformationOrder;
 	uint32_t ParentId;
 
-	btTransform Transform, Inverse;
+	btTransform Inverse;
 
 	bool Simulated;
 };

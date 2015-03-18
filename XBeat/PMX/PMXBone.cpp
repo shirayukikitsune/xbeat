@@ -115,6 +115,7 @@ namespace detail {
 		virtual void XM_CALLCONV render(DirectX::FXMMATRIX world, DirectX::CXMMATRIX view, DirectX::CXMMATRIX projection);
 
 		virtual btVector3 getStartPosition();
+		virtual btQuaternion getIKRotation() { return IkRotation; }
 
 		virtual Bone* getRootBone();
 
@@ -357,8 +358,9 @@ void detail::BoneImpl::update()
 	else {
 		if (hasAnyFlag((uint16_t)BoneFlags::RotationAttached)) {
 			if (InheritFrom) {
-				Rotation = InheritFrom->InheritTransform.getRotation();
+				Rotation = InheritFrom->getIKRotation() * InheritFrom->InheritTransform.getRotation();
 			}
+			else Rotation *= Parent->getIKRotation();
 		}
 	}
 	Rotation = btQuaternion::getIdentity().slerp(Rotation, InheritRate);
@@ -486,7 +488,7 @@ void XM_CALLCONV detail::BoneImpl::render(DirectX::FXMMATRIX world, DirectX::CXM
 	{
 		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, 0.3f, 0.3f, 1), DirectX::XMVectorZero(), getRotation().get128(), getPosition().get128());
 
-		Primitive->Draw(w, view, projection, DirectX::Colors::Red);
+		Primitive->Draw(w, view, projection, isIK() ? DirectX::Colors::Magenta : DirectX::Colors::Red);
 	}
 }
 
@@ -543,10 +545,14 @@ void detail::IKBone::terminate()
 	Primitive.reset();
 }
 
-#if 0
+#if 1
 void detail::IKBone::performIK() {
 	if (TargetBone->isSimulated())
 		return;
+
+	for (auto &Link : Links) {
+		if (Link.Bone->isSimulated()) return;
+	}
 
 	btVector3 TargetPosition = getPosition();
 	btVector3 RootPosition = Links.back().Bone->getPosition();
@@ -594,34 +600,11 @@ void detail::IKBone::performIK() {
 			if (!Link.Limited || ParentBonePosition.isZero())
 				return;
 
-			btVector3 LineDirection = (ParentBonePosition - TargetPosition).normalize();
+			btVector3 LineDirection = (LinkPosition - ParentBonePosition).normalize();
 
-#if 0
-			btVector3 LocalDirection = (LinkPosition - TargetPosition).normalize();
-			float Dot = LocalDirection.dot(LineDirection);
-			if (Dot > 0.999999f) return;
-
-			btVector3 Axis = LocalDirection.cross(LineDirection);
-			if (Axis.length2() < 0.0000001f) return;
-
-			float Angle = acosf(Dot);
-			if (fabsf(Angle) < 0.0001f) return;
-
-			float x, y, z;
-			btMatrix3x3 Rotation;
-			Rotation.setRotation(btQuaternion(Axis.normalized(), Angle));
-			Rotation.getEulerZYX(y, x, z);
-
-			btClamp(x, Link.Limits.Lower[0], Link.Limits.Upper[0]);
-			btClamp(y, Link.Limits.Lower[1], Link.Limits.Upper[1]);
-			btClamp(z, Link.Limits.Lower[2], Link.Limits.Upper[2]);
-
-			Rotation.setEulerZYX(y, x, z);
-			LinkPosition = (LocalDirection * Rotation) * BoneLength + TargetPosition;
-#else
-			btVector3 Origin = LineDirection.dot(LinkPosition - TargetPosition) * LineDirection;
+			btVector3 Origin = LineDirection.dot(TargetPosition - LinkPosition) * LineDirection;
 			float DistanceToOrigin = Origin.length();
-			Origin += TargetPosition;
+			Origin += LinkPosition;
 
 			btVector3 LocalXDirection(1, 0, 0);
 			btQuaternion YRotation;
@@ -633,7 +616,7 @@ void detail::IKBone::performIK() {
 				LocalXDirection = quatRotate(YRotation, LocalXDirection);
 			}
 
-			btVector3 LocalPosition = LinkPosition - Origin;
+			btVector3 LocalPosition = Origin - LinkPosition;
 			float Theta = btAcos(LocalPosition.normalized().dot(LocalXDirection));
 			int Quadrant = (int)(Theta / DirectX::XM_PIDIV2);
 			float Q1, Q2;
@@ -660,11 +643,12 @@ void detail::IKBone::performIK() {
 			float X = Q1 * cosf(Theta);
 			float Y = Q2 * sinf(Theta);
 			LocalPosition.setX(powf(-1.0f, Quadrant) * (fabsf(X) < fabsf(LocalPosition.x()) ? fabsf(X) : fabsf(LocalPosition.x())));
+			LocalPosition.setY(0.0f);
 			LocalPosition.setZ(powf(-1.0f, Quadrant) * (fabsf(Y) < fabsf(LocalPosition.z()) ? fabsf(Y) : fabsf(LocalPosition.z())));
 
-			auto DesiredPosition = (quatRotate(YRotation.inverse(), LocalPosition) + Origin).lerp(LinkPosition, BoneLength / DistanceToOrigin);
-			btVector3 CurrentDirection = (LinkPosition - ParentBonePosition).normalized();
-			btVector3 DesiredDirection = (DesiredPosition - ParentBonePosition).normalized();
+			auto DesiredPosition = (quatRotate(YRotation, LocalPosition) + Origin).lerp(LinkPosition, BoneLength / DistanceToOrigin);
+			btVector3 CurrentDirection = (TargetPosition - LinkPosition).normalized();
+			btVector3 DesiredDirection = (DesiredPosition - LinkPosition).normalized();
 			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
 			float Dot = CurrentDirection.dot(DesiredDirection);
 			if (Axis.length2() < 0.000001f) {
@@ -673,20 +657,9 @@ void detail::IKBone::performIK() {
 			}
 
 			Axis.normalize();
-			float Angle = btAcos(Dot);
+			float Angle = btClamped(btAcos(Dot), Link.Limits.Lower[1], Link.Limits.Upper[1]);
 
-			btMatrix3x3 Aux;
-			Aux.setRotation(btQuaternion(Axis, Angle));
-			float x, y, z;
-			Aux.getEulerZYX(z, y, x);
-
-			btClamp(x, Link.Limits.Lower[0], Link.Limits.Upper[0]);
-			btClamp(y, Link.Limits.Lower[1], Link.Limits.Upper[1]);
-			btClamp(z, Link.Limits.Lower[2], Link.Limits.Upper[2]);
-
-			Aux.setEulerZYX(z, y, x);
-			LinkPosition = (CurrentDirection * Aux) * BoneLength + ParentBonePosition;
-#endif
+			LinkPosition = quatRotate(btQuaternion(Axis, Angle), CurrentDirection) * BoneLength + ParentBonePosition;
 		};
 
 		// Stage 1: Forward reaching
@@ -708,7 +681,6 @@ void detail::IKBone::performIK() {
 			P0 = TargetPositions[Index];
 		}
 
-#if 1
 		// Apply the new positions as rotations
 		for (int Index = TargetPositions.size() - 2; Index >= 0; --Index) {
 			auto& Link = Links[Links.size() - Index - 1];
@@ -719,8 +691,8 @@ void detail::IKBone::performIK() {
 
 			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
 			float Dot = CurrentDirection.dot(DesiredDirection);
-			// No need to update if position is too close
-			if (Axis.length2() < 0.000001f || Dot > 0.999999f) continue;
+
+			if (Dot > 0.999999f || Axis.isZero()) continue;
 			
 			Axis.normalize();
 			float Angle = btAcos(Dot);
@@ -729,9 +701,8 @@ void detail::IKBone::performIK() {
 
 			Link.Bone->update();
 
-			position = Link.Bone->getPosition();
+			assert((Link.Bone->getEndPosition() - TargetPositions[Index + 1]).length2() < 0.0001f);
 		}
-#endif
 		TargetBone->update();
 	}
 
@@ -740,6 +711,14 @@ void detail::IKBone::performIK() {
 }
 #else
 void detail::IKBone::performIK() {
+	if (TargetBone->isSimulated())
+		return;
+
+	for (auto &Link : Links) {
+		if (Link.Bone->isSimulated()) return;
+		Link.Bone->clearIK();
+	}
+
 	btVector3 Destination = getPosition();
 	btVector3 RootPosition = Links.back().Bone->getPosition();
 
@@ -758,13 +737,11 @@ void detail::IKBone::performIK() {
 		for (int Index = 0; Index < Links.size(); ++Index) {
 			auto &Link = Links[Index];
 			btVector3 CurrentPosition = Link.Bone->getPosition();
-			btVector3 AffectedBonePosition = TargetBone->getPosition();
-
-			if (CurrentPosition == Destination || CurrentPosition == AffectedBonePosition) continue;
+			btVector3 TargetPosition = TargetBone->getPosition();
 
 			btTransform TransformInverse = Link.Bone->getTransform().inverse();
-			btVector3 LocalDestination = TransformInverse(Destination);
-			btVector3 LocalAffectedBonePosition = TransformInverse(AffectedBonePosition);
+			btVector3 LocalDestination = Destination - CurrentPosition;
+			btVector3 LocalAffectedBonePosition = TargetPosition - CurrentPosition;
 
 			if (LocalDestination.distance2(LocalAffectedBonePosition) <= 0.0001f) {
 				Iteration = LoopCount;
@@ -775,7 +752,7 @@ void detail::IKBone::performIK() {
 			LocalAffectedBonePosition.normalize();
 
 			auto Dot = LocalAffectedBonePosition.dot(LocalDestination);
-			if (Dot > 1.0f) continue;
+			if (Dot > 0.99999f) continue;
 
 			auto Angle = acosf(Dot);
 			if (fabsf(Angle) < 0.0001f) continue;
@@ -792,7 +769,8 @@ void detail::IKBone::performIK() {
 			if (Link.Limited) {
 #if 0
 				if (Iteration == 0) {
-					IkRotation.setRotation(btVector3(1.0f, 0.0f, 0.0f), fabsf(Angle));
+					Link.Bone->IkRotation.setRotation(Axis, -AngleLimit);
+					//Link.Bone->IkRotation.setEulerZYX(Link.Limits.Upper[2], Link.Limits.Upper[1], Link.Limits.Upper[0]);
 				}
 				else
 #endif
@@ -805,35 +783,14 @@ void detail::IKBone::performIK() {
 					Matrix.setRotation(Link.Bone->getRotation());
 					Matrix.getEulerZYX(cz, cy, cx);
 
-#if 0
-					x += cx;
-					y += cy;
-					z += cz;
-					btClamp(x, Link.limits.lower[0], Link.limits.upper[0]);
-					btClamp(y, Link.limits.lower[1], Link.limits.upper[1]);
-					btClamp(z, Link.limits.lower[2], Link.limits.upper[2]);
-#else
-					if (x + cx > Link.Limits.Upper[0])
-						x = Link.Limits.Upper[0] - cx;
-					if (x + cx < Link.Limits.Lower[0])
-						x = Link.Limits.Lower[0] - cx;
+					x = btClamped(x, Link.Limits.Lower[0] - cx, Link.Limits.Upper[0] - cx);
+					y = btClamped(y, Link.Limits.Lower[1] - cy, Link.Limits.Upper[1] - cy);
+					z = btClamped(z, Link.Limits.Lower[2] - cz, Link.Limits.Upper[2] - cz);
 
-					if (y + cy > Link.Limits.Upper[1])
-						y = Link.Limits.Upper[1] - cy;
-					if (y + cy < Link.Limits.Lower[1])
-						y = Link.Limits.Lower[1] - cy;
-
-					if (z + cz > Link.Limits.Upper[2])
-						z = Link.Limits.Upper[2] - cz;
-					if (z + cz < Link.Limits.Lower[2])
-						z = Link.Limits.Lower[2] - cz;
-#endif
-
-					Link.Bone->IkRotation.setEulerZYX(z, y, x);
+					Rotation.setEulerZYX(z, y, x);
 				}
 			}
-			else 
-				Link.Bone->IkRotation *= Rotation;
+			Link.Bone->IkRotation = Rotation * Link.Bone->IkRotation;
 
 			for (int UpdateIndex = Index; UpdateIndex >= 0; --UpdateIndex) {
 				Links[UpdateIndex].Bone->update();
@@ -844,5 +801,6 @@ void detail::IKBone::performIK() {
 
 	TargetBone->IkRotation = InitialRotation * TargetBone->getRotation().inverse();
 	TargetBone->update();
+	TargetBone->updateChildren();
 }
 #endif

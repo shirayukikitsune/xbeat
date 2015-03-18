@@ -87,7 +87,7 @@ bool Scenes::Menu::initialize()
 		size_t Index = RandomGenerator() % ModelList.size();
 		for (auto &ModelPath : ModelList) {
 			if (Index-- == 0) {
-				Model = ModelHandler->loadModel(ModelPath.first);
+				Model = ModelHandler->loadModel(ModelPath.first, Physics);
 				ModelList.erase(ModelPath.first);
 				break;
 			}
