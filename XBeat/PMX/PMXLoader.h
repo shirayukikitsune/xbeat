@@ -15,15 +15,20 @@
 #pragma once
 
 #include "PMXDefinitions.h"
+#include "PMXSoftBody.h"
 
 #include <exception>
 #include <fstream>
 #include <istream>
 #include <string>
 
-namespace PMX {
+#include <Ptr.h>
 
-class Model;
+namespace Urho3D {
+	class AnimatedModel;
+}
+
+namespace PMX {
 
 class Loader {
 	struct FileHeader {
@@ -91,7 +96,7 @@ public:
 
 	struct Bone {
 		Name Name;
-		DirectX::XMFLOAT3 InitialPosition;
+		float InitialPosition[3];
 		uint32_t Parent;
 		int DeformationOrder;
 		uint16_t Flags;
@@ -103,13 +108,15 @@ public:
 			uint32_t From;
 			float Rate;
 		} Inherit;
-		DirectX::XMFLOAT3 AxisTranslation;
+		float AxisTranslation[3];
 		struct {
-			DirectX::XMFLOAT3 X;
-			DirectX::XMFLOAT3 Z;
+			float X[3];
+			float Z[3];
 		} LocalAxes;
 		int ExternalDeformationKey;
-		IK *IkData;
+		IK IkData;
+
+		uint32_t index;
 	};
 
 	struct RigidBody{
@@ -118,9 +125,9 @@ public:
 		uint8_t group;
 		uint16_t groupMask;
 		PMX::RigidBodyShape shape;
-		DirectX::XMFLOAT3 size;
-		DirectX::XMFLOAT3 position;
-		DirectX::XMFLOAT3 rotation;
+		float size[3];
+		float position[3];
+		float rotation[3];
 		float mass;
 		float linearDamping;
 		float angularDamping;
@@ -134,43 +141,39 @@ public:
 		JointType type;
 		struct {
 			uint32_t bodyA, bodyB;
-			DirectX::XMFLOAT3 position;
-			DirectX::XMFLOAT3 rotation;
-			DirectX::XMFLOAT3 lowerMovementRestrictions;
-			DirectX::XMFLOAT3 upperMovementRestrictions;
-			DirectX::XMFLOAT3 lowerRotationRestrictions;
-			DirectX::XMFLOAT3 upperRotationRestrictions;
+			float position[3];
+			float rotation[3];
+			float lowerMovementRestrictions[3];
+			float upperMovementRestrictions[3];
+			float lowerRotationRestrictions[3];
+			float upperRotationRestrictions[3];
 			float springConstant[6];
 		} data;
 	};
 
-	bool loadFromFile(Model* model, const std::wstring &filename);
-	bool loadFromStream(Model* model, std::istream &in);
-	bool loadFromMemory(Model* model, const char *&data);
-	ModelDescription getDescription(const std::wstring &filename);
-
-	std::vector<Loader::Bone> Bones;
-	std::vector<Loader::RigidBody> RigidBodies;
-	std::vector<Loader::Joint> Joints;
+	bool loadFromFile(Urho3D::AnimatedModel* Model, const std::wstring &Filename);
+	bool loadFromStream(Urho3D::AnimatedModel* Model, std::istream &InStream);
+	bool loadFromMemory(Urho3D::AnimatedModel* Model, const char *&Data);
+	ModelDescription getDescription(const std::wstring &Filename);
 
 private:
 	FileHeader* loadHeader(const char *&data);
 	FileSizeInfo* loadSizeInfo(const char *&data);
 	void loadDescription(ModelDescription &desc, const char *&data);
-	void loadVertexData(Model* model, const char *&data);
-	void loadIndexData(Model* model, const char *&data);
-	void loadTextures(Model* model, const char *&data);
-	void loadMaterials(Model* model, const char *&data);
-	void loadBones(Model* model, const char *&data);
-	void loadMorphs(Model* model, const char *&data);
-	void loadFrames(Model* model, const char *&data);
-	void loadRigidBodies(Model* model, const char *&data);
-	void loadJoints(Model* model, const char *&data);
-	void loadSoftBodies(Model* model, const char *&data);
+	void loadVertexData(std::vector<Vertex> &VertexList, const char *&Data);
+	void loadIndexData(std::vector<uint32_t> &IndexList, const char *&Data);
+	void loadTextures(std::vector<std::wstring> &TextureList, const char *&Data);
+	void loadMaterials(std::vector<Material> &MaterialList, const char *&Data);
+	void loadBones(std::vector<Bone> &BoneList, const char *&Data);
+	void loadMorphs(std::vector<Morph> &MorphList, const char *&Data);
+	void loadFrames(std::vector<Frame> &FrameList, const char *&Data);
+	void loadRigidBodies(std::vector<RigidBody> &RigidBodyList, const char *&Data);
+	void loadJoints(std::vector<Joint> &JointList, const char *&Data);
+	void loadSoftBodies(std::vector<SoftBody> &SoftBodyList, const char *&Data);
 
-	std::wstring getString(const char *&data);
-	void readName(Name &name, const char *&data);
-	uint32_t readAsU32(uint8_t size, const char *&data);
+	std::wstring getString(const char *&Data);
+	void readName(Name &name, const char *&Data);
+	uint32_t readAsU32(uint8_t size, const char *&Data);
 };
 
 }

@@ -14,40 +14,34 @@
 
 #pragma once
 
-#include "Scene.h"
+#include <Ptr.h>
 
 #include <future>
 
-namespace Renderer {
-	class OrthoWindowClass;
-	class Texture;
-	namespace Shaders { class Texture; }
+namespace Urho3D {
+	class Context;
+	class Scene;
+	class Node;
 }
 
 namespace Scenes {
 
 	class Loading
-		: public Scene
 	{
 	public:
-		Loading(std::future<bool> &&Task);
-		virtual ~Loading();
+		Loading(Urho3D::Context *Context, std::future<bool> &&Task);
 
-		virtual bool initialize();
+		void initialize();
 
-		virtual void shutdown();
-
-		virtual void frame(float FrameTime);
-
-		virtual bool render();
-
-		virtual bool isFinished();
+		bool isFinished();
 
 	private:
+		Urho3D::Context *Context;
+
+		Urho3D::SharedPtr<Urho3D::Scene> Scene;
+		Urho3D::SharedPtr<Urho3D::Node> CameraNode;
+
 		std::future<bool> LoadingTask;
-		std::unique_ptr<Renderer::OrthoWindowClass> Window;
-		std::unique_ptr<Renderer::Texture> Texture;
-		std::unique_ptr<Renderer::Shaders::Texture> TextureShader;
 	};
 
 }

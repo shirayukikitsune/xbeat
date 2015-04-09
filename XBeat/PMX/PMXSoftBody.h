@@ -1,21 +1,15 @@
 #pragma once
-#include <vector>
-#include <istream>
-#include <cstdint>
-
 #include "PMXDefinitions.h"
-#include "BulletSoftBody/btSoftBody.h"
+
+#include <cstdint>
+#include <vector>
 
 namespace PMX {
 
 class Model;
 
-class SoftBody
+struct SoftBody
 {
-public:
-	SoftBody(void);
-	~SoftBody(void);
-
 	struct Shape {
 		enum Shape_e : uint8_t {
 			TriangleMesh,
@@ -96,8 +90,6 @@ public:
 		uint32_t vertexIndex;
 	};
 	std::vector<Pin> pins;
-
-	void Create(std::shared_ptr<Physics::Environment> physics, Model* model);
 };
 
 }

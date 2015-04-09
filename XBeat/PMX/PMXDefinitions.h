@@ -1,73 +1,27 @@
-﻿#pragma once
+﻿//===-- PMX/PMXLoader.h - Contains various definitions about the PMX --*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file contains several definitions used in the PMX::Loader class
+///
+//===----------------------------------------------------------------------------===//
+
+#pragma once
 
 #include <cstdint>
 #include <vector>
-#include <list>
-#include <D3D11.h>
-#include <DirectXMath.h>
-#include "../Physics/Environment.h"
-
-#ifdef PMX_TEST
-namespace PMXTest {
-	class BoneTest;
-}
-#endif
-
-namespace Renderer { class Texture; }
 
 namespace PMX {
 
 #pragma region Basic Types
 // Forward declarations here
-class RenderMaterial;
-class Bone;
-namespace detail { class BoneImpl; }
 struct Morph;
-
-struct Color {
-	float red;
-	float green;
-	float blue;
-
-	void operator += (const Color &other) {
-		red += other.red;
-		green += other.green;
-		blue += other.blue;
-	}
-	void operator *= (const Color &other) {
-		red *= other.red;
-		green *= other.green;
-		blue *= other.blue;
-	}
-	void operator *= (float scalar) {
-		red *= scalar;
-		green *= scalar;
-		blue *= scalar;
-	}
-};
-
-struct Color4 : public Color {
-	float alpha;
-
-	void operator += (const Color4 &other) {
-		red += other.red;
-		green += other.green;
-		blue += other.blue;
-		alpha += other.alpha;
-	}
-	void operator *= (const Color4 &other) {
-		red *= other.red;
-		green *= other.green;
-		blue *= other.blue;
-		alpha *= other.alpha;
-	}
-	void operator *= (float scalar) {
-		red *= scalar;
-		green *= scalar;
-		blue *= scalar;
-		alpha *= scalar;
-	}
-};
 
 struct Name {
 	std::wstring japanese;
@@ -174,38 +128,15 @@ enum struct FrameMorphTarget : uint8_t {
 struct MaterialMorph{
 	uint32_t index;
 	MaterialMorphMethod method;
-	Color4 diffuse;
-	Color specular;
+	float diffuse[4];
+	float specular[3];
 	float specularCoefficient;
-	Color ambient;
-	Color4 edgeColor;
+	float ambient[3];
+	float edgeColor[4];
 	float edgeSize;
-	Color4 baseCoefficient;
-	Color4 sphereCoefficient;
-	Color4 toonCoefficient;
-
-	void operator+= (const MaterialMorph &other) {
-		this->diffuse += other.diffuse;
-		this->specular += other.specular;
-		this->specularCoefficient += other.specularCoefficient;
-		this->ambient += other.ambient;
-		this->edgeColor += other.edgeColor;
-		this->edgeSize += other.edgeSize;
-		this->baseCoefficient += other.baseCoefficient;
-		this->sphereCoefficient += other.sphereCoefficient;
-		this->toonCoefficient += other.toonCoefficient;
-	}
-	void operator*= (const MaterialMorph &other) {
-		this->diffuse *= other.diffuse;
-		this->specular *= other.specular;
-		this->specularCoefficient *= other.specularCoefficient;
-		this->ambient *= other.ambient;
-		this->edgeColor *= other.edgeColor;
-		this->edgeSize *= other.edgeSize;
-		this->baseCoefficient *= other.baseCoefficient;
-		this->sphereCoefficient *= other.sphereCoefficient;
-		this->toonCoefficient *= other.toonCoefficient;
-	}
+	float baseCoefficient[4];
+	float sphereCoefficient[4];
+	float toonCoefficient[4];
 };
 
 union MorphType {
@@ -251,10 +182,10 @@ union MorphType {
 };
 
 struct Vertex {
-	DirectX::XMFLOAT3 position;
-	DirectX::XMFLOAT3 normal;
+	float position[3];
+	float normal[3];
 	float uv[2];
-	DirectX::XMFLOAT4 uvEx[4];
+	float uvEx[4][4];
 	VertexWeightMethod weightMethod;
 	union {
 		struct {
@@ -271,37 +202,17 @@ struct Vertex {
 	} boneInfo;
 	float edgeWeight;
 
-	Bone *bones[4];
-	std::list<std::pair<RenderMaterial*, UINT>> materials;
-	struct MorphData {
-		Morph *morph;
-		MorphType *type;
-		float weight;
-	};
-	std::list<MorphData*> morphs;
-	DirectX::XMVECTOR MorphOffset;
-
 	uint32_t index;
-
-#if defined _M_IX86 && defined _MSC_VER
-	void *__cdecl operator new(size_t count) {
-		return _aligned_malloc(count, 16);
-	}
-
-	void __cdecl operator delete(void *object) {
-		_aligned_free(object);
-	}
-#endif
 };
 
 struct Material{
 	Name name;
-	Color4 diffuse;
-	Color specular;
+	float diffuse[4];
+	float specular[3];
 	float specularCoefficient;
-	Color ambient;
+	float ambient[3];
 	uint8_t flags;
-	Color4 edgeColor;
+	float edgeColor[4];
 	float edgeSize;
 	uint32_t baseTexture;
 	uint32_t sphereTexture;
