@@ -50,7 +50,7 @@ void VS(float4 iPos : POSITION,
     #else
         out float3 oVertexLight : TEXCOORD4,
         out float4 oScreenPos : TEXCOORD5,
-        #ifdef ENVCUBEMAP
+		#if defined(ENVCUBEMAP) || defined(ENVMAP)
             out float3 oReflectionVec : TEXCOORD6,
         #endif
         #if defined(LIGHTMAP) || defined(AO)
@@ -109,7 +109,7 @@ void VS(float4 iPos : POSITION,
         
         oScreenPos = GetScreenPos(oPos);
 
-        #ifdef ENVCUBEMAP
+        #if defined (ENVCUBEMAP) || defined (ENVMAP)
             oReflectionVec = worldPos - cCameraPos;
         #endif
     #endif
@@ -137,7 +137,7 @@ void PS(
     #else
         float3 iVertexLight : TEXCOORD4,
         float4 iScreenPos : TEXCOORD5,
-        #ifdef ENVCUBEMAP
+        #if defined ENVCUBEMAP || defined ENVMAP
             float3 iReflectionVec : TEXCOORD6,
         #endif
         #if defined(LIGHTMAP) || defined(AO)
@@ -246,6 +246,9 @@ void PS(
         #ifdef ENVCUBEMAP
             finalColor += cMatEnvMapColor * texCUBE(sEnvCubeMap, reflect(iReflectionVec, normal)).rgb;
         #endif
+		#ifdef ENVMAP
+			finalColor += cMatEnvMapColor * tex2D(sEnvMap, normal.xy).rgb;
+		#endif
         #ifdef LIGHTMAP
             finalColor += tex2D(sEmissiveMap, iTexCoord2).rgb * diffColor.rgb;
         #endif

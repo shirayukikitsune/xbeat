@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <cstdint>
-#include <vector>
+#include <Str.h>
+#include <Vector.h>
 
 namespace PMX {
 
@@ -24,8 +24,8 @@ namespace PMX {
 struct Morph;
 
 struct Name {
-	std::wstring japanese;
-	std::wstring english;
+	Urho3D::String japanese;
+	Urho3D::String english;
 };
 
 struct ModelDescription {
@@ -35,7 +35,7 @@ struct ModelDescription {
 #pragma endregion
 
 #pragma region Enums
-enum struct MaterialFlags : uint8_t {
+enum struct MaterialFlags : unsigned char {
 	DoubleSide = 0x01,
 	GroundShadow = 0x02,
 	DrawSelfShadowMap = 0x04,
@@ -43,13 +43,13 @@ enum struct MaterialFlags : uint8_t {
 	DrawEdge = 0x10
 };
 
-enum struct MaterialSphereMode : uint8_t {
+enum struct MaterialSphereMode : unsigned char {
 	Disabled,
 	Multiply,
 	Add
 };
 
-enum struct VertexWeightMethod : uint8_t {
+enum struct VertexWeightMethod : unsigned char {
 	BDEF1,
 	BDEF2,
 	BDEF4,
@@ -64,21 +64,19 @@ enum struct BoneType {
 	IK,
 };
 
-enum struct BoneFlags : uint16_t {
-	Attached = 0x0001,
-	Rotatable = 0x0002,
-	Movable = 0x0004,
-	View = 0x0008,
-	Manipulable = 0x0010,
-	IK = 0x0020,
-	LocallyAttached = 0x0080,
-	RotationAttached = 0x0100,
-	TranslationAttached = 0x0200,
-	FixedAxis = 0x0400,
-	LocalAxis = 0x0800,
-	PostPhysicsDeformation = 0x1000,
-	OuterParentDeformation = 0x2000
-};
+#define BF_ATTACHED 0x0001
+#define BF_ROTATABLE 0x0002
+#define BF_MOVABLE 0x0004
+#define BF_VIEW 0x0008
+#define BF_MANIPULABLE 0x0010
+#define BF_IK 0x0020
+#define BF_LOCALLYATTACHED 0x0020
+#define BF_ROTATIONATTACHED 0x0100
+#define BF_TRANSLATIONATTACHED 0x0200
+#define BF_FIXEDAXIS 0x0400
+#define BF_LOCALAXIS 0x0800
+#define BF_POSTPHYSICSDEFORMATION 0x1000
+#define BF_OUTERPARENTDEFORMATION 0x2000
 
 enum struct DeformationOrigin {
 	User,
@@ -88,19 +86,19 @@ enum struct DeformationOrigin {
 	Internal
 };
 
-enum struct RigidBodyShape : uint8_t {
+enum struct RigidBodyShape : unsigned char {
 	Sphere,
 	Box,
 	Capsule
 };
 
-enum struct RigidBodyMode : uint8_t {
+enum struct RigidBodyMode : unsigned char {
 	Static,
 	Dynamic,
 	AlignedDynamic
 };
 
-enum struct JointType : uint8_t {
+enum struct JointType : unsigned char {
 	Spring6DoF,
 	SixDoF,
 	PointToPoint,
@@ -109,24 +107,24 @@ enum struct JointType : uint8_t {
 	Hinge
 };
 
-enum struct MaterialToonMode : uint8_t {
+enum struct MaterialToonMode : unsigned char {
 	CustomTexture,
 	DefaultTexture,
 };
 
-enum struct MaterialMorphMethod : uint8_t {
+enum struct MaterialMorphMethod : unsigned char {
 	Multiplicative,
 	Additive
 };
 
-enum struct FrameMorphTarget : uint8_t {
+enum struct FrameMorphTarget : unsigned char {
 	Bone,
 	Morph
 };
 #pragma endregion
 
-struct MaterialMorph{
-	uint32_t index;
+struct MaterialMorph {
+	unsigned int index;
 	MaterialMorphMethod method;
 	float diffuse[4];
 	float specular[3];
@@ -141,26 +139,26 @@ struct MaterialMorph{
 
 union MorphType {
 	struct {
-		uint32_t index;
+		unsigned int index;
 		float offset[3];
 	} vertex;
 	struct {
-		uint32_t index;
+		unsigned int index;
 		float offset[4];
 	} uv;
 	struct {
-		uint32_t index;
+		unsigned int index;
 		float movement[3];
 		float rotation[4];
 	} bone;
 	MaterialMorph material;
 	struct {
-		uint32_t index;
+		unsigned int index;
 		float rate;
 	} group;
 	struct {
-		uint32_t index; // Rigid Body index
-		uint8_t localFlag;
+		unsigned int index; // Rigid Body index
+		unsigned char localFlag;
 		float velocity[3];
 		float rotationTorque[3]; // If all 0, stop all rotation
 	} impulse;
@@ -189,11 +187,11 @@ struct Vertex {
 	VertexWeightMethod weightMethod;
 	union {
 		struct {
-			uint32_t boneIndexes[4];
+			unsigned int boneIndexes[4];
 			float weights[4];
 		} BDEF;
 		struct {
-			uint32_t boneIndexes[2];
+			unsigned int boneIndexes[2];
 			float weightBias;
 			float C[3];
 			float R0[3];
@@ -202,7 +200,7 @@ struct Vertex {
 	} boneInfo;
 	float edgeWeight;
 
-	uint32_t index;
+	unsigned int index;
 };
 
 struct Material{
@@ -211,24 +209,24 @@ struct Material{
 	float specular[3];
 	float specularCoefficient;
 	float ambient[3];
-	uint8_t flags;
+	unsigned char flags;
 	float edgeColor[4];
 	float edgeSize;
-	uint32_t baseTexture;
-	uint32_t sphereTexture;
+	unsigned int baseTexture;
+	unsigned int sphereTexture;
 	MaterialSphereMode sphereMode;
 	MaterialToonMode toonFlag;
 	union {
-		uint32_t custom;
-		uint8_t default;
+		unsigned int custom;
+		unsigned char default;
 	} toonTexture;
-	std::wstring freeField;
+	Urho3D::String freeField;
 	int indexCount;
 };
 
 struct IK {
 	struct Node {
-		uint32_t boneIndex;
+		unsigned int boneIndex;
 		bool limitAngle;
 		struct {
 			float lower[3];
@@ -236,10 +234,10 @@ struct IK {
 		} limits;
 	};
 
-	uint32_t targetIndex;
+	unsigned int targetIndex;
 	int loopCount;
 	float angleLimit;
-	std::vector<Node> links;
+	Urho3D::Vector<Node> links;
 };
 
 struct Morph{
@@ -248,23 +246,80 @@ struct Morph{
 	};
 
 	Name name;
-	uint8_t operation;
-	uint8_t type;
-	std::vector<MorphType> data;
+	unsigned char operation;
+	unsigned char type;
+	Urho3D::Vector<MorphType> data;
 
 	float appliedWeight;
 };
 
 struct FrameMorphs{
 	FrameMorphTarget target;
-	uint32_t id;
+	unsigned int id;
 };
 
 struct Frame{
 	Name name;
-	uint8_t type;
-	std::vector<FrameMorphs> morphs;
+	unsigned char type;
+	Urho3D::Vector<FrameMorphs> morphs;
 };
 
+
+struct Bone {
+	Name Name;
+	float InitialPosition[3];
+	unsigned int Parent;
+	int DeformationOrder;
+	unsigned short Flags;
+	union {
+		float Length[3];
+		unsigned int AttachTo;
+	} Size;
+	struct {
+		unsigned int From;
+		float Rate;
+	} Inherit;
+	float AxisTranslation[3];
+	struct {
+		float X[3];
+		float Z[3];
+	} LocalAxes;
+	int ExternalDeformationKey;
+	IK IkData;
+
+	unsigned int index;
+};
+
+struct RigidBody{
+	Name name;
+	unsigned int targetBone;
+	unsigned char group;
+	unsigned short groupMask;
+	PMX::RigidBodyShape shape;
+	float size[3];
+	float position[3];
+	float rotation[3];
+	float mass;
+	float linearDamping;
+	float angularDamping;
+	float restitution;
+	float friction;
+	PMX::RigidBodyMode mode;
+};
+
+struct Joint{
+	Name name;
+	JointType type;
+	struct {
+		unsigned int bodyA, bodyB;
+		float position[3];
+		float rotation[3];
+		float lowerMovementRestrictions[3];
+		float upperMovementRestrictions[3];
+		float lowerRotationRestrictions[3];
+		float upperRotationRestrictions[3];
+		float springConstant[6];
+	} data;
+};
 }
 

@@ -14,22 +14,21 @@
 
 #pragma once
 
+#include <Object.h>
 #include <Ptr.h>
-
-#include <future>
+#include <Scene.h>
 
 namespace Urho3D {
 	class Context;
-	class Scene;
-	class Node;
+	class Resource;
 }
 
 namespace Scenes {
 
-	class Loading
+	class LoadingScene
 	{
 	public:
-		Loading(Urho3D::Context *Context, std::future<bool> &&Task);
+		LoadingScene(Urho3D::Context *Context, Urho3D::Scene *nextScene);
 
 		void initialize();
 
@@ -41,7 +40,7 @@ namespace Scenes {
 		Urho3D::SharedPtr<Urho3D::Scene> Scene;
 		Urho3D::SharedPtr<Urho3D::Node> CameraNode;
 
-		std::future<bool> LoadingTask;
+		Urho3D::SharedPtr<Urho3D::Scene> NextScene;
 	};
 
 }

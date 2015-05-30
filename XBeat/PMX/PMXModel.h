@@ -1,148 +1,120 @@
-﻿#pragma once
+﻿//===-- PMX/PMXModel.h - Defines the PMX model class ---------------*- C++ -*-===//
+//
+//                      The XBeat Project
+//
+// This file is distributed under the University of Illinois Open Source License.
+// See LICENSE.TXT for details.
+//
+//===-------------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file declares the PMX::Model class
+///
+//===-------------------------------------------------------------------------===//
 
-#include <string>
-#include <map>
-#include <vector>
-#include <cstdint>
-#include <array>
-
-#include <DirectXMath.h>
-
-#include "../Renderer/Model.h"
-#include "../Physics/Environment.h"
+#pragma once
 
 #include "PMXDefinitions.h"
-#include "PMXLoader.h"
+
+#include "PMXAnimatedModel.h"
 #include "PMXSoftBody.h"
-#include "PMXRigidBody.h"
-#include "PMXJoint.h"
-#include "PMXShader.h"
-#include "PMXBone.h"
 
-namespace PMX {
+#include <Model.h>
+#include <Vector.h>
+#include <exception>
 
-class Model : public Renderer::Model
+class PMXModel : public Urho3D::Model
 {
+	OBJECT(PMXModel);
+
+	friend class PMXAnimatedModel;
+
+	struct FileHeader {
+		/// Stores the file identifier
+		char Magic[4];
+		/// Stores the type version
+		float Version;
+	} header;
+
+ 	struct FileSizeInfo {
+		///! The size of this structure
+		unsigned char Size;
+		/// The encoding used for strings
+		/// 0 means UTF-8, 1 means UTF-16
+		unsigned char Encoding;
+		/// The amount of UV components
+		unsigned char UVVectorSize;
+		/// The size of the vertex index, in bytes
+		unsigned char VertexIndexSize;
+		/// The size of the texture index, in bytes
+		unsigned char TextureIndexSize;
+		/// The size of the material index, in bytes
+		unsigned char MaterialIndexSize;
+		/// The size of the bone index, in bytes
+		unsigned char BoneIndexSize;
+		/// The size of the morph index, in bytes
+		unsigned char MorphIndexSize;
+		/// The size of the rigid body index, in bytes
+		unsigned char RigidBodyIndexSize;
+	} sizeInfo;
+
 public:
-	Model(void);
-	virtual ~Model(void);
+	class Exception : public std::exception
+	{
+		Urho3D::String Message;
 
-	ModelDescription description;
+	public:
+		Exception(const Urho3D::String &Message) throw() : Message(Message) {}
 
-	DirectX::XMVECTOR GetBonePosition(const std::wstring &JPname);
-	DirectX::XMVECTOR GetBoneEndPosition(const std::wstring &JPname);
-	Bone* GetBoneByName(const std::wstring &JPname);
-	Bone* GetBoneByENName(const std::wstring &ENname);
-	Bone* GetBoneById(uint32_t id);
-	Bone* GetRootBone() { return rootBone; }
-
-	void ApplyMorph(const std::wstring &JPname, float weight);
-	void ApplyMorph(Morph *morph, float weight);
-
-	struct DebugFlags {
-		enum Flags : uint32_t {
-			None,
-			RenderBones = 0x1,
-			RenderJoints = 0x2,
-			RenderSoftBodies = 0x4,
-			RenderRigidBodies = 0x8,
-			DontRenderModel = 0x10,
-			DontUpdatePhysics = 0x20,
-		};
+		virtual const char* what() const throw() {
+			return Message.CString();
+		}
 	};
 
-	DebugFlags::Flags GetDebugFlags() { return (DebugFlags::Flags)m_debugFlags; }
-	void SetDebugFlags(DebugFlags::Flags value) { m_debugFlags |= value; }
-	void ToggleDebugFlags(DebugFlags::Flags value) { m_debugFlags ^= value; }
-	void UnsetDebugFlags(DebugFlags::Flags value) { m_debugFlags &= ~value; }
+	/// Construct
+	PMXModel(Urho3D::Context* context);
+	/// Destruct
+	virtual ~PMXModel();
+	/// Register object factory.
+	static void RegisterObject(Urho3D::Context* context);
 
-	Material* GetMaterialById(uint32_t id);
-	RenderMaterial* GetRenderMaterialById(uint32_t id);
-	std::shared_ptr<RigidBody> GetRigidBodyById(uint32_t id);
-	std::shared_ptr<RigidBody> GetRigidBodyByName(const std::wstring &JPname);
+	/// Returns this model description
+	const PMX::ModelDescription& GetDescription() const { return description; }
 
-	virtual bool Update(float msec);
-	virtual void Render(ID3D11DeviceContext *context, std::shared_ptr<Renderer::ViewFrustum> frustum);
-
-	virtual bool LoadModel(const std::wstring &filename);
-
-	void Reset();
-
-#if defined _M_IX86 && defined _MSC_VER
-	void *__cdecl operator new(size_t count) {
-		return _aligned_malloc(count, 16);
-	}
-
-	void __cdecl operator delete(void *object) {
-		_aligned_free(object);
-	}
-#endif
+	/// Load resource from stream. May be called from a worker thread. Return true if successful.
+	virtual bool BeginLoad(Urho3D::Deserializer& source);
+	/// Finish resource loading. Always called from the main thread. Return true if successful.
+	virtual bool EndLoad();
 
 private:
-	std::vector<Vertex*> vertices;
+	Urho3D::Vector<PMX::Vertex> vertexList;
+	Urho3D::Vector<unsigned int> indexList;
+	Urho3D::Vector<Urho3D::String> textureList;
+	Urho3D::Vector<PMX::Material> materialList;
+	Urho3D::Vector<PMX::Bone> boneList;
+	Urho3D::Vector<PMX::Morph> morphList;
+	Urho3D::Vector<PMX::Frame> frameList;
+	Urho3D::Vector<PMX::RigidBody> rigidBodyList;
+	Urho3D::Vector<PMX::Joint> jointList;
+	Urho3D::Vector<PMX::SoftBody> softBodyList;
 
-	std::vector<uint32_t> verticesIndex;
-	std::vector<std::wstring> textures;
-	std::vector<Material*> materials;
-	std::vector<Bone*> bones;
-	std::vector<Morph*> morphs;
-	std::vector<Frame*> frames;
-	std::vector<SoftBody*> softBodies;
-	std::vector<RigidBody*> RigidBodies;
+	bool LoadHeader(FileHeader& header, Urho3D::Deserializer& source);
+	void LoadSizeInfo(FileSizeInfo& sizeInfo, Urho3D::Deserializer& source);
+	void LoadDescription(PMX::ModelDescription &description, Urho3D::Deserializer& source);
+	void LoadVertexData(Urho3D::Vector<PMX::Vertex> &vertexList, Urho3D::Deserializer& source);
+	void LoadIndexData(Urho3D::Vector<unsigned int> &indexList, Urho3D::Deserializer& source);
+	void LoadTextures(Urho3D::Vector<Urho3D::String> &textureList, Urho3D::Deserializer& source);
+	void LoadMaterials(Urho3D::Vector<PMX::Material> &materialList, Urho3D::Deserializer& source);
+	void LoadBones(Urho3D::Vector<PMX::Bone> &boneList, Urho3D::Deserializer& source);
+	void LoadMorphs(Urho3D::Vector<PMX::Morph> &morphList, Urho3D::Deserializer& source);
+	void LoadFrames(Urho3D::Vector<PMX::Frame> &frameList, Urho3D::Deserializer& source);
+	void LoadRigidBodies(Urho3D::Vector<PMX::RigidBody> &rigidBodyList, Urho3D::Deserializer& source);
+	void LoadJoints(Urho3D::Vector<PMX::Joint> &jointList, Urho3D::Deserializer& source);
+	void LoadSoftBodies(Urho3D::Vector<PMX::SoftBody> &softBodyList, Urho3D::Deserializer& source);
 
-	Bone *rootBone;
+	Urho3D::String getString(Urho3D::Deserializer& source);
+	void readName(PMX::Name &name, Urho3D::Deserializer& source);
+	unsigned int readAsU32(unsigned char size, Urho3D::Deserializer& source);
 
-	std::vector<RenderMaterial> rendermaterials;
-
-	uint64_t lastpos;
-
-	std::vector<std::shared_ptr<Renderer::Texture>> renderTextures;
-
-	std::shared_ptr<Renderer::D3DRenderer> m_d3d;
-
-	std::wstring basePath;
-
-	static std::vector<std::shared_ptr<Renderer::Texture>> sharedToonTextures;
-
-	std::vector<std::shared_ptr<RigidBody>> m_rigidBodies;
-	std::vector<std::shared_ptr<Joint>> m_joints;
-
-	std::vector<PMXShader::VertexType> m_vertices;
-
-	bool updateVertexBuffer(ID3D11DeviceContext *Context);
-	bool updateMaterialBuffer(uint32_t material, ID3D11DeviceContext *context);
-	bool m_dirtyBuffer;
-	ID3D11Buffer *m_materialBuffer;
-	ID3D11Buffer *m_vertexBuffer, *m_tmpVertexBuffer;
-	ID3D11Buffer *m_indexBuffer;
-
-	uint32_t m_debugFlags;
-
-	std::vector<Bone*> m_prePhysicsBones;
-	std::vector<Bone*> m_postPhysicsBones;
-	std::vector<Bone*> m_ikBones;
-
-protected:
-	virtual bool InitializeBuffers(std::shared_ptr<Renderer::D3DRenderer> d3d);
-	virtual void ShutdownBuffers();
-
-	virtual void ReleaseModel();
-
-	virtual bool LoadTexture(ID3D11Device *device);
-	virtual void ReleaseTexture();
-
-private:
-	void applyVertexMorph(Morph* morph, float weight);
-	void applyMaterialMorph(Morph* morph, float weight);
-	void applyMaterialMorph(MorphType* morph, RenderMaterial* material, float weight);
-	void applyBoneMorph(Morph* morph, float weight);
-	void applyFlipMorph(Morph* morph, float weight);
-	void applyImpulseMorph(Morph* morph, float weight);
-
-	friend class Loader;
-#ifdef PMX_TEST
-	friend class PMXTest::BoneTest;
-#endif
+	PMX::ModelDescription description;
 };
-
-}

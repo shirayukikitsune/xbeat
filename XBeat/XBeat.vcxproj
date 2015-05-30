@@ -72,7 +72,7 @@
     <LibraryPath>C:\dev\boost_1_57_0\stage\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\dev\boost_1_57_0;C:\Program Files\Urho3D\include;C:\Program Files\Urho3D\include\SDL;$(IncludePath)</IncludePath>
+    <IncludePath>C:\dev\boost_1_57_0;C:\Program Files\Urho3D\include;C:\Program Files\Urho3D\include\SDL;C:\Program Files\Urho3D\include\Bullet;$(IncludePath)</IncludePath>
     <LibraryPath>C:\dev\boost_1_57_0\stage64\lib;C:\Program Files\Urho3D\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -89,7 +89,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;DEBUG;_DEBUG;_SCL_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;DEBUG;_DEBUG;_SCL_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
       <DisableSpecificWarnings>4103;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
@@ -109,7 +109,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;_SCL_SECURE_NO_WARNINGS;_DEBUG;DEBUG;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;_SCL_SECURE_NO_WARNINGS;_DEBUG;DEBUG;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
       <OpenMPSupport>false</OpenMPSupport>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -133,7 +133,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;NDEBUG;_SCL_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;NDEBUG;_SCL_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
@@ -157,7 +157,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_OPENGL;GLEW_STATIC;GLEW_NO_GLU;URHO3D_ANGELSCRIPT;URHO3D_LUA;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_URHO2D;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
     <Link>
@@ -169,13 +169,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="PMX\PMXLoader.cpp" />
+    <ClCompile Include="PMX\PMXAnimatedModel.cpp" />
+    <ClCompile Include="PMX\PMXModel.cpp" />
     <ClCompile Include="Scenes\LoadingScene.cpp" />
+    <ClCompile Include="Scenes\MenuScene.cpp" />
     <ClCompile Include="XBeat.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PMX\PMXLoader.h" />
+    <ClInclude Include="PMX\PMXAnimatedModel.h" />
+    <ClInclude Include="PMX\PMXDefinitions.h" />
+    <ClInclude Include="PMX\PMXModel.h" />
+    <ClInclude Include="PMX\PMXSoftBody.h" />
     <ClInclude Include="Scenes\LoadingScene.h" />
+    <ClInclude Include="Scenes\MenuScene.h" />
     <ClInclude Include="XBeat.h" />
   </ItemGroup>
   <ItemGroup>

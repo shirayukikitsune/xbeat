@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scenes/LoadingScene.h"
+#include "Scenes/MenuScene.h"
 
 #include <Application.h>
 
@@ -39,6 +40,7 @@ protected:
 	/// Pause flag.
 	bool paused_;
 
-	Scenes::Loading *loadingScene;
+	Scenes::LoadingScene *loadingScene;
+	Scenes::Menu *menuScene;
 };
 

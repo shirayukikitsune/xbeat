@@ -25,7 +25,13 @@
     <ClCompile Include="Scenes\LoadingScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PMX\PMXLoader.cpp">
+    <ClCompile Include="Scenes\MenuScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PMX\PMXModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PMX\PMXAnimatedModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -36,7 +42,19 @@
     <ClInclude Include="Scenes\LoadingScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PMX\PMXLoader.h">
+    <ClInclude Include="Scenes\MenuScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PMX\PMXModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PMX\PMXSoftBody.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PMX\PMXDefinitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PMX\PMXAnimatedModel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

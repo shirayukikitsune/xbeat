@@ -13,99 +13,133 @@
 //===-----------------------------------------------------------------------------------===//
 
 #include "MenuScene.h"
-
-#include "SceneManager.h"
-#include "../ModelManager.h"
-#include "../Input/InputManager.h"
 #include "../PMX/PMXModel.h"
-#include "../PMX/PMXShader.h"
-#include "../Renderer/Camera.h"
-#include "../Renderer/D3DRenderer.h"
-#include "../Renderer/ViewFrustum.h"
-#include "../VMD/Motion.h"
+
+#include <AnimatedModel.h>
+#include <Camera.h>
+#include <CollisionShape.h>
+#include <Context.h>
+#include <DebugRenderer.h>
+#include <FileSystem.h>
+#include <Graphics.h>
+#include <Light.h>
+#include <Log.h>
+#include <Material.h>
+#include <Model.h>
+#include <Octree.h>
+#include <Renderer.h>
+#include <RenderPath.h>
+#include <ResourceCache.h>
+#include <RigidBody.h>
+#include <Scene.h>
+#include <Skybox.h>
+#include <StaticModel.h>
+#include <XMLFile.h>
 
 #include <boost/filesystem.hpp>
 #include <random>
 
 namespace fs = boost::filesystem;
 
-Scenes::Menu::Menu()
+Scenes::Menu::Menu(Urho3D::Context *Context)
+	: Context(Context)
 {
 	std::random_device RandomDevice;
 	RandomGenerator.seed(RandomDevice());
-	Paused = false;
 }
 
 Scenes::Menu::~Menu()
 {
 }
 
-bool Scenes::Menu::initialize()
+void Scenes::Menu::initialize()
 {
-	Shader.reset(new PMX::PMXShader);
-	assert(Shader);
-	if (!Shader->InitializeBuffers(Renderer->GetDevice(), nullptr))
-		return false;
-	Shader->SetLightCount(1);
-	Shader->SetLights(DirectX::XMVectorSplatOne(), DirectX::XMVectorSplatOne(), DirectX::XMVectorSplatOne(), DirectX::XMVectorSet(-1.0f, -1.0f, 1.0f, 0.0f), DirectX::XMVectorZero(), 0);
+	Urho3D::ResourceCache* Cache = Context->GetSubsystem<Urho3D::ResourceCache>();
+	Urho3D::Renderer* Renderer = Context->GetSubsystem<Urho3D::Renderer>();
+	Urho3D::Graphics* graphics = Context->GetSubsystem<Urho3D::Graphics>();
 
-	auto &Viewport = Renderer->getViewport();
-	Camera.reset(new Renderer::Camera(DirectX::XM_PIDIV4, (float)Viewport.Width / (float)Viewport.Height, Renderer::SCREEN_NEAR, Renderer::SCREEN_DEPTH));
-	assert(Camera);
-	Camera->SetPosition(0, 10.0f, 0.0f);
+	Scene = new Urho3D::Scene(Context);
+	Scene->CreateComponent<Urho3D::Octree>();
+	auto dr = Scene->CreateComponent<Urho3D::DebugRenderer>();
 
-	Frustum.reset(new Renderer::ViewFrustum);
-	assert(Frustum);
-
+#if 0
 	// Create a list of motions to be used as idle animations
 	fs::directory_iterator EndIterator;
 	fs::path MotionPath(L"./Data/Motions/Idle/");
 	for (fs::directory_iterator Entry(MotionPath); Entry != EndIterator; Entry++) {
 		if (fs::is_regular_file(Entry->status()) && Entry->path().extension().wstring().compare(L".vmd") == 0) {
-			KnownMotions.emplace_back(Entry->path().generic_wstring());
+			KnownMotions.Push(Entry->path().generic_wstring().c_str());
 		}
 	}
-
-	DirectX::XMMATRIX View, Projection;
-	Camera->setFocalDistance(-35.0f);
-	Camera->update(0.0f);
-	Camera->getViewMatrix(View);
-	Camera->getProjectionMatrix(Projection);
-
-	Frustum->Construct(Renderer::SCREEN_DEPTH, Projection, View);
-
-	Shader->SetEyePosition(Camera->GetPosition());
-	Shader->SetMatrices(DirectX::XMMatrixIdentity(), View, Projection);
-
-	// Initializes the model
-	// Pause the physics environment, to prevent resource race
-	Physics->pause();
-	// Select a model to be displayed
-#if 0
-	auto ModelList = ModelHandler->getKnownModels();
-	do {
-		size_t Index = RandomGenerator() % ModelList.size();
-		for (auto &ModelPath : ModelList) {
-			if (Index-- == 0) {
-				Model = ModelHandler->loadModel(ModelPath.first, Physics);
-				ModelList.erase(ModelPath.first);
-				break;
-			}
-		}
-	} while (!Model);
-#else
-	Model = ModelHandler->loadModel(L"Tda式改変WIMミク ver.2.9", Physics);
-	Model->SetDebugFlags(PMX::Model::DebugFlags::RenderBones);
 #endif
-	Model->SetShader(Shader);
 
-	if (!Model->Initialize(Renderer, Physics))
-		return false;
-	Physics->resume();
+	CameraNode = Scene->CreateChild("Camera");
+	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -30.0f));
+	auto Camera = CameraNode->CreateComponent<Urho3D::Camera>();
 
-	return true;
+	using namespace Urho3D;
+
+	Urho3D::Node* planeNode = Scene->CreateChild("Plane");
+	planeNode->SetScale(Urho3D::Vector3(100.0f, 1.0f, 100.0f));
+	Urho3D::StaticModel* planeObject = planeNode->CreateComponent<Urho3D::StaticModel>();
+	planeObject->SetModel(Cache->GetResource<Urho3D::Model>("Models/Plane.mdl"));
+	planeObject->SetMaterial(Cache->GetResource<Urho3D::Material>("Materials/StoneTiled.xml"));
+	Urho3D::CollisionShape* collisionShape = planeNode->CreateComponent<Urho3D::CollisionShape>();
+	collisionShape->SetShapeType(Urho3D::SHAPE_STATICPLANE);
+	collisionShape->SetStaticPlane();
+	Urho3D::RigidBody* rigidBody = planeNode->CreateComponent<Urho3D::RigidBody>();
+	rigidBody->SetKinematic(true);
+	rigidBody->SetUseGravity(false);
+
+	// Create a directional light to the world. Enable cascaded shadows on it
+	Urho3D::Node* lightNode = Scene->CreateChild("DirectionalLight");
+	lightNode->SetDirection(Urho3D::Vector3(0.6f, -1.0f, 0.8f));
+	Urho3D::Light* light = lightNode->CreateComponent<Urho3D::Light>();
+	light->SetLightType(Urho3D::LIGHT_DIRECTIONAL);
+	light->SetCastShadows(true);
+	light->SetShadowBias(Urho3D::BiasParameters(0.00025f, 0.5f));
+	// Set cascade splits at 10, 50 and 200 world units, fade shadows out at 80% of maximum shadow distance
+	light->SetShadowCascade(Urho3D::CascadeParameters(10.0f, 50.0f, 200.0f, 0.0f, 0.8f));
+	light->SetSpecularIntensity(0.5f);
+	light->SetColor(Urho3D::Color(1.2f, 1.2f, 1.2f));
+
+	Urho3D::Node* skyNode = Scene->CreateChild("Sky");
+	skyNode->SetScale(500.0f); // The scale actually does not matter
+	Urho3D::Skybox* skybox = skyNode->CreateComponent<Urho3D::Skybox>();
+	skybox->SetModel(Cache->GetResource<Urho3D::Model>("Models/Box.mdl"));
+	skybox->SetMaterial(Cache->GetResource<Urho3D::Material>("Materials/Skybox.xml"));
+
+	Viewport* viewport = new Viewport(Context, Scene, Camera);
+	Renderer->SetViewport(0, viewport);
+
+	auto file = Cache->GetFile("RenderPaths/PrepassHDR.xml", false);
+	char *data = new char[file->GetSize()];
+	file->Read(data, file->GetSize());
+	XMLFile* xmlfile = new XMLFile(Context);
+	xmlfile->FromString(data);
+	Renderer->SetDefaultRenderPath(xmlfile);
+	delete[] data;
+
+	Node* ModelNode = Scene->CreateChild("Model");
+	ModelNode->SetPosition(Vector3(0, 0, 0));
+	PMXAnimatedModel* SModel = ModelNode->CreateComponent<PMXAnimatedModel>();
+	try {
+		auto fs = Scene->GetSubsystem<FileSystem>();
+		auto dir = fs->GetCurrentDir();
+		fs->SetCurrentDir("OldData/Models/2013RacingMikuMMD");
+		auto model = Cache->GetResource<PMXModel>("2013RacingMiku.pmx", false);
+		SModel->SetModel(model);
+		fs->SetCurrentDir(dir);
+	}
+	catch (PMXModel::Exception &e)
+	{
+		LOGERROR(e.what());
+	}
+	dr->AddSkeleton(SModel->GetSkeleton(), Color::RED);
+	SModel->SetCastShadows(true);
 }
 
+/*
 void Scenes::Menu::shutdown()
 {
 	Model.reset();
@@ -145,50 +179,4 @@ void Scenes::Menu::frame(float FrameTime)
 
 	Model->Update(FrameTime);
 }
-
-bool Scenes::Menu::render()
-{
-	auto Context = Renderer->GetDeviceContext();
-
-	Renderer->SetDepthLessEqual();
-
-	if (!Shader->Update(0, Context))
-		return false;
-	
-	Model->Render(Context, Frustum);
-
-	return true;
-}
-
-bool Scenes::Menu::isFinished()
-{
-	return false;
-}
-
-void Scenes::Menu::onAttached()
-{
-	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_R), [this](void *unused) {
-		if (this->Motion)
-			this->Motion->reset();
-		this->Model->Reset();
-	});
-	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_E), [this](void *unused) {
-		this->Paused = false;
-	});
-	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_W), [this](void *unused) {
-		this->Paused = true;
-	});
-	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_X), [this](void *unused) {
-		this->Model->GetBoneByName(L"右足ＩＫ")->translate(btVector3(0, 0, -1.0f));
-	});
-	InputManager->addBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_Z), [this](void *unused) {
-		this->Model->GetBoneByName(L"右足ＩＫ")->translate(btVector3(0, 2.5f, 0));
-	});
-}
-
-void Scenes::Menu::onDeattached()
-{
-	InputManager->removeBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_R));
-	InputManager->removeBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_E));
-	InputManager->removeBinding(Input::CallbackInfo(Input::CallbackInfo::OnKeyUp, DIK_W));
-}
+*/

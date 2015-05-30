@@ -14,58 +14,40 @@
 
 #pragma once
 
-#include "Scene.h"
+#include <Ptr.h>
+#include <Resource.h>
 
+#include <future>
 #include <random>
-#include <string>
-#include <vector>
 
-namespace PMX {
-	class Model;
-	class PMXShader;
+namespace Urho3D {
+	class Context;
+	class Scene;
+	class Node;
 }
-namespace Renderer {
-	class Camera;
-	class ViewFrustum;
-}
-namespace VMD { class Motion; }
 
 namespace Scenes {
 
 	class Menu
-		: public Scene
 	{
+
 	public:
-		Menu();
-		virtual ~Menu();
+		Menu(Urho3D::Context *Context);
+		~Menu();
 
-		virtual bool initialize();
+		void initialize();
 
-		virtual void shutdown();
-
-		virtual void frame(float FrameTime);
-
-		virtual bool render();
-
-		virtual bool isFinished();
-
-		virtual void onAttached();
-
-		virtual void onDeattached();
+		Urho3D::SharedPtr<Urho3D::Scene> getScene() { return Scene; }
 
 	private:
-		std::unique_ptr<VMD::Motion> Motion;
-		std::unique_ptr<Renderer::Camera> Camera;
-		std::shared_ptr<Renderer::ViewFrustum> Frustum;
+		Urho3D::Context *Context;
 
-		std::vector<std::wstring> KnownMotions;
+		Urho3D::SharedPtr<Urho3D::Scene> Scene;
+		Urho3D::SharedPtr<Urho3D::Node> CameraNode;
 
-		std::shared_ptr<PMX::Model> Model;
-		std::shared_ptr<PMX::PMXShader> Shader;
+		Urho3D::Vector<Urho3D::String> KnownMotions;
 
-		std::mt19937 RandomGenerator;
-		float WaitTime;
-		bool Paused;
+		std::mt19937_64 RandomGenerator;
 	};
 
 }

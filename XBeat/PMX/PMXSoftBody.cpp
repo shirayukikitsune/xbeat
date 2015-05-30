@@ -1,16 +1,14 @@
 #include "PMXSoftBody.h"
 #include "PMXModel.h"
 
-#include "BulletSoftBody/btSoftBodyHelpers.h"
-
 using namespace PMX;
 
-SoftBody::SoftBody(void)
+SoftBody::SoftBody()
 {
 }
 
 
-SoftBody::~SoftBody(void)
+SoftBody::~SoftBody()
 {
 }
 

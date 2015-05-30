@@ -1,5 +1,6 @@
 #include "XBeat.h"
 #include "Scenes/LoadingScene.h"
+#include "PMX/PMXModel.h"
 
 #include <Console.h>
 #include <Context.h>
@@ -48,18 +49,14 @@ void XBeat::Start()
 
 	SubscribeToEvents();
 
-	// This is the task that will be executed when the loading screen is being shown.
-	std::packaged_task<bool()> WaitTask([this] {
-		while (true) { std::this_thread::sleep_for(std::chrono::seconds(5)); }
+	PMXAnimatedModel::RegisterObject(context_);
+	PMXModel::RegisterObject(context_);
 
-		return true;
-	});
+	//loadingScene = new Scenes::LoadingScene(context_, nullptr);
 
-	loadingScene = new Scenes::Loading(context_, WaitTask.get_future());
-
-	loadingScene->initialize();
-
-	std::thread(std::move(WaitTask)).detach();
+	//loadingScene->initialize();
+	menuScene = new Scenes::Menu(context_);
+	menuScene->initialize();
 }
 
 void XBeat::SetWindowParameters()

@@ -16,51 +16,27 @@
 
 #include <algorithm>
 #include <codecvt>
+#include <map>
 
 #include <AnimatedModel.h>
+#include <CollisionShape.h>
+#include <Constraint.h>
 #include <Context.h>
 #include <Geometry.h>
+#include <Image.h>
 #include <IndexBuffer.h>
 #include <Material.h>
 #include <Model.h>
+#include <PhysicsUtils.h>
 #include <ResourceCache.h>
+#include <RigidBody.h>
 #include <Skeleton.h>
+#include <Technique.h>
+#include <Texture2D.h>
 #include <VertexBuffer.h>
 
 using namespace std;
 using namespace PMX;
-
-bool Loader::loadFromFile(Urho3D::AnimatedModel* Model, const wstring &Filename)
-{
-	ifstream Ifile;
-	Ifile.open(Filename, ios::binary);
-	if (!Ifile.good())
-		return false;
-
-	bool Ret = loadFromStream(Model, Ifile);
-	Ifile.close();
-	return Ret;
-}
-
-bool Loader::loadFromStream(Urho3D::AnimatedModel* Model, istream &In)
-{
-	istream::pos_type Pos = In.tellg();
-	In.seekg(0, In.end);
-	istream::pos_type Len = In.tellg();
-	Len -= Pos;
-	In.seekg(Pos, In.beg);
-
-	char *Data = new char[Len];
-	const char *Cursor = Data;
-
-	In.read(Data, Len);
-	bool Ret = loadFromMemory(Model, Cursor);
-	In.seekg(Pos + (istream::pos_type)(Cursor - Data), In.beg);
-
-	delete[] Data;
-
-	return Ret;
-}
 
 bool Loader::loadFromMemory(Urho3D::AnimatedModel* AnimatedModel, const char *&Data)
 {
@@ -108,121 +84,22 @@ bool Loader::loadFromMemory(Urho3D::AnimatedModel* AnimatedModel, const char *&D
 	// Now parse the model data
 	using namespace Urho3D;
 
+	Vector3 scaling = AnimatedModel->GetNode()->GetScale();
+	AnimatedModel->GetNode()->SetScale(Vector3::ONE);
+
 	ResourceCache* Cache = AnimatedModel->GetContext()->GetSubsystem<ResourceCache>();
 	SharedPtr<Urho3D::Model> Model(new Urho3D::Model(AnimatedModel->GetContext()));
 
-	Model->SetNumGeometries(MaterialList.size());
+	AnimatedModel->SetModel(Model);
+	
+	File f(Model->GetContext(), Model->GetName(), FILE_WRITE);
+	Model->Save(f);
+	f.Close();
+	File f2(Model->GetContext(), Model->GetName() + "-prefab.xml", FILE_WRITE);
+	AnimatedModel->GetNode()->SaveXML(f2);
+	f2.Close();
 
-	vector<Vector3> Positions;
-
-	uint32_t lastIndex = 0;
-	for (size_t MaterialIndex = 0; MaterialIndex < MaterialList.size(); ++MaterialIndex) {
-		SharedPtr<IndexBuffer> IBuffer(new IndexBuffer(Model->GetContext()));
-		SharedPtr<VertexBuffer> VBuffer(new VertexBuffer(Model->GetContext()));
-
-		auto& ModelMat = MaterialList[MaterialIndex];
-
-		IBuffer->SetShadowed(true);
-		IBuffer->SetSize((unsigned int)ModelMat.indexCount, true, true);
-
-		VBuffer->SetShadowed(true);
-		VBuffer->SetSize((unsigned int)ModelMat.indexCount, MASK_POSITION | MASK_NORMAL | MASK_TEXCOORD1 | MASK_BLENDWEIGHTS | MASK_BLENDINDICES, true);
-
-		uint32_t *ibData = new uint32_t[ModelMat.indexCount];
-		uint32_t *pData = ibData;
-		std::memset(ibData, 0, sizeof(uint32_t) * ModelMat.indexCount);
-		unsigned char *data = new unsigned char[VBuffer->GetVertexSize() * ModelMat.indexCount];
-		std::memset(data, 0, VBuffer->GetVertexSize() * ModelMat.indexCount);
-		float* pd = (float*)data;
-
-		Vector3 Center = Vector3::ZERO;
-		for (size_t index = 0; index < ModelMat.indexCount; ++index)
-		{
-			*pData++ = index;
-			auto &vertex = VertexList[IndexList[index + lastIndex]];
-			Positions.emplace_back(vertex.position);
-			Center += Positions[index] / (float)ModelMat.indexCount;
-			*pd++ = vertex.position[0];
-			*pd++ = vertex.position[1];
-			*pd++ = vertex.position[2];
-			*pd++ = vertex.normal[0];
-			*pd++ = vertex.normal[1];
-			*pd++ = vertex.normal[2];
-			*pd++ = vertex.uv[0];
-			*pd++ = vertex.uv[1];
-			unsigned char *indices = (unsigned char*)(pd + 4);
-			switch (vertex.weightMethod) {
-			case VertexWeightMethod::BDEF4:
-			case VertexWeightMethod::QDEF:
-				*(pd + 2) = vertex.boneInfo.BDEF.weights[2];
-				*(pd + 3) = vertex.boneInfo.BDEF.weights[3];
-				*(indices + 2) = (unsigned char)vertex.boneInfo.BDEF.boneIndexes[2];
-				*(indices + 3) = (unsigned char)vertex.boneInfo.BDEF.boneIndexes[3];
-			case VertexWeightMethod::BDEF2:
-				*(pd + 1) = vertex.boneInfo.BDEF.weights[1];
-				*(indices + 1) = (unsigned char)vertex.boneInfo.BDEF.boneIndexes[1];
-			case VertexWeightMethod::BDEF1:
-				*(pd) = vertex.boneInfo.BDEF.weights[0];
-				*(indices) = (unsigned char)vertex.boneInfo.BDEF.boneIndexes[0];
-				break;
-			case VertexWeightMethod::SDEF:
-				*(pd) = vertex.boneInfo.SDEF.weightBias;
-				*(pd + 1) = 1.0f - vertex.boneInfo.SDEF.weightBias;
-				*(indices) = (unsigned char)vertex.boneInfo.SDEF.boneIndexes[0];
-				*(indices + 1) = (unsigned char)vertex.boneInfo.SDEF.boneIndexes[1];
-			}
-			pd += 5;
-		}
-		IBuffer->SetData(ibData);
-		VBuffer->SetData(data);
-
-		delete[] ibData;
-		delete[] data;
-		
-		lastIndex += ModelMat.indexCount;
-
-		SharedPtr<Geometry> Geom(new Geometry(Model->GetContext()));
-		Geom->SetVertexBuffer(0, VBuffer);
-		Geom->SetIndexBuffer(IBuffer);
-		Geom->SetDrawRange(TRIANGLE_LIST, 0, ModelMat.indexCount, 0, ModelMat.indexCount, false);
-
-		Model->SetGeometry(MaterialIndex, 0, Geom);
-		Model->SetGeometryCenter(MaterialIndex, Center);
-	}
-
-	/*std::vector<Frame>::iterator frame;
-	for (frame = FrameList.begin(); frame != FrameList.end(); ++frame) {
-		if (frame->type == 1 && frame->name.japanese.compare(L"Root") == 0)
-			break;
-	}
-
-	std::vector<PMX::Loader::Bone>::iterator root;
-	for (root = BoneList.begin(); root != BoneList.end(); ++root) {
-		if (root->index == frame->morphs.front().id)
-			break;
-	}*/
-
-
-	Skeleton Skeleton;
-	auto& Bones = Skeleton.GetModifiableBones();
-	Bones.Reserve((unsigned int)BoneList.size());
-
-	for (unsigned int BoneIndex = 0; BoneIndex != BoneList.size(); ++BoneIndex)
-	{
-		Bone& Bone = BoneList[BoneIndex];
-		Urho3D::Bone NewBone;
-		NewBone.name_ = Bone.Name.japanese.c_str();
-		NewBone.initialPosition_ = Vector3(Bone.InitialPosition);
-		NewBone.initialScale_ = Vector3(1.0f, 1.0f, 1.0f);
-		NewBone.collisionMask_ = BONECOLLISION_BOX | BONECOLLISION_SPHERE;
-		NewBone.parentIndex_ = Bone.Parent == -1 ? BoneIndex : Bone.Parent;
-		Bones.Push(NewBone);
-	}
-	Skeleton.SetRootBoneIndex(0);
-	Model->SetSkeleton(Skeleton);
-	AnimatedModel->SetModel(Model, false);
-
-	Model->SetBoundingBox(BoundingBox(Positions.data(), (uint32_t)Positions.size()));
+	AnimatedModel->GetNode()->SetScale(scaling);
 
 	return true;
 }

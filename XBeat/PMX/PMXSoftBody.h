@@ -1,49 +1,38 @@
 #pragma once
 #include "PMXDefinitions.h"
 
-#include <cstdint>
-#include <vector>
-
 namespace PMX {
-
-class Model;
 
 struct SoftBody
 {
-	struct Shape {
-		enum Shape_e : uint8_t {
-			TriangleMesh,
-			Rope
-		};
+	enum struct Shape : unsigned char {
+		TriangleMesh,
+		Rope
 	};
-	struct Flags {
-		enum Flags_e : uint8_t {
-			BLinkCreate = 0x01,
-			CreateCluster = 0x02,
-			LinkCrossing = 0x04
-		};
+	enum struct Flags : unsigned char {
+		BLinkCreate = 0x01,
+		CreateCluster = 0x02,
+		LinkCrossing = 0x04
 	};
-	struct AeroModel {
-		enum AeroModel_e : uint32_t {
-			V_Point,
-			V_TwoSided,
-			V_SingleSided,
-			F_TwoSided,
-			F_SingleSided
-		};
+	enum struct AeroModel : unsigned int {
+		V_Point,
+		V_TwoSided,
+		V_SingleSided,
+		F_TwoSided,
+		F_SingleSided
 	};
 
 	Name name;
-	Shape::Shape_e shape;
-	uint32_t material;
-	uint8_t group;
-	uint16_t groupFlags;
-	Flags::Flags_e flags;
+	Shape shape;
+	unsigned int material;
+	unsigned char group;
+	unsigned short groupFlags;
+	Flags flags;
 	int blinkCreationDistance;
 	int clusterCount;
 	float mass;
 	float collisionMargin;
-	AeroModel::AeroModel_e model;
+	AeroModel model;
 	struct Config {
 		float VCF;
 		float DP;
@@ -80,16 +69,16 @@ struct SoftBody
 	} materialInfo;
 
 	struct AnchorRigidBody {
-		uint32_t rigidBodyIndex;
-		uint32_t vertexIndex;
-		uint8_t  nearMode;
+		unsigned int rigidBodyIndex;
+		unsigned int vertexIndex;
+		unsigned char nearMode;
 	};
-	std::vector<AnchorRigidBody> anchors;
+	Urho3D::Vector<AnchorRigidBody> anchors;
 
 	struct Pin {
-		uint32_t vertexIndex;
+		unsigned int vertexIndex;
 	};
-	std::vector<Pin> pins;
+	Urho3D::Vector<Pin> pins;
 };
 
 }
