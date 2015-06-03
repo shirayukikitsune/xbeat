@@ -13,7 +13,6 @@
 //===-----------------------------------------------------------------------------------===//
 
 #include "LoadingScene.h"
-#include "../PMX/PMXLoader.h"
 
 #include <boost/filesystem.hpp>
 #include <Camera.h>

@@ -16,57 +16,83 @@
 
 #include "Motion.h"
 
+#include <Context.h>
+#include <ResourceCache.h>
+#include <Variant.h>
+
 using namespace VMD;
 
-MotionController::MotionController()
+MotionController::MotionController(Urho3D::Context *context)
+	: Urho3D::LogicComponent(context)
+	, motionsAttr(Motion::GetTypeStatic())
 {
 	FramesPerSecond = 30.f;
-}
 
+	SetUpdateEventMask(Urho3D::USE_UPDATE);
+}
 
 MotionController::~MotionController()
 {
 }
 
-void MotionController::advanceFrame(float Time)
+void MotionController::RegisterObject(Urho3D::Context* context)
 {
-	float FrameCount = Time * FramesPerSecond;
+	using namespace Urho3D;
+	context->RegisterFactory<MotionController>();
 
-	for (auto &Motion : KnownMotions) {
-		Motion->advanceFrame(FrameCount);
+	ATTRIBUTE(VMD::MotionController, VAR_FLOAT, "FPS", FramesPerSecond, 30.0f, AM_DEFAULT);
+}
+
+void MotionController::Update(float timeStep)
+{
+	float FrameCount = timeStep * FramesPerSecond;
+
+	for (auto motion = KnownMotions.Begin(); motion != KnownMotions.End(); ++motion) {
+		(*motion)->advanceFrame(FrameCount);
 	}
 }
 
-void MotionController::clearFinished()
+void MotionController::ClearFinished()
 {
-	for (auto motion = KnownMotions.begin(); motion != KnownMotions.end(); ) {
+	for (auto motion = KnownMotions.Begin(); motion != KnownMotions.End(); ) {
 		if ((*motion)->isFinished()) {
-			KnownMotions.erase(motion);
-			motion = KnownMotions.begin();
+			KnownMotions.Erase(motion);
+			motion = KnownMotions.Begin();
 		}
 		else ++motion;
 	}
 }
 
-void MotionController::setFPS(float FPS)
+Urho3D::SharedPtr<Motion> MotionController::LoadMotion(Urho3D::String FileName)
 {
-	FramesPerSecond = FPS;
-}
+	Urho3D::SharedPtr<Motion> Output;
 
-float MotionController::getFPS()
-{
-	return FramesPerSecond;
-}
+	auto cache = GetSubsystem<Urho3D::ResourceCache>();
+	Output = cache->GetResource<Motion>(FileName, false);
+	if (Output.Null())
+		return Output;
 
-std::shared_ptr<Motion> MotionController::loadMotion(std::wstring FileName)
-{
-	std::shared_ptr<Motion> Output(new Motion);
-	assert(Output);
-
-	if (!Output->loadFromFile(FileName))
-		return nullptr;
-
-	KnownMotions.push_back(Output);
+	KnownMotions.Push(Output);
 
 	return Output;
 }
+
+void MotionController::SetMotionsAttr(const Urho3D::ResourceRefList& value)
+{
+	auto cache = GetSubsystem<Urho3D::ResourceCache>();
+	for (unsigned i = 0; i < value.names_.Size(); ++i) {
+		auto motion = cache->GetResource<Motion>(value.names_[i]);
+		if (motion)
+			KnownMotions.Push(Urho3D::SharedPtr<Motion>(motion));
+	}
+}
+
+const Urho3D::ResourceRefList& MotionController::GetMotionsAttr() const
+{
+	motionsAttr.names_.Resize(KnownMotions.Size());
+	for (unsigned i = 0; i < KnownMotions.Size(); ++i)
+		motionsAttr.names_[i] = Urho3D::GetResourceName(KnownMotions[i]);
+
+	return motionsAttr;
+}
+

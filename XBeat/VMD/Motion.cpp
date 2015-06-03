@@ -13,10 +13,17 @@
 //===-------------------------------------------------------------------------===//
 
 #include "Motion.h"
+#include "../PMX/PMXModel.h"
 
+#include <algorithm>
+#include <Camera.h>
+#include <Context.h>
+#include <RigidBody.h>
+#include <Sort.h>
 #include <Windows.h>
 
-VMD::Motion::Motion()
+VMD::Motion::Motion(Urho3D::Context *context)
+	: Resource(context)
 {
 	reset();
 	MaxFrame = 0.0f;
@@ -25,6 +32,11 @@ VMD::Motion::Motion()
 
 VMD::Motion::~Motion()
 {
+}
+
+void VMD::Motion::RegisterObject(Urho3D::Context *context)
+{
+	context->RegisterFactory<VMD::Motion>();
 }
 
 void VMD::Motion::reset()
@@ -42,12 +54,24 @@ bool VMD::Motion::advanceFrame(float Frames)
 		return true;
 	}
 
-	if (!AttachedCameras.empty())
+	if (!AttachedCameras.Empty())
 		updateCamera(CurrentFrame);
 
-	if (!AttachedModels.empty()) {
-		for (auto &Model : AttachedModels)
-			Model->Reset();
+	if (!AttachedModels.Empty()) {
+		for (auto ModelIt = AttachedModels.Begin(); ModelIt != AttachedModels.End(); ++ModelIt) {
+			auto pmx = (*ModelIt)->GetComponent<PMXAnimatedModel>();
+#if 0
+			auto bones = pmx->GetSkeleton().GetBones();
+			for (auto boneit = bones.Begin(); boneit != bones.End(); ++boneit) {
+				auto rigidBody = boneit->node_->GetComponent<Urho3D::RigidBody>();
+				if (rigidBody != nullptr && !rigidBody->IsKinematic())
+					continue;
+				boneit->node_->SetTransform(boneit->initialPosition_, boneit->initialRotation_, boneit->initialScale_);
+			}
+#else
+			pmx->GetSkeleton().Reset();
+#endif
+		}
 
 		updateBones(CurrentFrame);
 		updateMorphs(CurrentFrame);
@@ -56,28 +80,24 @@ bool VMD::Motion::advanceFrame(float Frames)
 	return false;
 }
 
-void VMD::Motion::attachCamera(std::shared_ptr<Renderer::Camera> Camera)
+void VMD::Motion::attachCamera(Urho3D::Node* CameraNode)
 {
-	AttachedCameras.push_back(Camera);
+	if (CameraNode->GetComponent<Urho3D::Camera>() != nullptr)
+		AttachedCameras.Push(CameraNode);
 }
 
-void VMD::Motion::attachModel(std::shared_ptr<PMX::Model> Model)
+void VMD::Motion::attachModel(Urho3D::Node* ModelNode)
 {
-	AttachedModels.push_back(Model);
+	if (ModelNode->GetComponent<PMXAnimatedModel>() != nullptr)
+		AttachedModels.Push(ModelNode);
 }
 
-bool VMD::Motion::loadFromFile(const std::wstring &FileName)
+bool VMD::Motion::BeginLoad(Urho3D::Deserializer &source)
 {
-	std::ifstream InputStream;
-
-	InputStream.open(FileName, std::ios::binary);
-
-	if (!InputStream.good())
-		return false;
-
 	char Magic[30];
 
-	InputStream.read(Magic, 30);
+	if (source.Read(Magic, 30) != 30)
+		return false;
 
 	int Version;
 
@@ -85,17 +105,15 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		Version = 1;
 	else if (!strcmp("Vocaloid Motion Data 0002", Magic))
 		Version = 2;
-	else {
-		InputStream.close();
+	else
 		return false;
-	}
 
 	// Function used to read a Shift-JIS string from an input stream and returns its counterfeit in a std::wstring
-	auto readSJISString = [](std::istream &Input, size_t Length) {
+	auto readSJISString = [](Urho3D::Deserializer &source, unsigned int Length) {
 		char *ReadBuffer = new char[Length];
 		assert(ReadBuffer != nullptr);
 
-		Input.read(ReadBuffer, Length);
+		source.Read(ReadBuffer, Length);
 		ReadBuffer[Length - 1] = '\0';
 
 		// Gets the required output buffer size
@@ -109,7 +127,7 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		auto WrittenCharacters = MultiByteToWideChar(932, 0, ReadBuffer, -1, OutputBuffer, RequiredLength);
 
 		// Create the output string
-		std::wstring Output(OutputBuffer);
+		Urho3D::String Output(OutputBuffer);
 
 		// Delete the buffers
 		delete[] ReadBuffer;
@@ -118,145 +136,146 @@ bool VMD::Motion::loadFromFile(const std::wstring &FileName)
 		return Output;
 	};
 
-#if 1
-	std::wstring ModelName = readSJISString(InputStream, Version * 10);
-#else
-	// Skips the model name for the animation
-	InputStream.seekg(Version * 10, std::ios::cur);
-#endif
+	Urho3D::String ModelName = readSJISString(source, Version * 10);
 
-	uint32_t FrameCount;
-	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
+	unsigned int FrameCount = source.ReadUInt();
 
-	while (FrameCount --> 0) {
+	float data[4];
+
+	while (FrameCount--> 0) {
 		BoneKeyFrame Frame;
-		int8_t InterpolationData[64];
-		float TempVector[4];
+		char InterpolationData[64];
 
-		Frame.BoneName = readSJISString(InputStream, 15);
-		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
-		InputStream.read((char*)TempVector, sizeof(float) * 3);
-		Frame.Translation = btVector3(TempVector[0], TempVector[1], TempVector[2]);
-		InputStream.read((char*)TempVector, sizeof(float) * 4);
-		Frame.Rotation = btQuaternion(TempVector[0], TempVector[1], TempVector[2], TempVector[3]);
-		InputStream.read((char*)InterpolationData, 64);
+		Frame.BoneName = readSJISString(source, 15);
+		Frame.FrameCount = source.ReadUInt();
+		Frame.Translation = source.ReadVector3();
+		source.Read(data, sizeof(float) * 4);
+		Frame.Rotation = Urho3D::Quaternion(data[3], data[0], data[1], data[2]);
+		source.Read(InterpolationData, 64);
 
 		parseBoneInterpolationData(Frame, InterpolationData);
 
 		MaxFrame = std::max(MaxFrame, (float)Frame.FrameCount);
 
-		auto BoneMotion = BoneKeyFrames.find(Frame.BoneName);
-		if (BoneMotion == BoneKeyFrames.end())
-			BoneKeyFrames[Frame.BoneName] = { Frame };
-		else BoneKeyFrames[Frame.BoneName].emplace_back(Frame);
+		auto BoneMotion = BoneKeyFrames.Find(Frame.BoneName);
+		if (BoneMotion == BoneKeyFrames.End()) {
+			Urho3D::Vector<BoneKeyFrame> frameList;
+			frameList.Push(Frame);
+			BoneKeyFrames.Insert(Urho3D::MakePair(Urho3D::StringHash(Frame.BoneName), frameList));
+		}
+		else
+			BoneKeyFrames[Frame.BoneName].Push(Frame);
 	}
 
 	// Sort the bone motion by the key frames
-	for (auto &BoneMotion : BoneKeyFrames) {
-		std::sort(BoneMotion.second.begin(), BoneMotion.second.end(), [](BoneKeyFrame &a, BoneKeyFrame &b) {
+	for (auto BoneIt = BoneKeyFrames.Begin(); BoneIt != BoneKeyFrames.End(); ++BoneIt) {
+		Urho3D::Sort(BoneIt->second_.Begin(), BoneIt->second_.End(), [](BoneKeyFrame &a, BoneKeyFrame &b) {
 			return a.FrameCount < b.FrameCount;
 		});
 	}
 
-	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
+	FrameCount = source.ReadUInt();
 
 	while (FrameCount --> 0) {
 		MorphKeyFrame Frame;
 
-		Frame.MorphName = readSJISString(InputStream, 15);
-		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
-		InputStream.read((char*)&Frame.Weight, sizeof(float));
-
+		Frame.MorphName = readSJISString(source, 15);
+		Frame.FrameCount = source.ReadUInt();
+		Frame.Weight = source.ReadFloat();
+		
 		MaxFrame = std::max(MaxFrame, (float)Frame.FrameCount);
 
-		auto MorphFrame = MorphKeyFrames.find(Frame.MorphName);
-		if (MorphFrame == MorphKeyFrames.end())
-			MorphKeyFrames[Frame.MorphName] = { Frame };
-		else MorphKeyFrames[Frame.MorphName].emplace_back(Frame);
+		auto MorphFrame = MorphKeyFrames.Find(Frame.MorphName);
+		if (MorphFrame == MorphKeyFrames.End()) {
+			Urho3D::Vector<MorphKeyFrame> frameList;
+			frameList.Push(Frame);
+			MorphKeyFrames.Insert(Urho3D::MakePair(Urho3D::StringHash(Frame.MorphName), frameList));
+		}
+		else MorphKeyFrames[Frame.MorphName].Push(Frame);
 	}
 
 	// Check if the camera data is present
-	if (InputStream.eof()) {
-		InputStream.close();
+	if (source.IsEof()) {
 		return true;
 	}
 
-	InputStream.read((char*)&FrameCount, sizeof(uint32_t));
+	FrameCount = source.ReadUInt();
 
 	while (FrameCount --> 0) {
 		CameraKeyFrame Frame;
-		int8_t InterpolationData[24];
-		float TempVector[3];
-		uint32_t DegreesAngle;
+		char InterpolationData[24];
 
-		InputStream.read((char*)&Frame.FrameCount, sizeof(uint32_t));
-		InputStream.read((char*)&Frame.Distance, sizeof(float));
+		Frame.FrameCount = source.ReadUInt();
+		Frame.Distance = source.ReadFloat();
+		Frame.Position = source.ReadVector3();
 
-		InputStream.read((char*)TempVector, sizeof(float) * 3);
-		Frame.Position = btVector3(TempVector[0], TempVector[1], TempVector[2]);
+		Urho3D::Vector3 rotationEuler = source.ReadVector3();
+		Frame.Rotation.FromEulerAngles(rotationEuler.x_, rotationEuler.y_, rotationEuler.z_);
 
-		InputStream.read((char*)TempVector, sizeof(float) * 3);
-		Frame.Rotation.setEulerZYX(TempVector[0], TempVector[1], TempVector[2]);
+		source.Read(InterpolationData, 24);
 
-		InputStream.read((char*)InterpolationData, 24);
-
-		InputStream.read((char*)&DegreesAngle, sizeof(uint32_t));
-		Frame.FovAngle = DirectX::XMConvertToRadians((float)DegreesAngle);
-
-		InputStream.read((char*)&Frame.NoPerspective, 1);
+		Frame.FovAngle = source.ReadUInt() * Urho3D::M_DEGTORAD;
+		Frame.NoPerspective = source.ReadUByte();
 
 		parseCameraInterpolationData(Frame, InterpolationData);
 
 		MaxFrame = std::max(MaxFrame, (float)Frame.FrameCount);
 
-		CameraKeyFrames.push_back(Frame);
+		CameraKeyFrames.Push(Frame);
 	}
-
-	InputStream.close();
 
 	return true;
 }
 
-void VMD::Motion::setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btQuaternion &Rotation)
+void VMD::Motion::setCameraParameters(float FieldOfView, float Distance, Urho3D::Vector3 &Position, Urho3D::Quaternion &Rotation)
 {
-	for (auto &Camera : AttachedCameras) {
-		Camera->SetRotation(Rotation.get128());
-		Camera->SetPosition(Position.get128());
-		Camera->setFieldOfView(FieldOfView);
-		Camera->setFocalDistance(Distance);
+	for (auto it = AttachedCameras.Begin(); it != AttachedCameras.End(); ++it) {
+		auto cameraNode = *it;
+		cameraNode->SetRotation(Rotation);
+		cameraNode->SetPosition(Position);
+		auto cameraComponent = cameraNode->GetComponent<Urho3D::Camera>();
+		cameraComponent->SetFov(FieldOfView);
+		cameraComponent->SetLodBias(Distance);
 	}
 }
 
-void VMD::Motion::setBoneParameters(std::wstring BoneName, btVector3 &Translation, btQuaternion &Rotation)
+void VMD::Motion::setBoneParameters(Urho3D::String BoneName, Urho3D::Vector3 &Position, Urho3D::Quaternion &Rotation)
 {
-	for (auto &Model : AttachedModels) {
-		auto bone = Model->GetBoneByName(BoneName);
+	for (auto it = AttachedModels.Begin(); it != AttachedModels.End(); ++it) {
+		auto modelNode = *it;
+		auto bone = modelNode->GetComponent<PMXAnimatedModel>()->GetSkeleton().GetBone(BoneName);
 		if (bone) {
-			bone->transform(btTransform(Rotation, Translation), PMX::DeformationOrigin::Motion);
+			auto boneNode = bone->node_;
+			boneNode->SetPosition(Position + bone->initialPosition_);
+			boneNode->SetRotation(Rotation);
 		}
 	}
 }
 
-void VMD::Motion::setMorphParameters(std::wstring MorphName, float MorphWeight)
+void VMD::Motion::setMorphParameters(Urho3D::String MorphName, float MorphWeight)
 {
-	for (auto &Model : AttachedModels) {
-		Model->ApplyMorph(MorphName, MorphWeight);
-	}
+	// TODO: Port this to Urho
+	/*for (auto it = AttachedModels.Begin(); it != AttachedModels.End(); ++it) {
+		auto modelNode = it->Lock();
+		if (modelNode) {
+			modelNode->GetComponent<PMXModel>()->ApplyMorph(MorphName, MorphWeight);
+		}
+	}*/
 }
 
 // The following functions were extracted from MMDAgent project
 void VMD::Motion::updateCamera(float Frame)
 {
-	if (CameraKeyFrames.empty()) return;
+	if (CameraKeyFrames.Empty()) return;
 
 	// Clamp frame to the last frame of the animation
-	if (Frame > (float)CameraKeyFrames.back().FrameCount) {
-		Frame = (float)CameraKeyFrames.back().FrameCount;
+	if (Frame > (float)CameraKeyFrames.Back().FrameCount) {
+		Frame = (float)CameraKeyFrames.Back().FrameCount;
 	}
 
 	// Find the next key frame
-	size_t NextKeyFrame = 0, CurrentKeyFrame = 0;
-	for (size_t i = 0; i < CameraKeyFrames.size(); ++i) {
+	unsigned int NextKeyFrame = 0, CurrentKeyFrame = 0;
+	for (unsigned int i = 0; i < CameraKeyFrames.Size(); ++i) {
 		if (Frame <= CameraKeyFrames[i].FrameCount) {
 			NextKeyFrame = i;
 			break;
@@ -264,7 +283,7 @@ void VMD::Motion::updateCamera(float Frame)
 	}
 
 	// Value clamping
-	if (NextKeyFrame >= CameraKeyFrames.size()) NextKeyFrame = CameraKeyFrames.size() - 1;
+	if (NextKeyFrame >= CameraKeyFrames.Size()) NextKeyFrame = CameraKeyFrames.Size() - 1;
 
 	if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 	else CurrentKeyFrame = NextKeyFrame - 1;
@@ -280,21 +299,21 @@ void VMD::Motion::updateCamera(float Frame)
 		return;
 	}
 
-	btVector3 Position;
+	Urho3D::Vector3 Position;
 	float Ratio = (Frame - Frame1Time) / (Frame2Time - Frame1Time);
-	uint32_t InterpolationIndex = (uint32_t)(Ratio * InterpolationTableSize);
+	unsigned int InterpolationIndex = (unsigned int)(Ratio * InterpolationTableSize);
 
-	auto findRatio = [Ratio, InterpolationIndex](std::vector<float> &Table) {
-		if (Table.empty()) return Ratio;
+	auto findRatio = [Ratio, InterpolationIndex](Urho3D::PODVector<float> &Table) {
+		if (Table.Empty()) return Ratio;
 
 		return Table[InterpolationIndex] + (Table[InterpolationIndex + 1] - Table[InterpolationIndex]) * (Ratio * InterpolationTableSize - InterpolationIndex);
 	};
 
 	// Calculate the camera parameters
-	Position.setX(doLinearInterpolation(findRatio(Frame2.InterpolationData[0]), Frame1.Position.getX(), Frame2.Position.getX()));
-	Position.setY(doLinearInterpolation(findRatio(Frame2.InterpolationData[1]), Frame1.Position.getY(), Frame2.Position.getY()));
-	Position.setZ(doLinearInterpolation(findRatio(Frame2.InterpolationData[2]), Frame1.Position.getZ(), Frame2.Position.getZ()));
-	btQuaternion Rotation = Frame1.Rotation.slerp(Frame2.Rotation, findRatio(Frame2.InterpolationData[3]));
+	Position.x_ = doLinearInterpolation(findRatio(Frame2.InterpolationData[0]), Frame1.Position.x_, Frame2.Position.x_);
+	Position.y_ = doLinearInterpolation(findRatio(Frame2.InterpolationData[1]), Frame1.Position.y_, Frame2.Position.y_);
+	Position.z_ = doLinearInterpolation(findRatio(Frame2.InterpolationData[2]), Frame1.Position.z_, Frame2.Position.z_);
+	Urho3D::Quaternion Rotation = Frame1.Rotation.Slerp(Frame2.Rotation, findRatio(Frame2.InterpolationData[3]));
 	float Distance = doLinearInterpolation(findRatio(Frame2.InterpolationData[4]), Frame1.Distance, Frame2.Distance);
 	float FieldOfView = doLinearInterpolation(findRatio(Frame2.InterpolationData[5]), Frame1.FovAngle, Frame2.FovAngle);
 
@@ -303,32 +322,33 @@ void VMD::Motion::updateCamera(float Frame)
 
 void VMD::Motion::updateBones(float Frame)
 {
-	for (auto BoneMotion = BoneKeyFrames.begin(); BoneMotion != BoneKeyFrames.end(); ++BoneMotion) {
-		if (BoneMotion->second.size() == 1) {
-			if (BoneMotion->second.front().FrameCount > Frame) continue;
+	for (auto it = BoneKeyFrames.Begin(); it != BoneKeyFrames.End(); ++it) {
+		float animationFrame = Frame;
+		if (it->second_.Size() == 1) {
+			if (it->second_.Front().FrameCount > Frame) continue;
 
-			setBoneParameters(BoneMotion->first, BoneMotion->second.front().Translation, BoneMotion->second.front().Rotation);
+			setBoneParameters(it->second_.Front().BoneName, it->second_.Front().Translation, it->second_.Front().Rotation);
 			continue;
 		}
 
-		auto &BoneKeyFrames = BoneMotion->second;
+		auto &BoneKeyFrames = it->second_;
 
 		// Clamp frame to the last frame of the animation
-		if (Frame > (float)BoneKeyFrames.back().FrameCount) {
-			Frame = (float)BoneKeyFrames.back().FrameCount;
+		if (animationFrame > (float)BoneKeyFrames.Back().FrameCount) {
+			animationFrame = (float)BoneKeyFrames.Back().FrameCount;
 		}
 
 		// Find the next key frame
-		size_t NextKeyFrame = 0, CurrentKeyFrame = 0;
-		for (size_t i = 0; i < BoneKeyFrames.size(); ++i) {
-			if (Frame <= BoneKeyFrames[i].FrameCount) {
+		unsigned int NextKeyFrame = 0, CurrentKeyFrame = 0;
+		for (unsigned int i = 0; i < BoneKeyFrames.Size(); ++i) {
+			if (animationFrame <= BoneKeyFrames[i].FrameCount) {
 				NextKeyFrame = i;
 				break;
 			}
 		}
 
 		// Value clamping
-		if (NextKeyFrame >= BoneKeyFrames.size()) NextKeyFrame = BoneKeyFrames.size() - 1;
+		if (NextKeyFrame >= BoneKeyFrames.Size()) NextKeyFrame = BoneKeyFrames.Size() - 1;
 
 		if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 		else CurrentKeyFrame = NextKeyFrame - 1;
@@ -338,61 +358,62 @@ void VMD::Motion::updateBones(float Frame)
 		BoneKeyFrame& Frame1 = BoneKeyFrames[CurrentKeyFrame];
 		BoneKeyFrame& Frame2 = BoneKeyFrames[NextKeyFrame];
 
-		if (Frame1Time == Frame2Time || Frame <= Frame1Time) {
+		if (Frame1Time == Frame2Time || animationFrame <= Frame1Time) {
 			setBoneParameters(Frame1.BoneName, Frame1.Translation, Frame1.Rotation);
 			return;
 		}
-		else if (Frame >= Frame2Time) {
+		else if (animationFrame >= Frame2Time) {
 			setBoneParameters(Frame2.BoneName, Frame2.Translation, Frame2.Rotation);
 			return;
 		}
 
-		float Ratio = (Frame - Frame1Time) / (Frame2Time - Frame1Time);
-		uint32_t InterpolationIndex = (uint32_t)(Ratio * InterpolationTableSize);
+		float Ratio = (animationFrame - Frame1Time) / (Frame2Time - Frame1Time);
+		unsigned int InterpolationIndex = (unsigned int)(Ratio * InterpolationTableSize);
 
-		auto findRatio = [Ratio, InterpolationIndex](std::vector<float> &Table) {
-			if (Table.empty()) return Ratio;
+		auto findRatio = [Ratio, InterpolationIndex](Urho3D::PODVector<float> &Table) {
+			if (Table.Empty()) return Ratio;
 
 			return Table[InterpolationIndex] + (Table[InterpolationIndex + 1] - Table[InterpolationIndex]) * (Ratio * InterpolationTableSize - InterpolationIndex);
 		};
 
-		btVector3 Translation;
-		Translation.setX(doLinearInterpolation(findRatio(Frame2.InterpolationData[0]), Frame1.Translation.getX(), Frame2.Translation.getX()));
-		Translation.setY(doLinearInterpolation(findRatio(Frame2.InterpolationData[1]), Frame1.Translation.getY(), Frame2.Translation.getY()));
-		Translation.setZ(doLinearInterpolation(findRatio(Frame2.InterpolationData[2]), Frame1.Translation.getZ(), Frame2.Translation.getZ()));
-		btQuaternion Rotation;
-		Rotation = Frame1.Rotation.slerp(Frame2.Rotation, findRatio(Frame2.InterpolationData[3]));
+		Urho3D::Vector3 Translation;
+		Translation.x_ = doLinearInterpolation(findRatio(Frame2.InterpolationData[0]), Frame1.Translation.x_, Frame2.Translation.x_);
+		Translation.y_ = doLinearInterpolation(findRatio(Frame2.InterpolationData[1]), Frame1.Translation.y_, Frame2.Translation.y_);
+		Translation.z_ = doLinearInterpolation(findRatio(Frame2.InterpolationData[2]), Frame1.Translation.z_, Frame2.Translation.z_);
+		Urho3D::Quaternion Rotation;
+		Rotation = Frame1.Rotation.Slerp(Frame2.Rotation, findRatio(Frame2.InterpolationData[3]));
 
 		setBoneParameters(Frame1.BoneName, Translation, Rotation);
 	}
 }
 
-void VMD::Motion::updateMorphs(float CurrentFrame)
+void VMD::Motion::updateMorphs(float currentFrame)
 {
-	for (auto MorphFrame = MorphKeyFrames.begin(); MorphFrame != MorphKeyFrames.end(); ++MorphFrame) {
-		if (MorphFrame->second.size() == 1) {
-			if (MorphFrame->second.front().FrameCount > CurrentFrame) continue;
+	for (auto it = MorphKeyFrames.Begin(); it != MorphKeyFrames.End(); ++it) {
+		float animationFrame = currentFrame;
+		auto &Frame = it->second_;
 
-			setMorphParameters(MorphFrame->second.front().MorphName, MorphFrame->second.front().Weight);
+		if (Frame.Size() == 1) {
+			if (Frame.Front().FrameCount > animationFrame) continue;
+
+			setMorphParameters(Frame.Front().MorphName, Frame.Front().Weight);
 			continue;
 		}
 
-		auto &Frame = MorphFrame->second;
-
-		if (CurrentFrame > Frame.back().FrameCount)
-			CurrentFrame = (float)Frame.back().FrameCount;
+		if (animationFrame > Frame.Back().FrameCount)
+			animationFrame = (float)Frame.Back().FrameCount;
 
 		// Find the next key frame
-		size_t NextKeyFrame = 0, CurrentKeyFrame = 0;
-		for (size_t i = 0; i < Frame.size(); ++i) {
-			if (CurrentFrame <= Frame[i].FrameCount) {
+		unsigned int NextKeyFrame = 0, CurrentKeyFrame = 0;
+		for (unsigned int i = 0; i < Frame.Size(); ++i) {
+			if (animationFrame <= Frame[i].FrameCount) {
 				NextKeyFrame = i;
 				break;
 			}
 		}
 
 		// Value clamping
-		if (NextKeyFrame >= Frame.size()) NextKeyFrame = Frame.size() - 1;
+		if (NextKeyFrame >= Frame.Size()) NextKeyFrame = Frame.Size() - 1;
 
 		if (NextKeyFrame <= 1) CurrentKeyFrame = 0;
 		else CurrentKeyFrame = NextKeyFrame - 1;
@@ -402,32 +423,32 @@ void VMD::Motion::updateMorphs(float CurrentFrame)
 		auto& Frame1 = Frame[CurrentKeyFrame];
 		auto& Frame2 = Frame[NextKeyFrame];
 
-		if (Frame1Time == Frame2Time || CurrentFrame <= Frame1Time) {
+		if (Frame1Time == Frame2Time || animationFrame <= Frame1Time) {
 			setMorphParameters(Frame1.MorphName, Frame1.Weight);
 			return;
 		}
-		else if (CurrentFrame >= Frame2Time) {
+		else if (animationFrame >= Frame2Time) {
 			setMorphParameters(Frame2.MorphName, Frame2.Weight);
 			return;
 		}
 
-		float Ratio = (CurrentFrame - Frame1Time) / (Frame2Time - Frame1Time);
+		float Ratio = (animationFrame - Frame1Time) / (Frame2Time - Frame1Time);
 
 		setMorphParameters(Frame1.MorphName, doLinearInterpolation(Ratio, Frame1.Weight, Frame2.Weight));
 	}
 }
 
-void VMD::Motion::parseCameraInterpolationData(CameraKeyFrame &Frame, int8_t *InterpolationData)
+void VMD::Motion::parseCameraInterpolationData(CameraKeyFrame &Frame, char *InterpolationData)
 {
 	float X1, Y1, X2, Y2;
 
 	for (int i = 0; i < 6; ++i) {
 		if (InterpolationData[i * 4] == InterpolationData[i * 4 + 2] && InterpolationData[i * 4 + 1] == InterpolationData[i * 4 + 3]) {
-			Frame.InterpolationData[i].clear();
+			Frame.InterpolationData[i].Clear();
 			continue;
 		}
 
-		Frame.InterpolationData[i].resize(InterpolationTableSize + 1);
+		Frame.InterpolationData[i].Resize(InterpolationTableSize + 1);
 		X1 = InterpolationData[i * 4] / 127.0f;
 		Y1 = InterpolationData[i * 4 + 2] / 127.0f;
 		X2 = InterpolationData[i * 4 + 1] / 127.0f;
@@ -437,17 +458,17 @@ void VMD::Motion::parseCameraInterpolationData(CameraKeyFrame &Frame, int8_t *In
 	}
 }
 
-void VMD::Motion::parseBoneInterpolationData(BoneKeyFrame &Frame, int8_t *InterpolationData)
+void VMD::Motion::parseBoneInterpolationData(BoneKeyFrame &Frame, char *InterpolationData)
 {
 	float X1, Y1, X2, Y2;
 
 	for (int i = 0; i < 4; ++i) {
 		if (InterpolationData[i] == InterpolationData[i + 4] && InterpolationData[i + 8] == InterpolationData[i + 12]) {
-			Frame.InterpolationData[i].clear();
+			Frame.InterpolationData[i].Clear();
 			continue;
 		}
 
-		Frame.InterpolationData[i].resize(InterpolationTableSize + 1);
+		Frame.InterpolationData[i].Resize(InterpolationTableSize + 1);
 		X1 = InterpolationData[i] / 127.0f;
 		Y1 = InterpolationData[i + 4] / 127.0f;
 		X2 = InterpolationData[i + 8] / 127.0f;
@@ -457,7 +478,7 @@ void VMD::Motion::parseBoneInterpolationData(BoneKeyFrame &Frame, int8_t *Interp
 	}
 }
 
-void VMD::Motion::generateInterpolationTable(std::vector<float> &Table, float X1, float X2, float Y1, float Y2)
+void VMD::Motion::generateInterpolationTable(Urho3D::PODVector<float> &Table, float X1, float X2, float Y1, float Y2)
 {
 	for (int k = 0; k < InterpolationTableSize; ++k) {
 		float CurrentFrame = (float)k / (float)InterpolationTableSize;

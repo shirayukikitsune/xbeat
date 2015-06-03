@@ -25,7 +25,7 @@ PMXAnimatedModel::~PMXAnimatedModel()
 
 void PMXAnimatedModel::RegisterObject(Context* context)
 {
-	context->RegisterFactory<PMXAnimatedModel>("Geometry");
+	context->RegisterFactory<PMXAnimatedModel>();
 }
 
 void PMXAnimatedModel::OnNodeSet(Node* node)

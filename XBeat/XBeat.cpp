@@ -1,6 +1,7 @@
 #include "XBeat.h"
 #include "Scenes/LoadingScene.h"
 #include "PMX/PMXModel.h"
+#include "VMD/MotionController.h"
 
 #include <Console.h>
 #include <Context.h>
@@ -51,6 +52,8 @@ void XBeat::Start()
 
 	PMXAnimatedModel::RegisterObject(context_);
 	PMXModel::RegisterObject(context_);
+	VMD::MotionController::RegisterObject(context_);
+	VMD::Motion::RegisterObject(context_);
 
 	//loadingScene = new Scenes::LoadingScene(context_, nullptr);
 

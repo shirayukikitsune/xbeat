@@ -14,33 +14,35 @@
 
 #pragma once
 
-#include "../PMX/PMXModel.h"
-#include "../Renderer/Camera.h"
-
 #include "VMDDefinitions.h"
 
-#include <string>
-#include <vector>
+#include <Node.h>
+#include <Resource.h>
+#include <Str.h>
 
 namespace VMD {
 
 	/// \brief This is used to perform an animation of a character and/or camera
 	///
 	/// \remarks A single character may have different motions (for example, one motion is related to walking and another related to wave hands) in effect at the same time.
-	class Motion
+	class Motion : public Urho3D::Resource
 	{
+		OBJECT(VMD::Motion);
+
 	public:
-		Motion();
-		~Motion();
+		Motion(Urho3D::Context *context);
+		virtual ~Motion();
+		/// \brief Register object factory.
+		static void RegisterObject(Urho3D::Context* context);
 
 		/// \brief Resets the animation state
 		void reset();
 
-		/// \brief Loads a motion from a file
+		/// \brief Loads a motion from a deserializer stream
 		///
 		/// \param [in] FileName The path of the motion file to be loaded
 		/// \returns Whether the loading was successful or not
-		bool loadFromFile(const std::wstring &FileName);
+		virtual bool BeginLoad(Urho3D::Deserializer &source);
 
 		/// \brief Advances the frame of the motion
 		///
@@ -48,14 +50,15 @@ namespace VMD {
 		/// \returns true if the animation is finished, false otherwise
 		bool advanceFrame(float Frames);
 
-		/// \brief Attaches a Renderer::Camera to the motion
+		/// \brief Attaches a Camera node to the motion
 		///
 		/// \param [in] Camera The camera to be attached
-		void attachCamera(std::shared_ptr<Renderer::Camera> Camera);
-		/// \brief Attaches a Renderer::Model to the motion
+		void attachCamera(Urho3D::Node* CameraNode);
+
+		/// \brief Attaches a Model node to the motion
 		///
 		/// \param [in] Model The model to be attached
-		void attachModel(std::shared_ptr<PMX::Model> Model);
+		void attachModel(Urho3D::Node* ModelNode);
 
 		/// \brief Returns the motion finished state
 		bool isFinished() { return Finished; }
@@ -70,25 +73,25 @@ namespace VMD {
 		bool Finished;
 
 		/// \brief The key frames of bone animations
-		std::map<std::wstring, std::vector<BoneKeyFrame>> BoneKeyFrames;
+		Urho3D::HashMap<Urho3D::StringHash, Urho3D::Vector<BoneKeyFrame>> BoneKeyFrames;
 		/// \brief The key frames of morphs animations
-		std::map<std::wstring, std::vector<MorphKeyFrame>> MorphKeyFrames;
+		Urho3D::HashMap<Urho3D::StringHash, Urho3D::Vector<MorphKeyFrame>> MorphKeyFrames;
 		/// \brief The key frames of camera animations
-		std::vector<CameraKeyFrame> CameraKeyFrames;
+		Urho3D::Vector<CameraKeyFrame> CameraKeyFrames;
 
 		/// \brief The attached cameras
-		std::vector<std::shared_ptr<Renderer::Camera>> AttachedCameras;
+		Urho3D::PODVector<Urho3D::Node*> AttachedCameras;
 		/// \brief The attached models
-		std::vector<std::shared_ptr<PMX::Model>> AttachedModels;
+		Urho3D::PODVector<Urho3D::Node*> AttachedModels;
 
 		/// \brief Apply motion parameters to all attached cameras
-		void setCameraParameters(float FieldOfView, float Distance, btVector3 &Position, btQuaternion &Rotation);
+		void setCameraParameters(float FieldOfView, float Distance, Urho3D::Vector3 &Position, Urho3D::Quaternion &Rotation);
 
 		/// \brief Apply bone deformation parameters to all attached models
-		void setBoneParameters(std::wstring BoneName, btVector3 &Translation, btQuaternion &Rotation);
+		void setBoneParameters(Urho3D::String BoneName, Urho3D::Vector3 &Translation, Urho3D::Quaternion &Rotation);
 		
 		/// \brief Apply morph parameters to all attached models
-		void setMorphParameters(std::wstring MorphName, float MorphWeight);
+		void setMorphParameters(Urho3D::String MorphName, float MorphWeight);
 
 		/// \name Functions extracted from MMDAgent, http://www.mmdagent.jp/
 		/// @{
@@ -99,19 +102,19 @@ namespace VMD {
 		void updateCamera(float Frame);
 
 		/// \brief Parses the camera interpolation data from the VMD file
-		void parseCameraInterpolationData(CameraKeyFrame &Frame, int8_t *InterpolationData);
+		void parseCameraInterpolationData(CameraKeyFrame &Frame, char *InterpolationData);
 
 		/// \brief Sets bones parameters according to the motion at the specified frame
 		void updateBones(float Frame);
 
 		/// \brief Parses the bone interpolation data from the VMD file
-		void parseBoneInterpolationData(BoneKeyFrame &Frame, int8_t *InterpolationData);
+		void parseBoneInterpolationData(BoneKeyFrame &Frame, char *InterpolationData);
 
 		/// \brief Sets morphs parameters according to the motion at the specified frame
 		void updateMorphs(float Frame);
 
 		/// \brief Generates the interpolation data table
-		void generateInterpolationTable(std::vector<float> &Table, float X1, float X2, float Y1, float Y2);
+		void generateInterpolationTable(Urho3D::PODVector<float> &Table, float X1, float X2, float Y1, float Y2);
 
 		/// \brief Cubic Bézier curve interpolation function
 		///

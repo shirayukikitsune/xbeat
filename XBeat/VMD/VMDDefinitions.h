@@ -15,12 +15,10 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
-#include <LinearMath/btVector3.h>
-#include <LinearMath/btQuaternion.h>
+#include <Quaternion.h>
+#include <Str.h>
+#include <Vector.h>
+#include <Vector3.h>
 
 namespace VMD {
 
@@ -28,24 +26,24 @@ namespace VMD {
 	struct BoneKeyFrame
 	{
 		/// \brief The name of the bone to be animated
-		std::wstring BoneName;
+		Urho3D::String BoneName;
 		/// \brief The amount of frames until the next keyframe
-		uint32_t FrameCount;
+		unsigned int FrameCount;
 		/// \brief The bone translation component
-		btVector3 Translation;
+		Urho3D::Vector3 Translation;
 		/// \brief The bone rotation component, a quaternion
-		btQuaternion Rotation;
+		Urho3D::Quaternion Rotation;
 		/// \brief Bone interpolation data
-		std::vector<float> InterpolationData[4];
+		Urho3D::PODVector<float> InterpolationData[4];
 	};
 
 	/// \brief Stores information about morph animations
 	struct MorphKeyFrame
 	{
 		/// \brief The name of the morph to be applied, Shift-JIS encoded
-		std::wstring MorphName;
+		Urho3D::String MorphName;
 		/// \brief The amount of frames until the next keyframe
-		uint32_t FrameCount;
+		unsigned int FrameCount;
 		/// \brief The weight of the morph to be applied
 		float Weight;
 	};
@@ -54,21 +52,21 @@ namespace VMD {
 	struct CameraKeyFrame
 	{
 		/// \brief The amount of frames until the next keyframe
-		uint32_t FrameCount;
+		unsigned int FrameCount;
 		/// \brief The distance of the camera to the focal point
 		float Distance;
 		/// \brief The focal point
-		btVector3 Position;
+		Urho3D::Vector3 Position;
 		/// \brief Rotation around the focal point
-		btQuaternion Rotation;
+		Urho3D::Quaternion Rotation;
 		/// \brief Animation interpolation data
-		std::vector<float> InterpolationData[6];
+		Urho3D::PODVector<float> InterpolationData[6];
 		/// \brief Field of View angle, in radians
 		float FovAngle;
 		/// \brief Use or not orthogonal projection
 		///
 		/// \remarks If this is not zero, use orthogonal projection, if zero, use perspective projection
-		uint8_t NoPerspective;
+		unsigned char NoPerspective;
 	};
 
 }

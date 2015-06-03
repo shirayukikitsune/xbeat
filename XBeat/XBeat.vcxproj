@@ -173,6 +173,8 @@
     <ClCompile Include="PMX\PMXModel.cpp" />
     <ClCompile Include="Scenes\LoadingScene.cpp" />
     <ClCompile Include="Scenes\MenuScene.cpp" />
+    <ClCompile Include="VMD\Motion.cpp" />
+    <ClCompile Include="VMD\MotionController.cpp" />
     <ClCompile Include="XBeat.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -182,6 +184,9 @@
     <ClInclude Include="PMX\PMXSoftBody.h" />
     <ClInclude Include="Scenes\LoadingScene.h" />
     <ClInclude Include="Scenes\MenuScene.h" />
+    <ClInclude Include="VMD\Motion.h" />
+    <ClInclude Include="VMD\MotionController.h" />
+    <ClInclude Include="VMD\VMDDefinitions.h" />
     <ClInclude Include="XBeat.h" />
   </ItemGroup>
   <ItemGroup>
