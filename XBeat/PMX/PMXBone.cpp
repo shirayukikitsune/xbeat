@@ -700,8 +700,6 @@ void detail::IKBone::performIK() {
 			Link.Bone->IkRotation *= btQuaternion(Axis, Angle);
 
 			Link.Bone->update();
-
-			assert((Link.Bone->getEndPosition() - TargetPositions[Index + 1]).length2() < 0.0001f);
 		}
 		TargetBone->update();
 	}
