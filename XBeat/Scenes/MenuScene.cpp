@@ -131,8 +131,8 @@ void Scenes::Menu::initialize()
 	try {
 		auto fs = Scene->GetSubsystem<FileSystem>();
 		auto dir = fs->GetCurrentDir();
-		fs->SetCurrentDir("Data/Models/TDA Miku White Diva");
-		auto model = Cache->GetResource<PMXModel>("MikuWhiteDiva.pmx", false);
+		fs->SetCurrentDir("Data/Models/Maika v1.1");
+		auto model = Cache->GetResource<PMXModel>("MAIKAv1.1.pmx", false);
 		SModel->SetModel(model);
 		fs->SetCurrentDir(dir);
 	}

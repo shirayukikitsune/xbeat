@@ -61,12 +61,13 @@ bool VMD::Motion::advanceFrame(float Frames)
 		for (auto ModelIt = AttachedModels.Begin(); ModelIt != AttachedModels.End(); ++ModelIt) {
 			auto pmx = (*ModelIt)->GetComponent<PMXAnimatedModel>();
 #if 0
-			auto bones = pmx->GetSkeleton().GetBones();
-			for (auto boneit = bones.Begin(); boneit != bones.End(); ++boneit) {
-				auto rigidBody = boneit->node_->GetComponent<Urho3D::RigidBody>();
-				if (rigidBody != nullptr && !rigidBody->IsKinematic())
-					continue;
-				boneit->node_->SetTransform(boneit->initialPosition_, boneit->initialRotation_, boneit->initialScale_);
+			auto model = static_cast<PMXModel*>(pmx->GetModel());
+			auto bones = pmx->GetSkeleton().GetModifiableBones();
+			auto pmxit = model->GetBones().Begin(), pmxend = model->GetBones().End();
+			for (auto boneit = bones.Begin(), boneend = bones.End(); boneit != boneend; ++boneit) {
+				if (boneit->animated_ && boneit->node_) {
+					boneit->node_->SetTransform(boneit->initialPosition_, boneit->initialRotation_, boneit->initialScale_);
+				}
 			}
 #else
 			pmx->GetSkeleton().Reset();
@@ -142,7 +143,7 @@ bool VMD::Motion::BeginLoad(Urho3D::Deserializer &source)
 
 	float data[4];
 
-	while (FrameCount--> 0) {
+	while (FrameCount --> 0) {
 		BoneKeyFrame Frame;
 		char InterpolationData[64];
 

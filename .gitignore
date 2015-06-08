@@ -184,3 +184,5 @@ XBeat/Data/Motions
 XBeat/Data/Musics
 XBeat/Doc
 /XBeat/OldData
+/XBeat/CoreData/Shaders/HLSL/Cache
+/XBeat/CoreData/Shaders/GLSL/Cache

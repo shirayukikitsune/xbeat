@@ -64,19 +64,21 @@ enum struct BoneType {
 	IK,
 };
 
-#define BF_ATTACHED 0x0001
-#define BF_ROTATABLE 0x0002
-#define BF_MOVABLE 0x0004
-#define BF_VIEW 0x0008
-#define BF_MANIPULABLE 0x0010
-#define BF_IK 0x0020
-#define BF_LOCALLYATTACHED 0x0020
-#define BF_ROTATIONATTACHED 0x0100
-#define BF_TRANSLATIONATTACHED 0x0200
-#define BF_FIXEDAXIS 0x0400
-#define BF_LOCALAXIS 0x0800
-#define BF_POSTPHYSICSDEFORMATION 0x1000
-#define BF_OUTERPARENTDEFORMATION 0x2000
+namespace BoneFlags {
+	static const unsigned short Attached = 0x0001;
+	static const unsigned short Rotatable = 0x0002;
+	static const unsigned short Movable = 0x0004;
+	static const unsigned short Visible = 0x0008;
+	static const unsigned short Manipulable = 0x0010;
+	static const unsigned short IK = 0x0020;
+	static const unsigned short LocallyAttached = 0x0020;
+	static const unsigned short RotationAttached = 0x0100;
+	static const unsigned short TranslationAttached = 0x0200;
+	static const unsigned short FixedAxis = 0x0400;
+	static const unsigned short LocalAxis = 0x0800;
+	static const unsigned short PostPhysicsDeformation = 0x1000;
+	static const unsigned short OuterParentDeformation = 0x2000;
+};
 
 enum struct DeformationOrigin {
 	User,

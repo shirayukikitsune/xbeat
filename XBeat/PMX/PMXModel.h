@@ -86,6 +86,8 @@ public:
 	/// Finish resource loading. Always called from the main thread. Return true if successful.
 	virtual bool EndLoad();
 
+	const Urho3D::Vector<PMX::Bone> GetBones() const { return boneList; }
+
 private:
 	Urho3D::Vector<PMX::Vertex> vertexList;
 	Urho3D::Vector<unsigned int> indexList;

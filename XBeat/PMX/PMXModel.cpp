@@ -236,7 +236,7 @@ bool PMXModel::EndLoad()
 				auto getDirection = [this](PMX::Bone &bone) {
 					Vector3 direction = Vector3::ZERO;
 
-					if (bone.Flags & BF_ATTACHED) {
+					if (bone.Flags & PMX::BoneFlags::Attached) {
 						if (bone.Size.AttachTo != -1) {
 							PMX::Bone &attached = this->boneList[bone.Size.AttachTo];
 							direction = (Vector3(attached.InitialPosition) - Vector3(bone.InitialPosition)).Normalized();
@@ -438,11 +438,11 @@ void PMXModel::LoadBones(Urho3D::Vector<PMX::Bone>& boneList, Urho3D::Deserializ
 
 		it->Flags = source.ReadUShort();
 
-		if (it->Flags & BF_ATTACHED)
+		if (it->Flags & PMX::BoneFlags::Attached)
 			it->Size.AttachTo = readAsU32(sizeInfo.BoneIndexSize, source);
 		else source.Read(it->Size.Length, sizeof(float) * 3);
 
-		if (it->Flags & (BF_ROTATIONATTACHED | BF_TRANSLATIONATTACHED)) {
+		if (it->Flags & (PMX::BoneFlags::RotationAttached | PMX::BoneFlags::TranslationAttached)) {
 			it->Inherit.From = readAsU32(sizeInfo.BoneIndexSize, source);
 			it->Inherit.Rate = source.ReadFloat();
 		}
@@ -451,20 +451,20 @@ void PMXModel::LoadBones(Urho3D::Vector<PMX::Bone>& boneList, Urho3D::Deserializ
 			it->Inherit.Rate = 1.0f;
 		}
 
-		if (it->Flags & BF_FIXEDAXIS) {
+		if (it->Flags & PMX::BoneFlags::FixedAxis) {
 			source.Read(it->AxisTranslation, sizeof(float) * 3);
 		}
 
-		if (it->Flags & BF_LOCALAXIS) {
+		if (it->Flags & PMX::BoneFlags::LocalAxis) {
 			source.Read(it->LocalAxes.X, sizeof(float) * 3);
 			source.Read(it->LocalAxes.Z, sizeof(float) * 3);
 		}
 
-		if (it->Flags & BF_OUTERPARENTDEFORMATION) {
+		if (it->Flags & PMX::BoneFlags::OuterParentDeformation) {
 			it->ExternalDeformationKey = source.ReadInt();
 		}
 
-		if (it->Flags & BF_IK) {
+		if (it->Flags & PMX::BoneFlags::IK) {
 			it->IkData.targetIndex = readAsU32(sizeInfo.BoneIndexSize, source);
 			it->IkData.loopCount = source.ReadInt();
 			it->IkData.angleLimit = source.ReadFloat();
