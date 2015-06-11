@@ -75,7 +75,7 @@ void Scenes::LoadingScene::initialize()
 	Urho3D::Sprite2D* Sprite = nullptr;
 	// Try to load a file as a texture
 	while (!AvailableFiles.empty()) {
-		Sprite = Cache->GetResource<Urho3D::Sprite2D>(AvailableFiles.back().c_str());
+		Sprite = Cache->GetResource<Urho3D::Sprite2D>(AvailableFiles.back().c_str(), false);
 
 		if (!Sprite) {
 			AvailableFiles.pop_back();
