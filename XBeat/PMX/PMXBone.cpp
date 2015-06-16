@@ -117,6 +117,8 @@ namespace detail {
 		virtual btVector3 getStartPosition();
 		virtual btQuaternion getIKRotation() { return IkRotation; }
 
+		virtual btTransform getSkinningTransform() { return btTransform(btQuaternion::getIdentity(), -InitialPosition) * Transform; }
+
 		virtual Bone* getRootBone();
 
 		virtual void clearIK() { IkRotation = btQuaternion::getIdentity(); }
@@ -282,14 +284,18 @@ void detail::BoneImpl::initialize(Loader::Bone *Data)
 	}
 
 	btVector3 up, axis, direction;
-	up = btVector3(0, 1, 0);
-	direction = getEndPosition() - getPosition();
+	auto Parent = dynamic_cast<detail::BoneImpl*>(this->Parent);
+	if (Parent) up = Parent->getEndPosition(false) - Parent->getStartPosition();
+	else up = btVector3(0, 1, 0);
+	direction = getEndPosition(false) - getStartPosition();
 	axis = up.cross(direction);
 	if (axis.length2() > 0) {
 		// cosO = a.b/||a||*||b||
-		DebugRotation.setRotation(axis, acosf(up.dot(direction) / direction.length()));
+		DebugRotation.setRotation(axis, acosf(up.dot(direction) / direction.length() / up.length()));
 	}
 	else DebugRotation = btQuaternion::getIdentity();
+
+	Inverse.setRotation(DebugRotation);
 }
 
 void detail::BoneImpl::initializeDebug(ID3D11DeviceContext *Context)
@@ -600,23 +606,41 @@ void detail::IKBone::performIK() {
 			if (!Link.Limited || ParentBonePosition.isZero())
 				return;
 
+#if 0
+			btQuaternion rotation = getLocalTransform().getRotation();
+			btMatrix3x3 Matrix;
+			float x, y, z;
+			Matrix.setRotation(rotation);
+			Matrix.getEulerZYX(z, y, x);
+			float cx, cy, cz;
+			Matrix.setRotation(Link.Bone->getRotation());
+			Matrix.getEulerZYX(cz, cy, cx);
+
+			x = btClamped(x, Link.Limits.Lower[0] - cx, Link.Limits.Upper[0] - cx);
+			y = btClamped(y, Link.Limits.Lower[1] - cy, Link.Limits.Upper[1] - cy);
+			z = btClamped(z, Link.Limits.Lower[2] - cz, Link.Limits.Upper[2] - cz);
+
+			rotation.setEulerZYX(z, y, x);
+			btVector3 CurrentDirection = (TargetPosition - LinkPosition).normalized();
+			LinkPosition = quatRotate(rotation, CurrentDirection) * BoneLength + ParentBonePosition;
+#else
 			btVector3 LineDirection = (LinkPosition - ParentBonePosition).normalize();
 
 			btVector3 Origin = LineDirection.dot(TargetPosition - LinkPosition) * LineDirection;
 			float DistanceToOrigin = Origin.length();
-			Origin += LinkPosition;
+			//Origin += LinkPosition;
 
 			btVector3 LocalXDirection(1, 0, 0);
 			btQuaternion YRotation;
 			{
 				// Calculate the Y axis rotation and rotate the X axis for that rotation
-				float YRotationAngle = btAcos(LineDirection.dot(btVector3(0, 1, 0)));
+				float YRotationAngle = btClamped(btAcos(LineDirection.dot(btVector3(0, 1, 0))), Link.Limits.Lower[1], Link.Limits.Upper[1]);
 				btVector3 YRotationAxis = LineDirection.cross(btVector3(0, 1, 0));
 				YRotation = btQuaternion(YRotationAxis, YRotationAngle);
 				LocalXDirection = quatRotate(YRotation, LocalXDirection);
 			}
 
-			btVector3 LocalPosition = Origin - LinkPosition;
+			btVector3 LocalPosition = Origin;
 			float Theta = btAcos(LocalPosition.normalized().dot(LocalXDirection));
 			int Quadrant = (int)(Theta / DirectX::XM_PIDIV2);
 			float Q1, Q2;
@@ -646,9 +670,9 @@ void detail::IKBone::performIK() {
 			LocalPosition.setY(0.0f);
 			LocalPosition.setZ(powf(-1.0f, Quadrant) * (fabsf(Y) < fabsf(LocalPosition.z()) ? fabsf(Y) : fabsf(LocalPosition.z())));
 
-			auto DesiredPosition = (quatRotate(YRotation, LocalPosition) + Origin).lerp(LinkPosition, BoneLength / DistanceToOrigin);
-			btVector3 CurrentDirection = (TargetPosition - LinkPosition).normalized();
-			btVector3 DesiredDirection = (DesiredPosition - LinkPosition).normalized();
+			auto DesiredPosition = quatRotate(YRotation, LocalPosition).lerp((Reverse ? LinkPosition : TargetPosition), DistanceToOrigin / BoneLength);
+			btVector3 CurrentDirection = (Reverse ? LinkPosition - TargetPosition : TargetPosition - LinkPosition).normalized();
+			btVector3 DesiredDirection = (Reverse ? LinkPosition - DesiredPosition : DesiredDirection - TargetPosition).normalized();
 			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
 			float Dot = CurrentDirection.dot(DesiredDirection);
 			if (Axis.length2() < 0.000001f) {
@@ -657,9 +681,12 @@ void detail::IKBone::performIK() {
 			}
 
 			Axis.normalize();
-			float Angle = btClamped(btAcos(Dot), Link.Limits.Lower[1], Link.Limits.Upper[1]);
+			float Angle = btAcos(Dot);
+			if (Reverse)
+				Angle = -Angle;
 
 			LinkPosition = quatRotate(btQuaternion(Axis, Angle), CurrentDirection) * BoneLength + ParentBonePosition;
+#endif
 		};
 
 		// Stage 1: Forward reaching
@@ -677,7 +704,7 @@ void detail::IKBone::performIK() {
 		P0.setZero();
 		for (int Index = 0; Index < TargetPositions.size() - 1; ++Index) {
 			auto& Link = Links[Links.size() - Index - 1];
-			performInnerIteraction(P0, TargetPositions[Index + 1], TargetPositions[Index], Link, true);
+			performInnerIteraction(P0, TargetPositions[Index], TargetPositions[Index + 1], Link, true);
 			P0 = TargetPositions[Index];
 		}
 
@@ -765,7 +792,7 @@ void detail::IKBone::performIK() {
 			btQuaternion Rotation(Axis, Angle);
 			// clamp rotation values
 			if (Link.Limited) {
-#if 0
+#if 1
 				if (Iteration == 0) {
 					Link.Bone->IkRotation.setRotation(Axis, -AngleLimit);
 					//Link.Bone->IkRotation.setEulerZYX(Link.Limits.Upper[2], Link.Limits.Upper[1], Link.Limits.Upper[0]);
@@ -788,7 +815,7 @@ void detail::IKBone::performIK() {
 					Rotation.setEulerZYX(z, y, x);
 				}
 			}
-			Link.Bone->IkRotation = Rotation * Link.Bone->IkRotation;
+			Link.Bone->IkRotation *= Rotation;
 
 			for (int UpdateIndex = Index; UpdateIndex >= 0; --UpdateIndex) {
 				Links[UpdateIndex].Bone->update();

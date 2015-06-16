@@ -64,6 +64,8 @@ public:
 	btTransform getTransform() { return Transform; }
 	//! Gets the local transformation
 	btTransform getLocalTransform() { return Inverse * Transform; }
+	//! Gets the transformation used for skinning
+	virtual btTransform getSkinningTransform() { return Inverse * Transform; }
 	//! Gets the inverse transformation
 	btTransform getInverseTransform() { return Inverse; }
 
