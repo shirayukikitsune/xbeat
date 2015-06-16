@@ -14,6 +14,7 @@
 
 #include "Motion.h"
 #include "../PMX/PMXModel.h"
+#include "../PMX/PMXRigidBody.h"
 
 #include <algorithm>
 #include <Camera.h>
@@ -58,21 +59,23 @@ bool VMD::Motion::advanceFrame(float Frames)
 		updateCamera(CurrentFrame);
 
 	if (!AttachedModels.Empty()) {
-		for (auto ModelIt = AttachedModels.Begin(); ModelIt != AttachedModels.End(); ++ModelIt) {
+		/*for (auto ModelIt = AttachedModels.Begin(); ModelIt != AttachedModels.End(); ++ModelIt) {
 			auto pmx = (*ModelIt)->GetComponent<PMXAnimatedModel>();
-#if 0
+#if 1
 			auto model = static_cast<PMXModel*>(pmx->GetModel());
 			auto bones = pmx->GetSkeleton().GetModifiableBones();
 			auto pmxit = model->GetBones().Begin(), pmxend = model->GetBones().End();
 			for (auto boneit = bones.Begin(), boneend = bones.End(); boneit != boneend; ++boneit) {
 				if (boneit->animated_ && boneit->node_) {
-					boneit->node_->SetTransform(boneit->initialPosition_, boneit->initialRotation_, boneit->initialScale_);
+					if (!boneit->node_->GetComponent<PMXRigidBody>())
+						boneit->node_->SetTransform(boneit->initialPosition_, boneit->initialRotation_, boneit->initialScale_);
 				}
+				++pmxit;
 			}
 #else
 			pmx->GetSkeleton().Reset();
 #endif
-		}
+		}*/
 
 		updateBones(CurrentFrame);
 		updateMorphs(CurrentFrame);
@@ -247,9 +250,13 @@ void VMD::Motion::setBoneParameters(Urho3D::String BoneName, Urho3D::Vector3 &Po
 		auto bone = modelNode->GetComponent<PMXAnimatedModel>()->GetSkeleton().GetBone(BoneName);
 		if (bone) {
 			auto boneNode = bone->node_;
-			boneNode->SetPosition(Position + bone->initialPosition_);
-			boneNode->SetRotation(Rotation);
+			if (!boneNode->HasComponent<Urho3D::RigidBody>() || boneNode->HasComponent<PMXRigidBody>() || boneNode->GetComponent<Urho3D::RigidBody>()->IsKinematic()) {
+				boneNode->SetPositionSilent(Position + bone->initialPosition_);
+				boneNode->SetRotationSilent(bone->initialRotation_ * Rotation);
+			}
 		}
+
+		modelNode->MarkDirty();
 	}
 }
 

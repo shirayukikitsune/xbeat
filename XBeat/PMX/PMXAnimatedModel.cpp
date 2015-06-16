@@ -1,5 +1,6 @@
 #include "PMXAnimatedModel.h"
 #include "PMXModel.h"
+#include "PMXRigidBody.h"
 
 #include <CollisionShape.h>
 #include <Constraint.h>
@@ -10,6 +11,8 @@
 #include <RigidBody.h>
 #include <Technique.h>
 #include <Texture2D.h>
+
+#include <Bullet/BulletDynamics/ConstraintSolver/btHingeConstraint.h>
 
 using namespace Urho3D;
 
@@ -65,6 +68,11 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		else {
 			Rigid->SetMass(Body.mass);
 		}
+
+		if (Body.mode == PMX::RigidBodyMode::AlignedDynamic) {
+			Node->CreateComponent<PMXRigidBody>();
+		}
+
 		Rigid->SetAngularDamping(Body.angularDamping);
 		Rigid->SetFriction(Body.friction);
 		Rigid->SetLinearDamping(Body.linearDamping);
@@ -102,7 +110,22 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 
 		switch (constraint.type) {
 		case PMX::JointType::Hinge:
-			constraintComponent->SetConstraintType(CONSTRAINT_HINGE); break;
+		{
+			constraintComponent->SetConstraintType(CONSTRAINT_HINGE);
+			constraintComponent->SetLowLimit(Vector2(M_RADTODEG * constraint.data.lowerRotationRestrictions[0], 0));
+			constraintComponent->SetHighLimit(Vector2(M_RADTODEG * constraint.data.upperRotationRestrictions[0], 0));
+
+			/*auto btConstraint = static_cast<btHingeConstraint*>(constraintComponent->GetConstraint());
+			btConstraint->setLimit(constraint.data.lowerRotationRestrictions[0], constraint.data.upperRotationRestrictions[0], constraint.data.springConstant[0], constraint.data.springConstant[1], constraint.data.springConstant[2]);
+
+			bool motor = constraint.data.springConstant[3] != 0.0f;
+			btConstraint->enableMotor(motor);
+			if (motor) {
+				btConstraint->enableAngularMotor(motor, constraint.data.springConstant[4], constraint.data.springConstant[5]);
+			}*/
+
+			break;
+		}
 		case PMX::JointType::ConeTwist:
 			constraintComponent->SetConstraintType(CONSTRAINT_CONETWIST); break;
 		case PMX::JointType::Slider:

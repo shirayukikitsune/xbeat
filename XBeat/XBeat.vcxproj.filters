@@ -40,6 +40,9 @@
     <ClCompile Include="VMD\MotionController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PMX\PMXRigidBody.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="XBeat.h">
@@ -70,6 +73,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="VMD\VMDDefinitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PMX\PMXRigidBody.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -171,6 +171,7 @@
   <ItemGroup>
     <ClCompile Include="PMX\PMXAnimatedModel.cpp" />
     <ClCompile Include="PMX\PMXModel.cpp" />
+    <ClCompile Include="PMX\PMXRigidBody.cpp" />
     <ClCompile Include="Scenes\LoadingScene.cpp" />
     <ClCompile Include="Scenes\MenuScene.cpp" />
     <ClCompile Include="VMD\Motion.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="PMX\PMXAnimatedModel.h" />
     <ClInclude Include="PMX\PMXDefinitions.h" />
     <ClInclude Include="PMX\PMXModel.h" />
+    <ClInclude Include="PMX\PMXRigidBody.h" />
     <ClInclude Include="PMX\PMXSoftBody.h" />
     <ClInclude Include="Scenes\LoadingScene.h" />
     <ClInclude Include="Scenes\MenuScene.h" />
