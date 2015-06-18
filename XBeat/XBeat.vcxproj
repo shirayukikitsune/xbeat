@@ -169,6 +169,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="PMX\PMXIKNode.cpp" />
+    <ClCompile Include="PMX\PMXIKTarget.cpp" />
     <ClCompile Include="PMX\PMXAnimatedModel.cpp" />
     <ClCompile Include="PMX\PMXModel.cpp" />
     <ClCompile Include="PMX\PMXRigidBody.cpp" />
@@ -179,6 +181,8 @@
     <ClCompile Include="XBeat.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="PMX\PMXIKNode.h" />
+    <ClInclude Include="PMX\PMXIKTarget.h" />
     <ClInclude Include="PMX\PMXAnimatedModel.h" />
     <ClInclude Include="PMX\PMXDefinitions.h" />
     <ClInclude Include="PMX\PMXModel.h" />

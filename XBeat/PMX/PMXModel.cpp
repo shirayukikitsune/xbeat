@@ -277,7 +277,7 @@ bool PMXModel::EndLoad()
 	SetIndexBuffers(iBuffers);
 	PODVector<unsigned int> empty;
 	SetVertexBuffers(vBuffers, empty, empty);
-	SetName(description.name.japanese + ".mdl");
+	SetName(description.name.japanese);
 	SetBoundingBox(BoundingBox(&positions.At(0), positions.Size()));
 
 	return true;

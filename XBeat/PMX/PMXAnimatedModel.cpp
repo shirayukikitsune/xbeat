@@ -1,4 +1,6 @@
 #include "PMXAnimatedModel.h"
+#include "PMXIKNode.h"
+#include "PMXIKTarget.h"
 #include "PMXModel.h"
 #include "PMXRigidBody.h"
 
@@ -48,6 +50,47 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		return;
 
 	AnimatedModel::SetModel(model, true);
+
+	auto getBoneLength = [](Vector<PMX::Bone> &boneList, PMX::Bone &bone) {
+		Vector3 length = Vector3::ZERO;
+
+		if (bone.Flags & PMX::BoneFlags::Attached) {
+			if (bone.Size.AttachTo != -1) {
+				PMX::Bone &attached = boneList[bone.Size.AttachTo];
+				length = Vector3(attached.InitialPosition) - Vector3(bone.InitialPosition);
+			}
+		}
+		else length = Vector3(bone.Size.Length);
+
+		return length.Length();
+	};
+
+	// Define IK chains
+	for (unsigned int i = 0; i < model->boneList.Size(); ++i) {
+		auto bone = model->boneList[i];
+		if ((bone.Flags & PMX::BoneFlags::IK) == 0)
+			continue;
+
+		WeakPtr<Node> node;
+		node = GetSkeleton().GetBone(i)->node_;
+		auto ikTarget = node->CreateComponent<PMXIKTarget>();
+		ikTarget->SetAngleLimit(bone.IkData.angleLimit);
+		ikTarget->SetLoopCount(bone.IkData.loopCount);
+		auto endNode = GetSkeleton().GetBone(bone.IkData.targetIndex)->node_;
+		ikTarget->AddNode(endNode->CreateComponent<PMXIKNode>());
+		ikTarget->SetEndNode(endNode);
+
+		for (auto it = bone.IkData.links.Begin(); it != bone.IkData.links.End(); ++it) {
+			auto boneNode = GetSkeleton().GetBone(it->boneIndex)->node_;
+			auto ikNode = boneNode->CreateComponent<PMXIKNode>();
+			ikNode->SetBoneLength(getBoneLength(model->boneList, model->boneList[it->boneIndex]));
+			ikNode->SetLimited(it->limitAngle);
+			ikNode->SetLowerLimit(Vector3(it->limits.lower));
+			ikNode->SetUpperLimit(Vector3(it->limits.upper));
+			ikNode->SetBone(GetSkeleton().GetBone(it->boneIndex));
+			ikTarget->AddNode(ikNode);
+		}
+	}
 
 	Vector<Urho3D::RigidBody*> createdRigidBodies;
 	// Create rigid bodies

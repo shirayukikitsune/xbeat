@@ -5,14 +5,16 @@
 // This file is distributed under the University of Illinois Open Source License.
 // See LICENSE.TXT for details.
 //
-//===-------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
 ///
 /// \file
 /// \brief This file defines the VMD::Motion class
 ///
-//===-------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
 
 #include "Motion.h"
+#include "../PMX/PMXIKNode.h"
+#include "../PMX/PMXIKTarget.h"
 #include "../PMX/PMXModel.h"
 #include "../PMX/PMXRigidBody.h"
 
@@ -59,24 +61,6 @@ bool VMD::Motion::advanceFrame(float Frames)
 		updateCamera(CurrentFrame);
 
 	if (!AttachedModels.Empty()) {
-		/*for (auto ModelIt = AttachedModels.Begin(); ModelIt != AttachedModels.End(); ++ModelIt) {
-			auto pmx = (*ModelIt)->GetComponent<PMXAnimatedModel>();
-#if 1
-			auto model = static_cast<PMXModel*>(pmx->GetModel());
-			auto bones = pmx->GetSkeleton().GetModifiableBones();
-			auto pmxit = model->GetBones().Begin(), pmxend = model->GetBones().End();
-			for (auto boneit = bones.Begin(), boneend = bones.End(); boneit != boneend; ++boneit) {
-				if (boneit->animated_ && boneit->node_) {
-					if (!boneit->node_->GetComponent<PMXRigidBody>())
-						boneit->node_->SetTransform(boneit->initialPosition_, boneit->initialRotation_, boneit->initialScale_);
-				}
-				++pmxit;
-			}
-#else
-			pmx->GetSkeleton().Reset();
-#endif
-		}*/
-
 		updateBones(CurrentFrame);
 		updateMorphs(CurrentFrame);
 	}
@@ -250,9 +234,10 @@ void VMD::Motion::setBoneParameters(Urho3D::String BoneName, Urho3D::Vector3 &Po
 		auto bone = modelNode->GetComponent<PMXAnimatedModel>()->GetSkeleton().GetBone(BoneName);
 		if (bone) {
 			auto boneNode = bone->node_;
-			if (!boneNode->HasComponent<Urho3D::RigidBody>() || boneNode->HasComponent<PMXRigidBody>() || boneNode->GetComponent<Urho3D::RigidBody>()->IsKinematic()) {
+			if ((!boneNode->HasComponent<Urho3D::RigidBody>() || boneNode->HasComponent<PMXRigidBody>() || boneNode->GetComponent<Urho3D::RigidBody>()->IsKinematic())
+					&& !boneNode->HasComponent<PMXIKNode>() && !boneNode->HasComponent<PMXIKTarget>()){
 				boneNode->SetPositionSilent(Position + bone->initialPosition_);
-				boneNode->SetRotationSilent(bone->initialRotation_ * Rotation);
+				boneNode->SetRotationSilent(Rotation * bone->initialRotation_);
 			}
 		}
 
