@@ -332,6 +332,9 @@ btVector3 detail::BoneImpl::getEndPosition(bool transform)
 
 float detail::BoneImpl::getLength()
 {
+	if (AttachedTo) {
+		return (AttachedTo->getPosition() - getPosition()).length();
+	}
 	return Length;
 }
 
@@ -562,173 +565,150 @@ void detail::IKBone::performIK() {
 
 	btVector3 TargetPosition = getPosition();
 	btVector3 RootPosition = Links.back().Bone->getPosition();
-
-#if 1
+	
+	std::vector<btVector3> NodePositions;
+	std::vector<float> bonesLength;
+	// The first position of the vector is the root of the chain, and the last, the target point
+	for (int Index = Links.size() - 1; Index >= 0; --Index) {
+		NodePositions.emplace_back(Links[Index].Bone->getPosition());
+		bonesLength.emplace_back(Links[Index].Bone->getLength());
+	}
+	NodePositions.emplace_back(TargetBone->getPosition());
+	bonesLength.emplace_back(TargetBone->getLength());
 	// Determine if the target position is reachable
 	if (RootPosition.distance(TargetPosition) > ChainLength) {
-		// If unreachable, move the target point to a reachable point colinear to the root bone position and the original target point
-		TargetPosition = (TargetPosition - RootPosition).normalized() * ChainLength + RootPosition;
-		assert(RootPosition.distance(TargetPosition) <= ChainLength + 0.0001f);
+		for (int i = 0; i < NodePositions.size() - 1; ++i) {
+			float distance = (TargetPosition - NodePositions[i]).length();
+			float ratio = bonesLength[i] / distance;
+			NodePositions[i + 1] = NodePositions[i].lerp(TargetPosition, ratio);
+		}
 	}
-#endif
+	else {
+		for (int Iteration = 0; Iteration < LoopCount; ++Iteration) {
+			if ((NodePositions.back() - TargetPosition).length2() < 0.00001f) {
+				if (Iteration == 0)
+					return;
+
+				break;
+			}
+
+			NodePositions.back() = TargetPosition;
+			for (int Index = NodePositions.size() - 2; Index >= 0; --Index) {
+				float distance = (NodePositions[Index + 1] - NodePositions[Index]).length();
+				float ratio = bonesLength[Index] / distance;
+				NodePositions[Index] = NodePositions[Index + 1].lerp(NodePositions[Index], ratio);
+			}
+
+			NodePositions.front() = RootPosition;
+			for (int Index = 0; Index < NodePositions.size() - 1; ++Index) {
+				float distance = (NodePositions[Index + 1] - NodePositions[Index]).length();
+				float ratio = bonesLength[Index] / distance;
+				NodePositions[Index + 1] = NodePositions[Index].lerp(NodePositions[Index + 1], ratio);
+			}
+		}
+	}
 
 	btQuaternion OldRotation = TargetBone->getRotation();
 
-	for (int Iteration = 0; Iteration < LoopCount; ++Iteration) {
-		btVector3 EndPosition = TargetBone->getPosition();
-		// Check if the last joint position is close to the target point
-		if (EndPosition.distance(TargetPosition) < 0.001f) {
+	auto performInnerIteraction = [this](btVector3 &ParentBonePosition, btVector3 &LinkPosition, btVector3 &TargetPosition, Node &Link, float BoneLength) {
+#if 0
+		btQuaternion rotation = getLocalTransform().getRotation();
+		btMatrix3x3 Matrix;
+		float x, y, z;
+		Matrix.setRotation(rotation);
+		Matrix.getEulerZYX(z, y, x);
+		float cx, cy, cz;
+		Matrix.setRotation(Link.Bone->getRotation());
+		Matrix.getEulerZYX(cz, cy, cx);
+
+		x = btClamped(x, Link.Limits.Lower[0] - cx, Link.Limits.Upper[0] - cx);
+		y = btClamped(y, Link.Limits.Lower[1] - cy, Link.Limits.Upper[1] - cy);
+		z = btClamped(z, Link.Limits.Lower[2] - cz, Link.Limits.Upper[2] - cz);
+
+		rotation.setEulerZYX(z, y, x);
+		btVector3 CurrentDirection = (TargetPosition - LinkPosition).normalized();
+		LinkPosition = quatRotate(rotation, CurrentDirection) * BoneLength + ParentBonePosition;
+#else
+		btVector3 LineDirection = (LinkPosition - ParentBonePosition).normalize();
+
+		btVector3 Origin = LineDirection.dot(TargetPosition - LinkPosition) * LineDirection;
+		float DistanceToOrigin = Origin.length();
+
+		btVector3 LocalXDirection(1, 0, 0);
+		btQuaternion YRotation;
+		{
+			// Calculate the Y axis rotation and rotate the X axis for that rotation
+			float YRotationAngle = btClamped(btAcos(LineDirection.dot(btVector3(0, 1, 0))), Link.Limits.Lower[1], Link.Limits.Upper[1]);
+			btVector3 YRotationAxis = LineDirection.cross(btVector3(0, 1, 0));
+			YRotation = btQuaternion(YRotationAxis, YRotationAngle);
+			LocalXDirection = quatRotate(YRotation, LocalXDirection);
+		}
+
+		btVector3 LocalPosition = Origin;
+		float Theta = btAcos(LocalPosition.normalized().dot(LocalXDirection));
+		int Quadrant = (int)(Theta / DirectX::XM_PIDIV2);
+		float Q1, Q2;
+
+		switch (Quadrant) {
+		default:
+			Q1 = DistanceToOrigin * tanf(Link.Limits.Upper[0]);
+			Q2 = DistanceToOrigin * tanf(Link.Limits.Upper[2]);
+			break;
+		case 1:
+			Q1 = DistanceToOrigin * tanf(Link.Limits.Lower[0]);
+			Q2 = DistanceToOrigin * tanf(Link.Limits.Upper[2]);
+			break;
+		case 2:
+			Q1 = DistanceToOrigin * tanf(Link.Limits.Lower[0]);
+			Q2 = DistanceToOrigin * tanf(Link.Limits.Lower[2]);
+			break;
+		case 3:
+			Q1 = DistanceToOrigin * tanf(Link.Limits.Upper[0]);
+			Q2 = DistanceToOrigin * tanf(Link.Limits.Lower[2]);
+			break;
+		}
+
+		float X = Q1 * cosf(Theta);
+		float Y = Q2 * sinf(Theta);
+		LocalPosition.setX(powf(-1.0f, Quadrant) * (fabsf(X) < fabsf(LocalPosition.x()) ? fabsf(X) : fabsf(LocalPosition.x())));
+		LocalPosition.setY(0.0f);
+		LocalPosition.setZ(powf(-1.0f, Quadrant) * (fabsf(Y) < fabsf(LocalPosition.z()) ? fabsf(Y) : fabsf(LocalPosition.z())));
+
+		auto DesiredPosition = quatRotate(YRotation, LocalPosition).lerp(TargetPosition, DistanceToOrigin / BoneLength);
+		btVector3 CurrentDirection = (LinkPosition - TargetPosition).normalized();
+		btVector3 DesiredDirection = (DesiredDirection - TargetPosition).normalized();
+		btVector3 Axis = CurrentDirection.cross(DesiredDirection);
+		float Dot = CurrentDirection.dot(DesiredDirection);
+		if (Axis.length2() < 0.000001f) {
+			LinkPosition = DesiredPosition;
 			return;
 		}
 
-		// Here we are assuming that all bones of the chain are interconnected
-		std::vector<btVector3> TargetPositions;
-		// The first position of the vector is the root of the chain, and the last, the target point
-		for (int Index = Links.size() - 1; Index >= 0; --Index) {
-			TargetPositions.emplace_back(Links[Index].Bone->getPosition());
-		}
-		
-		TargetPositions.emplace_back(TargetPosition);
+		Axis.normalize();
+		float Angle = btAcos(Dot);
 
-		auto performInnerIteraction = [this](btVector3 &ParentBonePosition, btVector3 &LinkPosition, btVector3 &TargetPosition, Node &Link, bool Reverse) {
-			float Distance = LinkPosition.distance(TargetPosition);
-			if (Distance <= 0.00001f) {
-				LinkPosition = TargetPosition;
-				return;
-			}
-			float BoneLength = Link.Bone->getLength();
-			float Ratio = BoneLength / Distance;
-			btClamp(Ratio, 0.0f, 1.0f);
-
-			LinkPosition = TargetPosition.lerp(LinkPosition, Ratio);
-
-			// Now apply rotation constraints if needed
-			if (!Link.Limited || ParentBonePosition.isZero())
-				return;
-
-#if 0
-			btQuaternion rotation = getLocalTransform().getRotation();
-			btMatrix3x3 Matrix;
-			float x, y, z;
-			Matrix.setRotation(rotation);
-			Matrix.getEulerZYX(z, y, x);
-			float cx, cy, cz;
-			Matrix.setRotation(Link.Bone->getRotation());
-			Matrix.getEulerZYX(cz, cy, cx);
-
-			x = btClamped(x, Link.Limits.Lower[0] - cx, Link.Limits.Upper[0] - cx);
-			y = btClamped(y, Link.Limits.Lower[1] - cy, Link.Limits.Upper[1] - cy);
-			z = btClamped(z, Link.Limits.Lower[2] - cz, Link.Limits.Upper[2] - cz);
-
-			rotation.setEulerZYX(z, y, x);
-			btVector3 CurrentDirection = (TargetPosition - LinkPosition).normalized();
-			LinkPosition = quatRotate(rotation, CurrentDirection) * BoneLength + ParentBonePosition;
-#else
-			btVector3 LineDirection = (LinkPosition - ParentBonePosition).normalize();
-
-			btVector3 Origin = LineDirection.dot(TargetPosition - LinkPosition) * LineDirection;
-			float DistanceToOrigin = Origin.length();
-			//Origin += LinkPosition;
-
-			btVector3 LocalXDirection(1, 0, 0);
-			btQuaternion YRotation;
-			{
-				// Calculate the Y axis rotation and rotate the X axis for that rotation
-				float YRotationAngle = btClamped(btAcos(LineDirection.dot(btVector3(0, 1, 0))), Link.Limits.Lower[1], Link.Limits.Upper[1]);
-				btVector3 YRotationAxis = LineDirection.cross(btVector3(0, 1, 0));
-				YRotation = btQuaternion(YRotationAxis, YRotationAngle);
-				LocalXDirection = quatRotate(YRotation, LocalXDirection);
-			}
-
-			btVector3 LocalPosition = Origin;
-			float Theta = btAcos(LocalPosition.normalized().dot(LocalXDirection));
-			int Quadrant = (int)(Theta / DirectX::XM_PIDIV2);
-			float Q1, Q2;
-
-			switch (Quadrant) {
-			default:
-				Q1 = DistanceToOrigin * tanf(Link.Limits.Upper[0]);
-				Q2 = DistanceToOrigin * tanf(Link.Limits.Upper[2]);
-				break;
-			case 1:
-				Q1 = DistanceToOrigin * tanf(Link.Limits.Lower[0]);
-				Q2 = DistanceToOrigin * tanf(Link.Limits.Upper[2]);
-				break;
-			case 2:
-				Q1 = DistanceToOrigin * tanf(Link.Limits.Lower[0]);
-				Q2 = DistanceToOrigin * tanf(Link.Limits.Lower[2]);
-				break;
-			case 3:
-				Q1 = DistanceToOrigin * tanf(Link.Limits.Upper[0]);
-				Q2 = DistanceToOrigin * tanf(Link.Limits.Lower[2]);
-				break;
-			}
-
-			float X = Q1 * cosf(Theta);
-			float Y = Q2 * sinf(Theta);
-			LocalPosition.setX(powf(-1.0f, Quadrant) * (fabsf(X) < fabsf(LocalPosition.x()) ? fabsf(X) : fabsf(LocalPosition.x())));
-			LocalPosition.setY(0.0f);
-			LocalPosition.setZ(powf(-1.0f, Quadrant) * (fabsf(Y) < fabsf(LocalPosition.z()) ? fabsf(Y) : fabsf(LocalPosition.z())));
-
-			auto DesiredPosition = quatRotate(YRotation, LocalPosition).lerp((Reverse ? LinkPosition : TargetPosition), DistanceToOrigin / BoneLength);
-			btVector3 CurrentDirection = (Reverse ? LinkPosition - TargetPosition : TargetPosition - LinkPosition).normalized();
-			btVector3 DesiredDirection = (Reverse ? LinkPosition - DesiredPosition : DesiredDirection - TargetPosition).normalized();
-			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
-			float Dot = CurrentDirection.dot(DesiredDirection);
-			if (Axis.length2() < 0.000001f) {
-				LinkPosition = DesiredPosition;
-				return;
-			}
-
-			Axis.normalize();
-			float Angle = btAcos(Dot);
-			if (Reverse)
-				Angle = -Angle;
-
-			LinkPosition = quatRotate(btQuaternion(Axis, Angle), CurrentDirection) * BoneLength + ParentBonePosition;
+		LinkPosition = quatRotate(btQuaternion(Axis, Angle), CurrentDirection) * BoneLength + ParentBonePosition;
 #endif
-		};
+	};
 
-		// Stage 1: Forward reaching
-		btVector3 P0 = Links.back().Bone->getParent()->getPosition();
-		for (int Index = TargetPositions.size() - 2; Index >= 0; --Index) {
-			auto& Link = Links[Links.size() - Index - 1];
-			performInnerIteraction(P0, TargetPositions[Index], TargetPositions[Index + 1], Link, false);
-			P0 = TargetPositions[Index];
-		}
+	// Apply the new positions as rotations
+	for (int Index = 0; Index < NodePositions.size() - 1; ++Index) {
+		auto& Link = Links[Links.size() - Index - 1];
+		btVector3 position = Link.Bone->getPosition();
 
-		// Set the root position its initial position
-		TargetPositions[0] = RootPosition;
+		btVector3 CurrentDirection = (Link.Bone->getEndPosition() - position).normalized();
+		btVector3 DesiredDirection = (NodePositions[Index + 1] - NodePositions[Index]).normalized();
 
-		// Stage 2: Backward reaching
-		P0.setZero();
-		for (int Index = 0; Index < TargetPositions.size() - 1; ++Index) {
-			auto& Link = Links[Links.size() - Index - 1];
-			performInnerIteraction(P0, TargetPositions[Index], TargetPositions[Index + 1], Link, true);
-			P0 = TargetPositions[Index];
-		}
+		btVector3 Axis = CurrentDirection.cross(DesiredDirection);
+		float Dot = CurrentDirection.dot(DesiredDirection);
 
-		// Apply the new positions as rotations
-		for (int Index = TargetPositions.size() - 2; Index >= 0; --Index) {
-			auto& Link = Links[Links.size() - Index - 1];
-			btVector3 position = Link.Bone->getPosition();
-
-			btVector3 CurrentDirection = (Link.Bone->getEndPosition() - position).normalized();
-			btVector3 DesiredDirection = (TargetPositions[Index + 1] - position).normalized();
-
-			btVector3 Axis = CurrentDirection.cross(DesiredDirection);
-			float Dot = CurrentDirection.dot(DesiredDirection);
-
-			if (Dot > 0.999999f || Axis.isZero()) continue;
+		if (Dot > 0.999999f || Axis.isZero()) continue;
 			
-			Axis.normalize();
-			float Angle = btAcos(Dot);
+		Axis.normalize();
+		float Angle = btAcos(Dot);
 
-			Link.Bone->IkRotation *= btQuaternion(Axis, Angle);
-
-			Link.Bone->update();
-		}
-		TargetBone->update();
+		Link.Bone->IkRotation = btQuaternion(Axis, Angle);
+		Link.Bone->update();
 	}
 
 	TargetBone->IkRotation = OldRotation * TargetBone->getRotation().inverse();
