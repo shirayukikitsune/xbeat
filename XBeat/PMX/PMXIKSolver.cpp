@@ -57,7 +57,7 @@ void PMXIKSolver::FixedUpdate(float timeStep)
 		for (int i = 0; i < jointPositions.Size() - 1; ++i) {
 			float distance = (targetPosition - jointPositions[i]).Length();
 			float ratio = boneLengths[i] / distance;
-			jointPositions[i + 1] = (1 - ratio) * jointPositions[i] + ratio * targetPosition;
+			jointPositions[i + 1] = jointPositions[i].Lerp(targetPosition, ratio);
 		}
 	}
 	else {
@@ -72,7 +72,7 @@ void PMXIKSolver::FixedUpdate(float timeStep)
 			for (int n = jointPositions.Size() - 2; n >= 0; --n) {
 				float distance = (jointPositions[n + 1] - jointPositions[n]).Length();
 				float ratio = boneLengths[n] / distance;
-				jointPositions[n] = (1 - ratio) * jointPositions[n + 1] + ratio * jointPositions[n];
+				jointPositions[n] = jointPositions[n + 1].Lerp(jointPositions[n], ratio);
 			}
 
 			// Stage 2: Backward reaching
@@ -81,7 +81,7 @@ void PMXIKSolver::FixedUpdate(float timeStep)
 			for (int n = 0; n < jointPositions.Size() - 1; ++n) {
 				float distance = (jointPositions[n + 1] - jointPositions[n]).Length();
 				float ratio = boneLengths[n] / distance;
-				jointPositions[n + 1] = (1 - ratio) * jointPositions[n] + ratio * jointPositions[n + 1];
+				jointPositions[n + 1] = jointPositions[n].Lerp(jointPositions[n + 1], ratio);
 			}
 		}
 	}
