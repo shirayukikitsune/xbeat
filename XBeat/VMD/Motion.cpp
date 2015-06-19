@@ -14,7 +14,6 @@
 
 #include "Motion.h"
 #include "../PMX/PMXIKNode.h"
-#include "../PMX/PMXIKTarget.h"
 #include "../PMX/PMXModel.h"
 #include "../PMX/PMXRigidBody.h"
 
@@ -235,7 +234,7 @@ void VMD::Motion::setBoneParameters(Urho3D::String BoneName, Urho3D::Vector3 &Po
 		if (bone) {
 			auto boneNode = bone->node_;
 			if ((!boneNode->HasComponent<Urho3D::RigidBody>() || boneNode->HasComponent<PMXRigidBody>() || boneNode->GetComponent<Urho3D::RigidBody>()->IsKinematic())
-					&& !boneNode->HasComponent<PMXIKNode>() && !boneNode->HasComponent<PMXIKTarget>()){
+				&& !boneNode->HasComponent<PMXIKNode>()){
 				boneNode->SetPositionSilent(Position + bone->initialPosition_);
 				boneNode->SetRotationSilent(Rotation * bone->initialRotation_);
 			}

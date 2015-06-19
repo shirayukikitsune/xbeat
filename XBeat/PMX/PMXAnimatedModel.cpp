@@ -1,6 +1,6 @@
 #include "PMXAnimatedModel.h"
 #include "PMXIKNode.h"
-#include "PMXIKTarget.h"
+#include "PMXIKSolver.h"
 #include "PMXModel.h"
 #include "PMXRigidBody.h"
 
@@ -73,7 +73,7 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 
 		WeakPtr<Node> node;
 		node = GetSkeleton().GetBone(i)->node_;
-		auto ikTarget = node->CreateComponent<PMXIKTarget>();
+		auto ikTarget = node->CreateComponent<PMXIKSolver>();
 		ikTarget->SetAngleLimit(bone.IkData.angleLimit);
 		ikTarget->SetLoopCount(bone.IkData.loopCount);
 		auto endNode = GetSkeleton().GetBone(bone.IkData.targetIndex)->node_;

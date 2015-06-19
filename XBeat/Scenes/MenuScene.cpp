@@ -79,7 +79,7 @@ void Scenes::Menu::initialize()
 	}
 
 	CameraNode = Scene->CreateChild("Camera");
-	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -50.0f));
+	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -30.0f));
 	auto Camera = CameraNode->CreateComponent<Urho3D::Camera>();
 
 	using namespace Urho3D;

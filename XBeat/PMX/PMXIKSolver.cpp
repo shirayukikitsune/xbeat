@@ -1,4 +1,4 @@
-#include "PMXIKTarget.h"
+#include "PMXIKSolver.h"
 
 #include "PMXIKNode.h"
 
@@ -8,36 +8,38 @@
 
 using namespace Urho3D;
 
-PMXIKTarget::PMXIKTarget(Urho3D::Context *context)
+PMXIKSolver::PMXIKSolver(Urho3D::Context *context)
 	: Urho3D::LogicComponent(context)
 {
 	threshold = 0.000001f;
 	chainLength = 0.0f;
 	angleLimit = M_PI;
 	loopCount = 20;
+
+	SetUpdateEventMask(USE_FIXEDUPDATE);
 }
 
-PMXIKTarget::~PMXIKTarget()
+PMXIKSolver::~PMXIKSolver()
 {
 }
 
-void PMXIKTarget::RegisterObject(Urho3D::Context *context)
+void PMXIKSolver::RegisterObject(Urho3D::Context *context)
 {
-	context->RegisterFactory<PMXIKTarget>();
+	context->RegisterFactory<PMXIKSolver>();
 
-	ATTRIBUTE(PMXIKTarget, VAR_FLOAT, "Threshold", threshold, 0.000001f, AM_DEFAULT);
-	ATTRIBUTE(PMXIKTarget, VAR_FLOAT, "Angle Limit", angleLimit, M_PI, AM_DEFAULT);
-	ATTRIBUTE(PMXIKTarget, VAR_INT, "Loop Count", loopCount, 20, AM_DEFAULT);
+	ATTRIBUTE(PMXIKSolver, VAR_FLOAT, "Threshold", threshold, 0.000001f, AM_DEFAULT);
+	ATTRIBUTE(PMXIKSolver, VAR_FLOAT, "Angle Limit", angleLimit, M_PI, AM_DEFAULT);
+	ATTRIBUTE(PMXIKSolver, VAR_INT, "Loop Count", loopCount, 20, AM_DEFAULT);
 }
 
-void PMXIKTarget::AddNode(PMXIKNode *node)
+void PMXIKSolver::AddNode(PMXIKNode *node)
 {
 	nodes.Push(node);
 
 	chainLength += node->GetBoneLength();
 }
 
-void PMXIKTarget::FixedPostUpdate(float timeStep)
+void PMXIKSolver::FixedUpdate(float timeStep)
 {
 	// Perform IK here
 	Vector<Vector3> jointPositions;
@@ -109,22 +111,8 @@ void PMXIKTarget::FixedPostUpdate(float timeStep)
 	endNode->SetWorldRotation(oldRotation);
 }
 
-void PMXIKTarget::PerformInnerIteration(Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* node, bool reverse)
+void PMXIKSolver::PerformInnerIteration(Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* node, bool reverse)
 {
-	float distance = (linkPosition - targetPosition).LengthSquared();
-	if (distance <= threshold) {
-		linkPosition = targetPosition;
-		return;
-	}
-	float boneLength = node->GetBoneLength();
-	float ratio = boneLength / distance;
-	ratio = Clamp(ratio, 0.0f, 1.0f);
-
-	linkPosition = targetPosition.Lerp(linkPosition, ratio);
-
-	if (node->GetLimited() == false || parentPosition.Equals(Vector3::ZERO))
-		return;
-
 #if 0
 	// Now apply rotation constraints if needed
 	if (!Link.Limited || ParentBonePosition.isZero())

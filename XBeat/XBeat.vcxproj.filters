@@ -43,10 +43,10 @@
     <ClCompile Include="PMX\PMXRigidBody.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PMX\PMXIKTarget.cpp">
+    <ClCompile Include="PMX\PMXIKNode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PMX\PMXIKNode.cpp">
+    <ClCompile Include="PMX\PMXIKSolver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -84,10 +84,10 @@
     <ClInclude Include="PMX\PMXRigidBody.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PMX\PMXIKTarget.h">
+    <ClInclude Include="PMX\PMXIKNode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PMX\PMXIKNode.h">
+    <ClInclude Include="PMX\PMXIKSolver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

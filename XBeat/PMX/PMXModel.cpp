@@ -124,26 +124,9 @@ bool PMXModel::EndLoad()
 
 			positions.Push(vertex.position);
 			center += positions.Back() / (float)modelMat.indexCount;
-			Vector3 bonePosition(boneList[vertex.weightMethod == PMX::VertexWeightMethod::SDEF ? vertex.boneInfo.SDEF.boneIndexes[0] : vertex.boneInfo.BDEF.boneIndexes[0]].InitialPosition);
-			switch (vertex.weightMethod) {
-			case PMX::VertexWeightMethod::BDEF4:
-			case PMX::VertexWeightMethod::QDEF:
-				bonePosition = bonePosition * vertex.boneInfo.BDEF.weights[0];
-				bonePosition += Vector3(boneList[vertex.boneInfo.BDEF.boneIndexes[1]].InitialPosition) * vertex.boneInfo.BDEF.weights[1];
-				bonePosition += Vector3(boneList[vertex.boneInfo.BDEF.boneIndexes[2]].InitialPosition) * vertex.boneInfo.BDEF.weights[2];
-				bonePosition += Vector3(boneList[vertex.boneInfo.BDEF.boneIndexes[3]].InitialPosition) * vertex.boneInfo.BDEF.weights[3];
-				break;
-			case PMX::VertexWeightMethod::BDEF2:
-				bonePosition = bonePosition * vertex.boneInfo.BDEF.weights[0];
-				bonePosition += Vector3(boneList[vertex.boneInfo.BDEF.boneIndexes[1]].InitialPosition) * vertex.boneInfo.BDEF.weights[1];
-				break;
-			case PMX::VertexWeightMethod::SDEF:
-				bonePosition = bonePosition.Lerp(Vector3(boneList[vertex.boneInfo.SDEF.boneIndexes[1]].InitialPosition), vertex.boneInfo.SDEF.weightBias);
-				break;
-			}
-			*pd++ = vertex.position[0] - bonePosition.x_;
-			*pd++ = vertex.position[1] - bonePosition.y_;
-			*pd++ = vertex.position[2] - bonePosition.z_;
+			*pd++ = vertex.position[0];
+			*pd++ = vertex.position[1];
+			*pd++ = vertex.position[2];
 			*pd++ = vertex.normal[0];
 			*pd++ = vertex.normal[1];
 			*pd++ = vertex.normal[2];
@@ -223,6 +206,8 @@ bool PMXModel::EndLoad()
 		PMX::Bone& bone = boneList[boneIndex];
 		Urho3D::Bone newBone;
 
+		newBone.offsetMatrix_ = Matrix3x4(Vector3::ZERO, Quaternion::IDENTITY, 1.0f);
+
 		if (bone.index == root.index) {
 			newBone.initialPosition_ = Vector3::ZERO;
 			newBone.initialRotation_ = Quaternion::IDENTITY;
@@ -232,6 +217,7 @@ bool PMXModel::EndLoad()
 			if (bone.Parent != -1) {
 				parent = &boneList[bone.Parent];
 				newBone.initialPosition_ = Vector3(bone.InitialPosition) - Vector3(boneList[bone.Parent].InitialPosition);
+				newBone.offsetMatrix_.SetTranslation(-Vector3(bone.InitialPosition));
 
 				auto getDirection = [this](PMX::Bone &bone) {
 					Vector3 direction = Vector3::ZERO;
@@ -256,6 +242,15 @@ bool PMXModel::EndLoad()
 					if (fabsf(angle) > 0.000001f) {
 						angle = acosf(angle);
 						newBone.initialRotation_.FromAngleAxis(angle, axis);
+						newBone.offsetMatrix_ = Matrix3x4(Vector3(bone.InitialPosition), Quaternion(angle, axis), 1.0f).Inverse();
+					}
+				}
+				axis = boneDirection.CrossProduct(Vector3::UP);
+				if (axis.LengthSquared() > 0.00000001f) {
+					axis.Normalize();
+					float angle = boneDirection.DotProduct(Vector3::UP);
+					if (fabsf(angle) > 0.000001f) {
+						angle = acosf(angle);
 					}
 				}
 			}
@@ -264,12 +259,13 @@ bool PMXModel::EndLoad()
 			}
 		}
 
-		newBone.initialScale_ = Vector3(1.0f, 1.0f, 1.0f);
-		newBone.name_ = bone.Name.japanese.CString();
+		newBone.initialScale_ = Vector3::ONE;
+		newBone.name_ = bone.Name.japanese;
 		newBone.nameHash_ = newBone.name_;
-		newBone.parentIndex_ = bone.Parent == -1 ? 0 : bone.Parent;
+		newBone.parentIndex_ = bone.Parent == -1 ? root.index : bone.Parent;
 		bones.Push(newBone);
 	}
+
 	skeleton.SetRootBoneIndex(root.index);
 	this->SetSkeleton(skeleton);
 

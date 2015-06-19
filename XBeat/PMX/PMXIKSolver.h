@@ -5,16 +5,16 @@
 
 class PMXIKNode;
 
-class PMXIKTarget
+class PMXIKSolver
 	: public Urho3D::LogicComponent
 {
 public:
-	PMXIKTarget(Urho3D::Context *context);
-	~PMXIKTarget();
+	PMXIKSolver(Urho3D::Context *context);
+	~PMXIKSolver();
 	/// Register object factory.
 	static void RegisterObject(Urho3D::Context* context);
 
-	virtual void FixedPostUpdate(float timeStep);
+	virtual void FixedUpdate(float timeStep);
 
 	void AddNode(PMXIKNode *node);
 

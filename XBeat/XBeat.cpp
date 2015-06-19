@@ -1,7 +1,7 @@
 #include "XBeat.h"
 #include "Scenes/LoadingScene.h"
 #include "PMX/PMXIKNode.h"
-#include "PMX/PMXIKTarget.h"
+#include "PMX/PMXIKSolver.h"
 #include "PMX/PMXModel.h"
 #include "VMD/MotionController.h"
 
@@ -54,7 +54,7 @@ void XBeat::Start()
 
 	PMXAnimatedModel::RegisterObject(context_);
 	PMXIKNode::RegisterObject(context_);
-	PMXIKTarget::RegisterObject(context_);
+	PMXIKSolver::RegisterObject(context_);
 	PMXModel::RegisterObject(context_);
 	VMD::MotionController::RegisterObject(context_);
 	VMD::Motion::RegisterObject(context_);
