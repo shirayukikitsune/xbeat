@@ -17,29 +17,24 @@
 #include "../PMX/PMXModel.h"
 #include "../VMD/MotionController.h"
 
-#include <AnimatedModel.h>
-#include <Camera.h>
-#include <CollisionShape.h>
-#include <Context.h>
-#include <DebugRenderer.h>
-#include <FileSystem.h>
-#include <Graphics.h>
-#include <Light.h>
-#include <Log.h>
-#include <Material.h>
-#include <Model.h>
-#include <Octree.h>
-#include <PhysicsWorld.h>
-#include <Renderer.h>
-#include <RenderPath.h>
-#include <ResourceCache.h>
-#include <RigidBody.h>
-#include <Scene.h>
-#include <SceneEvents.h>
-#include <Skybox.h>
-#include <StaticModel.h>
-#include <Swap.h>
-#include <XMLFile.h>
+#include <Urho3D/Core/Context.h>
+#include <Urho3D/Graphics/Camera.h>
+#include <Urho3D/Graphics/DebugRenderer.h>
+#include <Urho3D/Graphics/Graphics.h>
+#include <Urho3D/Graphics/Light.h>
+#include <Urho3D/Graphics/Material.h>
+#include <Urho3D/Graphics/Octree.h>
+#include <Urho3D/Graphics/Renderer.h>
+#include <Urho3D/Graphics/Skybox.h>
+#include <Urho3D/IO/FileSystem.h>
+#include <Urho3D/IO/Log.h>
+#include <Urho3D/Resource/XMLFile.h>
+#include <Urho3D/Physics/CollisionShape.h>
+#include <Urho3D/Physics/PhysicsWorld.h>
+#include <Urho3D/Physics/RigidBody.h>
+#include <Urho3D/Resource/ResourceCache.h>
+#include <Urho3D/Scene/Scene.h>
+#include <Urho3D/Scene/SceneEvents.h>
 
 #include <boost/filesystem.hpp>
 #include <random>
@@ -79,7 +74,7 @@ void Scenes::Menu::initialize()
 	}
 
 	CameraNode = Scene->CreateChild("Camera");
-	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -30.0f));
+	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -50.0f));
 	auto Camera = CameraNode->CreateComponent<Urho3D::Camera>();
 
 	using namespace Urho3D;
@@ -145,7 +140,6 @@ void Scenes::Menu::initialize()
 	{
 		LOGERROR(e.what());
 	}
-	dr->AddSkeleton(SModel->GetSkeleton(), Color::RED);
 	SModel->SetCastShadows(true);
 
 	SubscribeToEvent(Scene, Urho3D::E_SCENEUPDATE, HANDLER(Scenes::Menu, HandleSceneUpdate));
@@ -189,7 +183,7 @@ void Scenes::Menu::HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::Varia
 		// Initialize a new random VMD motion
 		Motion = Scene->GetComponent<VMD::MotionController>()->LoadMotion(KnownMotions.Front());
 
-		Motion->attachModel(Model);
+		//Motion->attachModel(Model);
 	}
 	else
 		waitTime -= eventData[P_TIMESTEP].GetFloat();

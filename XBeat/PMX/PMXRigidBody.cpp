@@ -1,7 +1,7 @@
 #include "PMXRigidBody.h"
 
-#include <Node.h>
-#include <RigidBody.h>
+#include <Urho3D/Physics/RigidBody.h>
+#include <Urho3D/Scene/Node.h>
 
 PMXRigidBody::PMXRigidBody(Urho3D::Context *context)
 	: Urho3D::LogicComponent(context)
@@ -14,8 +14,8 @@ PMXRigidBody::~PMXRigidBody()
 {
 }
 
-void PMXRigidBody::FixedUpdate(float timeStep)
+void PMXRigidBody::FixedPostUpdate(float timeStep)
 {
 	auto rb = GetComponent<Urho3D::RigidBody>();
-	rb->SetPosition(node_->GetWorldPosition());
+	//rb->SetPosition(node_->GetWorldPosition());
 }

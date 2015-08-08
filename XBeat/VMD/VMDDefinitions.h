@@ -15,10 +15,11 @@
 
 #pragma once
 
-#include <Quaternion.h>
-#include <Str.h>
-#include <Vector.h>
-#include <Vector3.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Container/Str.h>
+#include <Urho3D/Container/Vector.h>
+#include <Urho3D/Math/Quaternion.h>
+#include <Urho3D/Math/Vector3.h>
 
 namespace VMD {
 

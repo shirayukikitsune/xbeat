@@ -1,12 +1,15 @@
 #pragma once
 
-#include <Component.h>
-#include <Skeleton.h>
-#include <Vector3.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Graphics/Skeleton.h>
+#include <Urho3D/Math/Vector3.h>
+#include <Urho3D/Scene/Component.h>
 
 class PMXIKNode
 	: public Urho3D::Component
 {
+	OBJECT(PMXIKNode);
+
 public:
 	PMXIKNode(Urho3D::Context *context);
 	~PMXIKNode();
@@ -19,7 +22,7 @@ public:
 	void SetUpperLimit(const Urho3D::Vector3& value) { upperLimit = value; }
 	void SetBone(Urho3D::Bone *bone) { associatedBone = bone; }
 
-	bool GetLimited() const { return limited; }
+	bool IsLimited() const { return limited; }
 	float GetBoneLength() const { return boneLength; }
 	const Urho3D::Vector3& GetLowerLimit() const { return lowerLimit; }
 	const Urho3D::Vector3& GetUpperLimit() const { return upperLimit; }

@@ -4,17 +4,15 @@
 #include "PMXModel.h"
 #include "PMXRigidBody.h"
 
-#include <CollisionShape.h>
-#include <Constraint.h>
-#include <Context.h>
-#include <Image.h>
-#include <Material.h>
-#include <ResourceCache.h>
-#include <RigidBody.h>
-#include <Technique.h>
-#include <Texture2D.h>
-
-#include <Bullet/BulletDynamics/ConstraintSolver/btHingeConstraint.h>
+#include <Urho3D/Core/Context.h>
+#include <Urho3D/Graphics/Material.h>
+#include <Urho3D/Graphics/Technique.h>
+#include <Urho3D/Graphics/Texture2D.h>
+#include <Urho3D/Physics/CollisionShape.h>
+#include <Urho3D/Physics/Constraint.h>
+#include <Urho3D/Physics/RigidBody.h>
+#include <Urho3D/Resource/Image.h>
+#include <Urho3D/Resource/ResourceCache.h>
 
 using namespace Urho3D;
 
@@ -49,6 +47,15 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 	if (!node_ || !model)
 		return;
 
+	auto name = model->GetName();
+	model->SetName(name + ".mdl");
+
+	{
+		File f(context_, model->GetName(), FILE_WRITE);
+		model->Save(f);
+		f.Close();
+	}
+
 	AnimatedModel::SetModel(model, true);
 
 	auto getBoneLength = [](Vector<PMX::Bone> &boneList, PMX::Bone &bone) {
@@ -65,7 +72,7 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		return length.Length();
 	};
 
-	// Define IK chains
+	// Define IK chains and calculate offset matrices
 	for (unsigned int i = 0; i < model->boneList.Size(); ++i) {
 		auto bone = model->boneList[i];
 		if ((bone.Flags & PMX::BoneFlags::IK) == 0)
@@ -73,6 +80,16 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 
 		WeakPtr<Node> node;
 		node = GetSkeleton().GetBone(i)->node_;
+
+		Matrix3x4 offset = Matrix3x4::IDENTITY;
+		int current = i;
+		for (Bone* b = GetSkeleton().GetBone(current); b != NULL && b->node_ != NULL && b->node_->GetParent() != GetNode(); b = GetSkeleton().GetBone(current)) {
+			offset = offset * Matrix3x4(b->initialPosition_, b->initialRotation_, b->initialScale_);
+
+			current = b->parentIndex_;
+		}
+		GetSkeleton().GetBone(i)->offsetMatrix_ = offset.Inverse();
+
 		auto ikTarget = node->CreateComponent<PMXIKSolver>();
 		ikTarget->SetAngleLimit(bone.IkData.angleLimit);
 		ikTarget->SetLoopCount(bone.IkData.loopCount);
@@ -127,15 +144,15 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		switch (Body.shape) {
 		case PMX::RigidBodyShape::Box:
 			collider->SetShapeType(SHAPE_BOX);
-			collider->SetBox(Vector3(Body.size), positionOffset, Quaternion(Body.rotation[0], Body.rotation[1], Body.rotation[2]));
+			collider->SetBox(Vector3(Body.size), positionOffset, Quaternion(Body.rotation[0] * M_RADTODEG, Body.rotation[1] * M_RADTODEG, Body.rotation[2] * M_RADTODEG));
 			break;
 		case PMX::RigidBodyShape::Capsule:
 			collider->SetShapeType(SHAPE_CAPSULE);
-			collider->SetCapsule(Body.size[0], Body.size[1], Vector3(Body.position) - Node->GetWorldPosition() + node_->GetWorldPosition(), Quaternion(Body.rotation[0], Body.rotation[1], Body.rotation[2]));
+			collider->SetCapsule(Body.size[0], Body.size[1], Vector3(Body.position) - Node->GetWorldPosition() + node_->GetWorldPosition(), Quaternion(Body.rotation[0] * M_RADTODEG, Body.rotation[1] * M_RADTODEG, Body.rotation[2] * M_RADTODEG));
 			break;
 		case PMX::RigidBodyShape::Sphere:
 			collider->SetShapeType(SHAPE_SPHERE);
-			collider->SetSphere(Body.size[0], Vector3(Body.position) - Node->GetWorldPosition() + node_->GetWorldPosition(), Quaternion(Body.rotation[0], Body.rotation[1], Body.rotation[2]));
+			collider->SetSphere(Body.size[0], Vector3(Body.position) - Node->GetWorldPosition() + node_->GetWorldPosition(), Quaternion(Body.rotation[0] * M_RADTODEG, Body.rotation[1] * M_RADTODEG, Body.rotation[2] * M_RADTODEG));
 			break;
 		}
 	}
@@ -149,7 +166,7 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		auto constraintComponent = Node->CreateComponent<Urho3D::Constraint>();
 		constraintComponent->SetOtherBody(createdRigidBodies.At(constraint.data.bodyB));
 		constraintComponent->SetPosition(Vector3(constraint.data.position) - Node->GetWorldPosition() + node_->GetWorldPosition());
-		constraintComponent->SetRotation(Quaternion(constraint.data.rotation[0] * M_DEGTORAD, constraint.data.rotation[1] * M_DEGTORAD, constraint.data.rotation[2] * M_DEGTORAD));
+		constraintComponent->SetRotation(Quaternion(constraint.data.rotation[0] * M_RADTODEG, constraint.data.rotation[1] * M_RADTODEG, constraint.data.rotation[2] * M_RADTODEG));
 
 		switch (constraint.type) {
 		case PMX::JointType::Hinge:
@@ -254,10 +271,15 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		material->SetShaderParameter("MatDiffColor", Vector4(ModelMat.diffuse));
 		material->SetShaderParameter("MatEnvMapColor", Vector3(ModelMat.ambient));
 		material->SetShaderParameter("MatSpecColor", Vector4(ModelMat.specular[0], ModelMat.specular[1], ModelMat.specular[2], ModelMat.specularCoefficient));
-		material->SetName(model->GetDescription().name.japanese + "_mat" + String(materialIndex));
+		material->SetName(model->GetDescription().name.japanese + "_mat" + String(materialIndex) + ".xml");
 		if (ModelMat.flags & (unsigned char)PMX::MaterialFlags::DoubleSide)
 			material->SetCullMode(CULL_NONE);
 		this->SetMaterial(materialIndex, material);
 	}
 
+	{
+		File f(context_, name + "-prefab.xml", FILE_WRITE);
+		this->GetNode()->SaveXML(f);
+		f.Close();
+	}
 }

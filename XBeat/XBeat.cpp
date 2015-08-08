@@ -5,22 +5,21 @@
 #include "PMX/PMXModel.h"
 #include "VMD/MotionController.h"
 
-#include <Console.h>
-#include <Context.h>
-#include <DebugHud.h>
-#include <Engine.h>
-#include <EngineEvents.h>
-#include <FileSystem.h>
-#include <Graphics.h>
-#include <Input.h>
-#include <InputEvents.h>
-#include <IOEvents.h>
-#include <Log.h>
-#include <ProcessUtils.h>
-#include <Renderer.h>
-#include <ResourceCache.h>
-#include <UI.h>
-#include <XMLFile.h>
+#include <Urho3D/Engine/Console.h>
+#include <Urho3D/Engine/DebugHud.h>
+#include <Urho3D/Engine/Engine.h>
+#include <Urho3D/Engine/EngineEvents.h>
+#include <Urho3D/Graphics/Graphics.h>
+#include <Urho3D/Graphics/Renderer.h>
+#include <Urho3D/Input/Input.h>
+#include <Urho3D/Input/InputEvents.h>
+#include <Urho3D/IO/FileSystem.h>
+#include <Urho3D/IO/Log.h>
+#include <Urho3D/Resource/ResourceCache.h>
+#include <Urho3D/Resource/XMLFile.h>
+#include <Urho3D/UI/BorderImage.h>
+#include <Urho3D/UI/UI.h>
+
 #include <Windows.h>
 
 using namespace Urho3D;
@@ -70,6 +69,7 @@ void XBeat::SetWindowParameters()
 {
 	Graphics* graphics = GetSubsystem<Graphics>();
 	graphics->SetWindowTitle("XBeat");
+	graphics->SetBlendMode(Urho3D::BLEND_ALPHA);
 }
 
 void XBeat::SubscribeToEvents()

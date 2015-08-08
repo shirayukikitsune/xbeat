@@ -2,7 +2,8 @@
 
 #include "PMXDefinitions.h"
 
-#include <LogicComponent.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Scene/LogicComponent.h>
 
 class PMXRigidBody : public Urho3D::LogicComponent
 {
@@ -12,6 +13,6 @@ public:
 	PMXRigidBody(Urho3D::Context *context);
 	~PMXRigidBody();
 
-	virtual void FixedUpdate(float timeStep);
+	virtual void FixedPostUpdate(float timeStep);
 };
 

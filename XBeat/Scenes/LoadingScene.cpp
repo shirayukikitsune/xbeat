@@ -15,19 +15,15 @@
 #include "LoadingScene.h"
 
 #include <boost/filesystem.hpp>
-#include <Camera.h>
-#include <Context.h>
-#include <DebugRenderer.h>
-#include <Drawable2D.h>
-#include <Graphics.h>
-#include <Log.h>
-#include <Node.h>
-#include <Octree.h>
-#include <Renderer.h>
-#include <Resource.h>
-#include <ResourceCache.h>
-#include <Scene.h>
-#include <StaticSprite2D.h>
+#include <Urho3D/Core/Context.h>
+#include <Urho3D/Graphics/Camera.h>
+#include <Urho3D/Graphics/DebugRenderer.h>
+#include <Urho3D/Graphics/Graphics.h>
+#include <Urho3D/Graphics/Octree.h>
+#include <Urho3D/Graphics/Renderer.h>
+#include <Urho3D/Resource/ResourceCache.h>
+#include <Urho3D/Urho2D/Sprite2D.h>
+#include <Urho3D/Urho2D/StaticSprite2D.h>
 
 #include <algorithm>
 #include <chrono>

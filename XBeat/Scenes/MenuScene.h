@@ -16,9 +16,9 @@
 
 #include "../VMD/Motion.h"
 
-#include <Ptr.h>
-#include <Resource.h>
-#include <Variant.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Container/Ptr.h>
+#include <Urho3D/Core/Variant.h>
 
 #include <future>
 #include <random>

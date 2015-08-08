@@ -1,13 +1,16 @@
 #pragma once
 
-#include <LogicComponent.h>
-#include <Vector.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Container/Vector.h>
+#include <Urho3D/Scene/LogicComponent.h>
 
 class PMXIKNode;
 
 class PMXIKSolver
 	: public Urho3D::LogicComponent
 {
+	OBJECT(PMXIKSolver);
+
 public:
 	PMXIKSolver(Urho3D::Context *context);
 	~PMXIKSolver();
@@ -30,7 +33,7 @@ public:
 	Urho3D::Node* GetEndNode() const { return endNode; }
 
 private:
-	void PerformInnerIteration(Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* link, bool reverse);
+	void PerformInnerIteration(const Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* link);
 
 	float threshold;
 	float angleLimit;

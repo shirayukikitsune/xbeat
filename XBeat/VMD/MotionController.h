@@ -17,10 +17,11 @@
 
 #include "Motion.h"
 
-#include <LogicComponent.h>
-#include <Ptr.h>
-#include <Str.h>
-#include <Vector.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Container/Ptr.h>
+#include <Urho3D/Container/Str.h>
+#include <Urho3D/Container/Vector.h>
+#include <Urho3D/Scene/LogicComponent.h>
 
 namespace VMD {
 

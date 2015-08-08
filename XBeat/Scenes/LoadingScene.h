@@ -14,9 +14,10 @@
 
 #pragma once
 
-#include <Object.h>
-#include <Ptr.h>
-#include <Scene.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Core/Object.h>
+#include <Urho3D/Container/Ptr.h>
+#include <Urho3D/Scene/Scene.h>
 
 namespace Urho3D {
 	class Context;

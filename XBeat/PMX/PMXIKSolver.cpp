@@ -2,16 +2,16 @@
 
 #include "PMXIKNode.h"
 
-#include <Context.h>
-#include <Node.h>
-#include <Variant.h>
+#include <Urho3D/Core/Context.h>
+#include <Urho3D/Core/Variant.h>
+#include <Urho3D/Scene/Node.h>
 
 using namespace Urho3D;
 
 PMXIKSolver::PMXIKSolver(Urho3D::Context *context)
 	: Urho3D::LogicComponent(context)
 {
-	threshold = 0.000001f;
+	threshold = 0.01f;
 	chainLength = 0.0f;
 	angleLimit = M_PI;
 	loopCount = 20;
@@ -27,9 +27,9 @@ void PMXIKSolver::RegisterObject(Urho3D::Context *context)
 {
 	context->RegisterFactory<PMXIKSolver>();
 
-	ATTRIBUTE(PMXIKSolver, VAR_FLOAT, "Threshold", threshold, 0.000001f, AM_DEFAULT);
-	ATTRIBUTE(PMXIKSolver, VAR_FLOAT, "Angle Limit", angleLimit, M_PI, AM_DEFAULT);
-	ATTRIBUTE(PMXIKSolver, VAR_INT, "Loop Count", loopCount, 20, AM_DEFAULT);
+	ATTRIBUTE("Threshold", float, threshold, 0.000001f, AM_DEFAULT);
+	ATTRIBUTE("Angle Limit", float, angleLimit, M_PI, AM_DEFAULT);
+	ATTRIBUTE("Loop Count", int, loopCount, 20, AM_DEFAULT);
 }
 
 void PMXIKSolver::AddNode(PMXIKNode *node)
@@ -73,6 +73,8 @@ void PMXIKSolver::FixedUpdate(float timeStep)
 				float distance = (jointPositions[n + 1] - jointPositions[n]).Length();
 				float ratio = boneLengths[n] / distance;
 				jointPositions[n] = jointPositions[n + 1].Lerp(jointPositions[n], ratio);
+				auto node = nodes[nodes.Size() - 1 - n];
+				PerformInnerIteration(node->GetNode()->GetParent()->GetPosition(), jointPositions[n], jointPositions[n + 1], node);
 			}
 
 			// Stage 2: Backward reaching
@@ -82,6 +84,8 @@ void PMXIKSolver::FixedUpdate(float timeStep)
 				float distance = (jointPositions[n + 1] - jointPositions[n]).Length();
 				float ratio = boneLengths[n] / distance;
 				jointPositions[n + 1] = jointPositions[n].Lerp(jointPositions[n + 1], ratio);
+				auto node = nodes[nodes.Size() - 1 - n];
+				PerformInnerIteration(node->GetNode()->GetParent()->GetPosition(), jointPositions[n], jointPositions[n + 1], node);
 			}
 		}
 	}
@@ -91,93 +95,77 @@ void PMXIKSolver::FixedUpdate(float timeStep)
 
 	// Apply the new positions
 	for (int idx = 0; idx < jointPositions.Size() - 1; ++idx) {
-		auto node = nodes[nodes.Size() - idx - 1];
-		Vector3 position = node->GetNode()->GetWorldPosition();
-
-		Vector3 currentDirection = node->GetNode()->GetWorldUp().Normalized();
 		Vector3 desiredDirection = (jointPositions[idx + 1] - jointPositions[idx]).Normalized();
 
-		Vector3 axis = currentDirection.CrossProduct(desiredDirection);
-		float dot = currentDirection.AbsDotProduct(desiredDirection);
-
-		if (fabsf(dot) > 1.0f - threshold || axis.Equals(Vector3::ZERO)) continue;
-
-		axis.Normalize();
-		float angle = acosf(dot);
-			
-		node->GetNode()->Rotate(Quaternion(-angle, axis), TS_WORLD);
+		auto node = nodes[nodes.Size() - idx - 1];
+		node->GetNode()->SetWorldPosition(jointPositions[idx]);
+		node->GetNode()->SetWorldDirection(desiredDirection);
 	}
 
 	endNode->SetWorldRotation(oldRotation);
 }
 
-void PMXIKSolver::PerformInnerIteration(Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* node, bool reverse)
+void PMXIKSolver::PerformInnerIteration(const Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* node)
 {
-#if 0
-	// Now apply rotation constraints if needed
-	if (!Link.Limited || ParentBonePosition.isZero())
+	if (!node->IsLimited())
 		return;
 
-	btVector3 LineDirection = (LinkPosition - ParentBonePosition).normalize();
+	Vector3 parentDirection = (linkPosition - parentPosition).Normalized();
+	Vector3 localOrigin = parentDirection.DotProduct(targetPosition - linkPosition) * parentDirection;
 
-	btVector3 Origin = LineDirection.dot(TargetPosition - LinkPosition) * LineDirection;
-	float DistanceToOrigin = Origin.length();
-	Origin += LinkPosition;
+	float distanceToOrigin = localOrigin.Length();
+	localOrigin += linkPosition;
 
-	btVector3 LocalXDirection(1, 0, 0);
-	btQuaternion YRotation;
+	Vector3 localXDirection = Vector3::RIGHT;
+	Quaternion Yrotation;
 	{
-		// Calculate the Y axis rotation and rotate the X axis for that rotation
-		float YRotationAngle = btAcos(LineDirection.dot(btVector3(0, 1, 0)));
-		btVector3 YRotationAxis = LineDirection.cross(btVector3(0, 1, 0));
-		YRotation = btQuaternion(YRotationAxis, YRotationAngle);
-		LocalXDirection = quatRotate(YRotation, LocalXDirection);
+		float YrotationAngle = acosf(parentDirection.DotProduct(Vector3::UP));
+		Vector3 rotationAxis = parentDirection.CrossProduct(Vector3::UP);
+		Yrotation = YrotationAngle < threshold ? Quaternion::IDENTITY : Quaternion(YrotationAngle, rotationAxis);
+		localXDirection = Yrotation * localXDirection;
 	}
 
-	btVector3 LocalPosition = Origin - LinkPosition;
-	float Theta = btAcos(LocalPosition.normalized().dot(LocalXDirection));
-	int Quadrant = (int)(Theta / DirectX::XM_PIDIV2);
-	float Q1, Q2;
+	Vector3 localPosition = targetPosition - localOrigin;
+	float theta = acosf(localPosition.Normalized().DotProduct(localXDirection));
+	int quadrant = (int)(theta / M_HALF_PI);
+	float q1, q2;
 
-	switch (Quadrant) {
+	switch (quadrant)
+	{
 	default:
-		Q1 = DistanceToOrigin * tanf(Link.Limits.Upper[0]);
-		Q2 = DistanceToOrigin * tanf(Link.Limits.Upper[2]);
+		q1 = distanceToOrigin * tanf(node->GetUpperLimit().x_);
+		q2 = distanceToOrigin * tanf(node->GetUpperLimit().z_);
 		break;
 	case 1:
-		Q1 = DistanceToOrigin * tanf(Link.Limits.Lower[0]);
-		Q2 = DistanceToOrigin * tanf(Link.Limits.Upper[2]);
+		q1 = distanceToOrigin * tanf(node->GetLowerLimit().x_);
+		q2 = distanceToOrigin * tanf(node->GetUpperLimit().z_);
 		break;
 	case 2:
-		Q1 = DistanceToOrigin * tanf(Link.Limits.Lower[0]);
-		Q2 = DistanceToOrigin * tanf(Link.Limits.Lower[2]);
+		q1 = distanceToOrigin * tanf(node->GetLowerLimit().x_);
+		q2 = distanceToOrigin * tanf(node->GetLowerLimit().z_);
 		break;
 	case 3:
-		Q1 = DistanceToOrigin * tanf(Link.Limits.Upper[0]);
-		Q2 = DistanceToOrigin * tanf(Link.Limits.Lower[2]);
+		q1 = distanceToOrigin * tanf(node->GetUpperLimit().x_);
+		q2 = distanceToOrigin * tanf(node->GetLowerLimit().z_);
 		break;
 	}
 
-	float X = Q1 * cosf(Theta);
-	float Y = Q2 * sinf(Theta);
-	LocalPosition.setX(powf(-1.0f, Quadrant) * (fabsf(X) < fabsf(LocalPosition.x()) ? fabsf(X) : fabsf(LocalPosition.x())));
-	LocalPosition.setY(0.0f);
-	LocalPosition.setZ(powf(-1.0f, Quadrant) * (fabsf(Y) < fabsf(LocalPosition.z()) ? fabsf(Y) : fabsf(LocalPosition.z())));
+	float x = q1 * cosf(theta);
+	float y = q2 * sinf(theta);
+	localPosition.x_ = powf(-1.0f, quadrant) * (fabsf(y) < fabsf(localPosition.x_) ? fabsf(y) : fabsf(localPosition.x_));
+	localPosition.y_ = 0.0f;
+	localPosition.z_ = powf(-1.0f, quadrant) * (fabsf(x) < fabsf(localPosition.z_) ? fabsf(x) : fabsf(localPosition.z_));
 
-	auto DesiredPosition = (quatRotate(YRotation, LocalPosition) + Origin).lerp(LinkPosition, BoneLength / DistanceToOrigin);
-	btVector3 CurrentDirection = (TargetPosition - LinkPosition).normalized();
-	btVector3 DesiredDirection = (DesiredPosition - LinkPosition).normalized();
-	btVector3 Axis = CurrentDirection.cross(DesiredDirection);
-	float Dot = CurrentDirection.dot(DesiredDirection);
-	if (Axis.length2() < 0.000001f) {
-		LinkPosition = DesiredPosition;
-		return;
-	}
+	Vector3 desiredPosition = (Yrotation * localPosition) + localOrigin;
+//	Vector3 currentDirection = (targetPosition - linkPosition).Normalized();
+//	Vector3 desiredDirection = (desiredPosition - linkPosition).Normalized();
+//	Vector3 axis = currentDirection.CrossProduct(desiredDirection);
+//	float dot = currentDirection.DotProduct(desiredDirection);
+	targetPosition = desiredPosition;
 
-	Axis.normalize();
-	float Angle = btClamped(btAcos(Dot), Link.Limits.Lower[1], Link.Limits.Upper[1]);
+//	axis.Normalize();
+//	float angle = Clamp(acosf(dot), node->GetLowerLimit().y_, node->GetUpperLimit().y_);
 
-	LinkPosition = quatRotate(btQuaternion(Axis, Angle), CurrentDirection) * BoneLength + ParentBonePosition;
-#endif
+//	linkPosition = (Quaternion(angle, axis) * currentDirection) * node->GetBoneLength() + parentPosition;
 }
 

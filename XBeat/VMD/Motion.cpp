@@ -18,10 +18,11 @@
 #include "../PMX/PMXRigidBody.h"
 
 #include <algorithm>
-#include <Camera.h>
-#include <Context.h>
-#include <RigidBody.h>
-#include <Sort.h>
+
+#include <Urho3D/Core/Context.h>
+#include <Urho3D/Graphics/Camera.h>
+#include <Urho3D/Physics/RigidBody.h>
+
 #include <Windows.h>
 
 VMD::Motion::Motion(Urho3D::Context *context)

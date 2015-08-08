@@ -1,6 +1,7 @@
 #pragma once
 
-#include <AnimatedModel.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Graphics/AnimatedModel.h>
 
 class PMXModel;
 

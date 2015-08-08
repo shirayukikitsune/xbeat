@@ -16,9 +16,10 @@
 
 #include "VMDDefinitions.h"
 
-#include <Node.h>
-#include <Resource.h>
-#include <Str.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Container/Str.h>
+#include <Urho3D/Resource/Resource.h>
+#include <Urho3D/Scene/Node.h>
 
 namespace VMD {
 

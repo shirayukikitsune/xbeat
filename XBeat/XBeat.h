@@ -3,7 +3,8 @@
 #include "Scenes/LoadingScene.h"
 #include "Scenes/MenuScene.h"
 
-#include <Application.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Engine/Application.h>
 
 class XBeat : public Urho3D::Application
 {

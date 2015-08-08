@@ -19,8 +19,9 @@
 #include "PMXAnimatedModel.h"
 #include "PMXSoftBody.h"
 
-#include <Model.h>
-#include <Vector.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Container/Vector.h>
+#include <Urho3D/Graphics/Model.h>
 #include <exception>
 
 class PMXModel : public Urho3D::Model

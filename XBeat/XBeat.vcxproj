@@ -72,8 +72,8 @@
     <LibraryPath>C:\dev\boost_1_57_0\stage\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\dev\boost_1_57_0;C:\Program Files\Urho3D\include;C:\Program Files\Urho3D\include\SDL;C:\Program Files\Urho3D\include\Bullet;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\dev\boost_1_57_0\stage64\lib;C:\Program Files\Urho3D\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\boost_1_57_0;C:\Program Files\Urho3D\include;C:\Program Files\Urho3D\include\Urho3D\ThirdParty;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\boost_1_57_0\stage64\lib;C:\Program Files\Urho3D\lib64\Urho3D;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\dev\boost_1_57_0\boost;$(IncludePath)</IncludePath>

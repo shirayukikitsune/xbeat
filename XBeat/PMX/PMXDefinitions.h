@@ -14,8 +14,9 @@
 
 #pragma once
 
-#include <Str.h>
-#include <Vector.h>
+#include <Urho3D/Urho3D.h>
+#include <Urho3D/Container/Str.h>
+#include <Urho3D/Container/Vector.h>
 
 namespace PMX {
 

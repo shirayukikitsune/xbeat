@@ -2,11 +2,10 @@
 
 #include <codecvt>
 
-#include <Context.h>
-#include <Geometry.h>
-#include <HashMap.h>
-#include <IndexBuffer.h>
-#include <VertexBuffer.h>
+#include <Urho3D/Core/Context.h>
+#include <Urho3D/Graphics/Geometry.h>
+#include <Urho3D/Graphics/IndexBuffer.h>
+#include <Urho3D/Graphics/VertexBuffer.h>
 
 using namespace std;
 using namespace Urho3D;
@@ -206,18 +205,13 @@ bool PMXModel::EndLoad()
 		PMX::Bone& bone = boneList[boneIndex];
 		Urho3D::Bone newBone;
 
-		newBone.offsetMatrix_ = Matrix3x4(Vector3::ZERO, Quaternion::IDENTITY, 1.0f);
+		newBone.initialPosition_ = Vector3::ZERO;
+		newBone.initialRotation_ = Quaternion::IDENTITY;
 
-		if (bone.index == root.index) {
-			newBone.initialPosition_ = Vector3::ZERO;
-			newBone.initialRotation_ = Quaternion::IDENTITY;
-		}
-		else {
-			newBone.initialRotation_ = Quaternion::IDENTITY;
+		if (bone.index != root.index) {
 			if (bone.Parent != -1) {
 				parent = &boneList[bone.Parent];
-				newBone.initialPosition_ = Vector3(bone.InitialPosition) - Vector3(boneList[bone.Parent].InitialPosition);
-				newBone.offsetMatrix_.SetTranslation(-Vector3(bone.InitialPosition));
+				newBone.initialPosition_ = Vector3(bone.InitialPosition) - Vector3(boneList[bone.Parent].InitialPosition); 
 
 				auto getDirection = [this](PMX::Bone &bone) {
 					Vector3 direction = Vector3::ZERO;
@@ -235,6 +229,12 @@ bool PMXModel::EndLoad()
 
 				Vector3 boneDirection = getDirection(bone), parentDirection = getDirection(*parent);
 
+#if 0
+				Quaternion worldRotation;
+				worldRotation.FromLookRotation(boneDirection);
+				newBone.initialRotation_.FromRotationTo(parentDirection, boneDirection);
+#else
+				newBone.offsetMatrix_.SetTranslation(-Vector3(bone.InitialPosition));
 				auto axis = boneDirection.CrossProduct(parentDirection);
 				if (axis.LengthSquared() > 0.0000001f) {
 					axis.Normalize();
@@ -242,17 +242,10 @@ bool PMXModel::EndLoad()
 					if (fabsf(angle) > 0.000001f) {
 						angle = acosf(angle);
 						newBone.initialRotation_.FromAngleAxis(angle, axis);
-						newBone.offsetMatrix_ = Matrix3x4(Vector3(bone.InitialPosition), Quaternion(angle, axis), 1.0f).Inverse();
+						//newBone.offsetMatrix_ = Matrix3x4(Vector3(bone.InitialPosition), Quaternion(angle, axis), 1.0f).Inverse();
 					}
 				}
-				axis = boneDirection.CrossProduct(Vector3::UP);
-				if (axis.LengthSquared() > 0.00000001f) {
-					axis.Normalize();
-					float angle = boneDirection.DotProduct(Vector3::UP);
-					if (fabsf(angle) > 0.000001f) {
-						angle = acosf(angle);
-					}
-				}
+#endif
 			}
 			else {
 				newBone.initialPosition_ = Vector3(bone.InitialPosition);

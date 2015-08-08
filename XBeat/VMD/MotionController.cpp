@@ -16,9 +16,9 @@
 
 #include "Motion.h"
 
-#include <Context.h>
-#include <ResourceCache.h>
-#include <Variant.h>
+#include <Urho3D/Core/Context.h>
+#include <Urho3D/Core/Variant.h>
+#include <Urho3D/Resource/ResourceCache.h>
 
 using namespace VMD;
 
@@ -40,7 +40,7 @@ void MotionController::RegisterObject(Urho3D::Context* context)
 	using namespace Urho3D;
 	context->RegisterFactory<MotionController>();
 
-	ATTRIBUTE(VMD::MotionController, VAR_FLOAT, "FPS", FramesPerSecond, 30.0f, AM_DEFAULT);
+	ATTRIBUTE("FPS", float, FramesPerSecond, 30.0f, AM_DEFAULT);
 }
 
 void MotionController::Update(float timeStep)
