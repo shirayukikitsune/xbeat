@@ -781,5 +781,7 @@ void PMX::Model::applyImpulseMorph(Morph* morph, float weight)
 		assert("Impulse morph rigid body index out of range" && Morph.impulse.index < m_rigidBodies.size());
 		auto Body = m_rigidBodies[Morph.impulse.index];
 		assert("Impulse morph cannot be applied to a kinematic rigid body" && Body->isDynamic());
+		Body->getBody()->applyCentralImpulse(btVector3(Morph.impulse.velocity[0], Morph.impulse.velocity[1], Morph.impulse.velocity[2]));
+		Body->getBody()->applyTorqueImpulse(btVector3(Morph.impulse.rotationTorque[0], Morph.impulse.rotationTorque[1], Morph.impulse.rotationTorque[2]));;
 	}
 }

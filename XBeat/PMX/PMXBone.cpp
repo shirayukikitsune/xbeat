@@ -80,7 +80,7 @@ namespace detail {
 			return _aligned_malloc(count, 16);
 		}
 
-			void __cdecl operator delete(void *object) {
+		void __cdecl operator delete(void *object) {
 			_aligned_free(object);
 		}
 #endif
@@ -135,7 +135,7 @@ namespace detail {
 			return _aligned_malloc(count, 16);
 		}
 
-			void __cdecl operator delete(void *object) {
+		void __cdecl operator delete(void *object) {
 			_aligned_free(object);
 		}
 #endif
@@ -495,7 +495,7 @@ void XM_CALLCONV detail::BoneImpl::render(DirectX::FXMMATRIX world, DirectX::CXM
 
 	if (Primitive)
 	{
-		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, 0.3f, 0.3f, 1), DirectX::XMVectorZero(), getRotation().get128(), getPosition().get128());
+		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, 0.3f, 0.3f, 1), InitialPosition.get128(), getRotation().get128(), getPosition().get128());
 
 		Primitive->Draw(w, view, projection, isIK() ? DirectX::Colors::Magenta : DirectX::Colors::Red);
 	}

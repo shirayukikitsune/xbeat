@@ -1,0 +1,9 @@
+[submodule "Third Party/DirectXTex"]
+	path = Third Party/DirectXTex
+	url = https://github.com/Microsoft/DirectXTex.git
+[submodule "Third Party/DirectXTK"]
+	path = Third Party/DirectXTK
+	url = https://github.com/Microsoft/DirectXTK.git
+[submodule "Third Party/FX11"]
+	path = Third Party/FX11
+	url = https://github.com/Microsoft/FX11.git

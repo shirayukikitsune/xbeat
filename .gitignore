@@ -183,3 +183,6 @@ XBeat/Data/ModelCache.dat
 XBeat/Data/Motions
 XBeat/Data/Musics
 XBeat/Doc
+/XBeat/CoreData/Shaders/HLSL/Cache
+/XBeat/Data/Materials
+/XBeat/Data/Textures
