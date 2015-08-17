@@ -7,3 +7,6 @@
 [submodule "Third Party/FX11"]
 	path = Third Party/FX11
 	url = https://github.com/Microsoft/FX11.git
+[submodule "Third Party/bullet3"]
+	path = Third Party/bullet3
+	url = https://github.com/bulletphysics/bullet3.git

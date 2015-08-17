@@ -142,6 +142,9 @@
     <ClCompile Include="Scenes\Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Scenes\Node.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SystemClass.h">
@@ -285,6 +288,9 @@
     <ClInclude Include="Scenes\Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Scenes\Node.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Data\Shaders\LightPixel.hlsl">
@@ -319,7 +325,6 @@
     <Text Include="Data\Models\cube.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="Data\Shaders\PMX\Classes.hlsli">
       <Filter>Shader Files</Filter>
     </None>

@@ -449,7 +449,10 @@ void PMX::Model::Reset()
 
 void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustum> frustum)
 {
-	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0) {
+#ifdef DEBUG
+	if ((m_debugFlags & DebugFlags::DontRenderModel) == 0)
+#endif
+	{
 		unsigned int stride = sizeof(PMXShader::VertexType);
 
 		ID3D11ShaderResourceView *textures[3];
@@ -502,7 +505,9 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 	DirectX::XMMATRIX projection = DirectX::XMMatrixTranspose(m_shader->GetCBuffer().matrix.projection);
 	DirectX::XMMATRIX world = DirectX::XMMatrixRotationQuaternion(rootBone->getTransform().getRotation().get128()) * DirectX::XMMatrixTranslationFromVector(rootBone->getTransform().getOrigin().get128());
 
+#ifdef DEBUG
 	context->RSSetState(m_d3d->GetRasterState(1));
+
 	if (m_debugFlags & DebugFlags::RenderJoints) {
 		for (auto &joint : m_joints) {
 			joint->Render(view, projection);
@@ -519,7 +524,9 @@ void PMX::Model::Render(ID3D11DeviceContext *context, std::shared_ptr<ViewFrustu
 		for (auto &bone : bones)
 			bone->render(world, view, projection);
 	}
+
 	context->RSSetState(m_d3d->GetRasterState(0));
+#endif
 }
 
 bool PMX::Model::LoadTexture(ID3D11Device *device)

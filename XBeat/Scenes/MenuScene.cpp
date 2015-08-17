@@ -81,7 +81,7 @@ bool Scenes::Menu::initialize()
 	// Pause the physics environment, to prevent resource race
 	Physics->pause();
 	// Select a model to be displayed
-#if 0
+#if 1
 	auto ModelList = ModelHandler->getKnownModels();
 	do {
 		size_t Index = RandomGenerator() % ModelList.size();

@@ -495,7 +495,7 @@ void XM_CALLCONV detail::BoneImpl::render(DirectX::FXMMATRIX world, DirectX::CXM
 
 	if (Primitive)
 	{
-		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, 0.3f, 0.3f, 1), InitialPosition.get128(), getRotation().get128(), getPosition().get128());
+		w = DirectX::XMMatrixAffineTransformation(DirectX::XMVectorSet(0.3f, getLength(), 0.3f, 0), DirectX::XMVectorZero(), getRotation().get128(), getPosition().get128());
 
 		Primitive->Draw(w, view, projection, isIK() ? DirectX::Colors::Magenta : DirectX::Colors::Red);
 	}
@@ -554,7 +554,7 @@ void detail::IKBone::terminate()
 	Primitive.reset();
 }
 
-#if 1
+#if 0
 void detail::IKBone::performIK() {
 	if (TargetBone->isSimulated())
 		return;
@@ -747,6 +747,9 @@ void detail::IKBone::performIK() {
 			btTransform TransformInverse = Link.Bone->getTransform().inverse();
 			btVector3 LocalDestination = Destination - CurrentPosition;
 			btVector3 LocalAffectedBonePosition = TargetPosition - CurrentPosition;
+
+			if (LocalDestination.length2() <= 0.00001f)
+				continue;
 
 			if (LocalDestination.distance2(LocalAffectedBonePosition) <= 0.0001f) {
 				Iteration = LoopCount;

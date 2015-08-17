@@ -9,7 +9,8 @@ See LICENSE.txt for details.
 
 ## Computer Requisites
 
-  - To be able to run, it is required a DirectX 11 compatible graphics adapter, and it is recommended to use the latest available graphics driver, for best results.
+  - Windows 7 or higher (tested on 8.1 and 10)
+  - A DirectX 11 compatible graphics adapter, and it is recommended to use the latest available graphics driver, for best results.
   - A DirectAudio compatible sound card is also required.
   - A XInput compatible gamepad is recommended, but is not required (you may use a keyboard).
 
@@ -36,7 +37,7 @@ For the main menu, a random model will be used from the list of known models. Al
 
 To add a new idle, just drop a VMD motion file into the Data/Motions/Idle folder.
 
-## Developers 
+## For Developers 
 
 ### Project Status
 
@@ -46,11 +47,12 @@ The features that are implemented so far are:
 
   - PMX 2.0 and 2.1 model support, with a manager to list all available models
   - Morph types supported:
-    - Vertex
-    - Material
 	- Bone
-    - Group
 	- Flip (PMX 2.1 exclusive)
+    - Group
+    - Impulse (PMX 2.1 exclusive)
+    - Material
+    - Vertex
   - Physics support (PMX 2.1 soft bodies not yet supported)
   - OBJ for static meshes
   - PostProcessing effect (only for the entire scene, to be done for each model)
@@ -60,19 +62,24 @@ The features that are implemented so far are:
 
 ### Compiling
 
-In order to compile, you need a C++11 enabled compiler - Microsoft Visual Studio 2013 is recommended and its solution is available with the source code.
+In order to compile, you need a C++11 enabled compiler - Microsoft Visual Studio 2013 or 2015 is recommended and a solution for 2015 is available with the source code.
 
-There are some dependencies included with the source code, but it is also needed some external libraries:
+Also, there are a few external libraries. When cloning the repository, all of the following dependencies are cloned together:
+
+  - Bullet Physics 3
+  - DirectXTex
+  - DirectXTK
+  - FX11
+
+There is also the need for the following libraries, not included on GIT:
 
   - Boost 1.55 or higher, available [here][1]
-  - Bullet Physics 2.82 or higher, available [here][2]
   
 ### Coding Standards
 
-To make the source code more readable, we are (at least, trying to :P) adopting the LLVM coding standards, which can be seen [here][3].
+To make the source code more readable, we are (at least, trying to :P) adopting the LLVM coding standards, which can be seen [here][2].
 
 When submitting a patch or doing a merge request, please follow these standards.
   
 [1]: http://www.boost.org/
-[2]: http://bulletphysics.org/
-[3]: http://llvm.org/docs/CodingStandards.html
+[2]: http://llvm.org/docs/CodingStandards.html
