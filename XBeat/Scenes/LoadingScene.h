@@ -38,9 +38,6 @@ namespace Scenes {
 	private:
 		Urho3D::Context *Context;
 
-		Urho3D::SharedPtr<Urho3D::Scene> Scene;
-		Urho3D::SharedPtr<Urho3D::Node> CameraNode;
-
 		Urho3D::SharedPtr<Urho3D::Scene> NextScene;
 	};
 

@@ -14,23 +14,20 @@
 
 #include "LoadingScene.h"
 
-#include <boost/filesystem.hpp>
+#include "../shuffle.h"
+
 #include <Urho3D/Core/Context.h>
-#include <Urho3D/Graphics/Camera.h>
-#include <Urho3D/Graphics/DebugRenderer.h>
 #include <Urho3D/Graphics/Graphics.h>
-#include <Urho3D/Graphics/Octree.h>
-#include <Urho3D/Graphics/Renderer.h>
+#include <Urho3D/Graphics/Texture2D.h>
+#include <Urho3D/IO/FileSystem.h>
 #include <Urho3D/Resource/ResourceCache.h>
-#include <Urho3D/Urho2D/Sprite2D.h>
-#include <Urho3D/Urho2D/StaticSprite2D.h>
+#include <Urho3D/UI/Sprite.h>
+#include <Urho3D/UI/UI.h>
 
 #include <algorithm>
 #include <chrono>
 #include <random>
 #include <vector>
-
-namespace fs = boost::filesystem;
 
 Scenes::LoadingScene::LoadingScene(Urho3D::Context *Context, Urho3D::Scene *NextScene)
 	: Context(Context), NextScene(NextScene)
@@ -40,41 +37,27 @@ Scenes::LoadingScene::LoadingScene(Urho3D::Context *Context, Urho3D::Scene *Next
 void Scenes::LoadingScene::initialize()
 {
 	Urho3D::ResourceCache* Cache = Context->GetSubsystem<Urho3D::ResourceCache>();
-	Urho3D::Renderer* Renderer = Context->GetSubsystem<Urho3D::Renderer>();
-	Urho3D::Graphics* graphics = Context->GetSubsystem<Urho3D::Graphics>();
-
-	Scene = new Urho3D::Scene(Context);
-	Scene->CreateComponent<Urho3D::Octree>();
-	auto dr = Scene->CreateComponent<Urho3D::DebugRenderer>();
+	Urho3D::Graphics* Graphics = Context->GetSubsystem<Urho3D::Graphics>();
+	Urho3D::FileSystem* FS = Context->GetSubsystem<Urho3D::FileSystem>();
+	Urho3D::UI* UI = Context->GetSubsystem<Urho3D::UI>();
 
 	// Select a random texture file
-	fs::directory_iterator EndIterator;
-	std::vector<std::string> AvailableFiles;
-	for (fs::directory_iterator PathIterator(fs::path(L"./Data/Textures/Loading/")); PathIterator != EndIterator; ++PathIterator) {
-		if (fs::is_regular_file(PathIterator->status())) {
-			AvailableFiles.emplace_back(PathIterator->path().generic_string());
-		}
-	}
+	static const Urho3D::String LoadingTexPath("./Data/Textures/Loading/");
+	Urho3D::Vector<Urho3D::String> AvailableFiles;
+	FS->ScanDir(AvailableFiles, LoadingTexPath, "", Urho3D::SCAN_FILES, false);
 
 	// Shuffle the available file list
 	std::random_device RandomDevice;
 	std::mt19937 RandomGenerator(RandomDevice());
-	std::shuffle(AvailableFiles.begin(), AvailableFiles.end(), RandomGenerator);
+	Urho3D::random_shuffle(AvailableFiles.Begin(), AvailableFiles.End(), RandomGenerator);
 
-	CameraNode = Scene->CreateChild("Camera");
-	CameraNode->SetPosition(Urho3D::Vector3::ZERO);
-
-	auto Camera = CameraNode->CreateComponent<Urho3D::Camera>();
-	Camera->SetOrthographic(true);
-	Camera->SetOrthoSize((float)graphics->GetHeight() * Urho3D::PIXEL_SIZE);
-
-	Urho3D::Sprite2D* Sprite = nullptr;
+	Urho3D::Texture2D* SpriteTex = nullptr;
 	// Try to load a file as a texture
-	while (!AvailableFiles.empty()) {
-		Sprite = Cache->GetResource<Urho3D::Sprite2D>(AvailableFiles.back().c_str(), false);
+	while (!AvailableFiles.Empty()) {
+		SpriteTex = Cache->GetResource<Urho3D::Texture2D>(LoadingTexPath + AvailableFiles.Back(), false);
 
-		if (!Sprite) {
-			AvailableFiles.pop_back();
+		if (!SpriteTex) {
+			AvailableFiles.Pop();
 			continue;
 		}
 
@@ -82,21 +65,19 @@ void Scenes::LoadingScene::initialize()
 		break;
 	}
 
-	float halfWidth = graphics->GetWidth() * 0.5f * Urho3D::PIXEL_SIZE;
-	float halfHeight = graphics->GetHeight() * 0.5f * Urho3D::PIXEL_SIZE;
+	int width = Graphics->GetWidth();
+	int height = Graphics->GetHeight();
 
-	if (Sprite != nullptr) {
-		auto Size = Sprite->GetRectangle();
-		Camera->SetOrthoSize(Urho3D::Vector2((float)(Size.right_ - Size.left_) * Urho3D::PIXEL_SIZE, (float)(Size.bottom_ - Size.top_) * Urho3D::PIXEL_SIZE));
+	if (SpriteTex != nullptr) {
+		Urho3D::SharedPtr<Urho3D::Sprite> Sprite(new Urho3D::Sprite(Context));
 
-		Urho3D::SharedPtr<Urho3D::Node> SpriteNode(Scene->CreateChild("Background"));
-		SpriteNode->SetPosition2D(0.0f, 0.0f);
+		Sprite->SetTexture(SpriteTex);
+		Sprite->SetPosition(0.0f, 0.0f);
+		Sprite->SetHotSpot(0, 0);
+		Sprite->SetSize(width, height);
+		Sprite->SetBlendMode(Urho3D::BLEND_REPLACE);
 
-		Urho3D::StaticSprite2D* StaticSprite = SpriteNode->CreateComponent<Urho3D::StaticSprite2D>();
-		StaticSprite->SetSprite(Sprite);
-
-		Urho3D::SharedPtr<Urho3D::Viewport> Viewport(new Urho3D::Viewport(Context, Scene, Camera));
-		Renderer->SetViewport(0, Viewport);
+		UI->GetRoot()->AddChild(Sprite);
 	}
 }
 

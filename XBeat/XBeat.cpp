@@ -3,6 +3,7 @@
 #include "PMX/PMXIKNode.h"
 #include "PMX/PMXIKSolver.h"
 #include "PMX/PMXModel.h"
+#include "PMX/PMXRigidBody.h"
 #include "VMD/MotionController.h"
 
 #include <Urho3D/Engine/Console.h>
@@ -55,21 +56,26 @@ void XBeat::Start()
 	PMXIKNode::RegisterObject(context_);
 	PMXIKSolver::RegisterObject(context_);
 	PMXModel::RegisterObject(context_);
+	PMXRigidBody::RegisterObject(context_);
 	VMD::MotionController::RegisterObject(context_);
 	VMD::Motion::RegisterObject(context_);
 
 	//loadingScene = new Scenes::LoadingScene(context_, nullptr);
-
 	//loadingScene->initialize();
+
 	menuScene = new Scenes::Menu(context_);
 	menuScene->initialize();
+}
+
+void XBeat::Stop()
+{
+	engine_->DumpResources(true);
 }
 
 void XBeat::SetWindowParameters()
 {
 	Graphics* graphics = GetSubsystem<Graphics>();
 	graphics->SetWindowTitle("XBeat");
-	graphics->SetBlendMode(Urho3D::BLEND_ALPHA);
 }
 
 void XBeat::SubscribeToEvents()
@@ -234,6 +240,6 @@ void XBeat::HandleInput(const String& input)
 		engine_->Exit();
 	}
 	else {
-		Urho3D::Log::WriteRaw("Unrecognized command \"" + input + "\"");
+		Urho3D::Log::WriteRaw("Unrecognized command \"" + input + "\"", true);
 	}
 }

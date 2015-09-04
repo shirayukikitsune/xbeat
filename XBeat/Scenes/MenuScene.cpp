@@ -14,6 +14,7 @@
 
 #include "MenuScene.h"
 
+#include "../shuffle.h"
 #include "../PMX/PMXModel.h"
 #include "../VMD/MotionController.h"
 
@@ -36,10 +37,7 @@
 #include <Urho3D/Scene/Scene.h>
 #include <Urho3D/Scene/SceneEvents.h>
 
-#include <boost/filesystem.hpp>
 #include <random>
-
-namespace fs = boost::filesystem;
 
 Scenes::Menu::Menu(Urho3D::Context *Context)
 	: Urho3D::Object(Context)
@@ -57,6 +55,7 @@ void Scenes::Menu::initialize()
 	Urho3D::ResourceCache* Cache = context_->GetSubsystem<Urho3D::ResourceCache>();
 	Urho3D::Renderer* Renderer = context_->GetSubsystem<Urho3D::Renderer>();
 	Urho3D::Graphics* graphics = context_->GetSubsystem<Urho3D::Graphics>();
+	Urho3D::FileSystem* fs = context_->GetSubsystem<Urho3D::FileSystem>();
 
 	Scene = new Urho3D::Scene(context_);
 	Scene->CreateComponent<Urho3D::Octree>();
@@ -65,13 +64,7 @@ void Scenes::Menu::initialize()
 	auto dr = Scene->CreateComponent<Urho3D::DebugRenderer>();
 
 	// Create a list of motions to be used as idle animations
-	fs::directory_iterator EndIterator;
-	fs::path MotionPath(L"./Data/Motions/Idle/");
-	for (fs::directory_iterator Entry(MotionPath); Entry != EndIterator; Entry++) {
-		if (fs::is_regular_file(Entry->status()) && Entry->path().extension().wstring().compare(L".vmd") == 0) {
-			KnownMotions.Push(Entry->path().generic_wstring().c_str());
-		}
-	}
+	fs->ScanDir(KnownMotions, "./Data/Motions/Idle/", ".vmd", Urho3D::SCAN_FILES, false);
 
 	CameraNode = Scene->CreateChild("Camera");
 	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -50.0f));
@@ -93,7 +86,7 @@ void Scenes::Menu::initialize()
 
 	// Create a directional light to the world. Enable cascaded shadows on it
 	Urho3D::Node* lightNode = Scene->CreateChild("DirectionalLight");
-	lightNode->SetDirection(Urho3D::Vector3(0.6f, 0.0f, 1.0f));
+	lightNode->SetDirection(Urho3D::Vector3(0.6f, -1.0f, 1.0f));
 	Urho3D::Light* light = lightNode->CreateComponent<Urho3D::Light>();
 	light->SetLightType(Urho3D::LIGHT_DIRECTIONAL);
 	light->SetCastShadows(true);
@@ -120,45 +113,35 @@ void Scenes::Menu::initialize()
 	Renderer->SetDefaultRenderPath(xmlfile);
 	delete[] data;
 
-	Node* ModelNode = Scene->CreateChild("Model");
-	ModelNode->SetPosition(Vector3(0, 0, 0));
-	PMXAnimatedModel* SModel = ModelNode->CreateComponent<PMXAnimatedModel>();
+	Node* Model1Node = Scene->CreateChild("Model1");
+	Model1Node->SetPosition(Vector3(-8, 0, 0));
+	PMXAnimatedModel* SModel1 = Model1Node->CreateComponent<PMXAnimatedModel>();
+
+	Node* Model2Node = Scene->CreateChild("Model2");
+	Model2Node->SetPosition(Vector3(8, 0, 0));
+	PMXAnimatedModel* SModel2 = Model2Node->CreateComponent<PMXAnimatedModel>();
 	try {
-		auto fs = Scene->GetSubsystem<FileSystem>();
 		auto dir = fs->GetCurrentDir();
 		
 		fs->SetCurrentDir("Data/Models/Maika v1.1");
 		auto model = Cache->GetResource<PMXModel>("MAIKAv1.1.pmx", false);
+		SModel1->SetModel(model);
 		
-		//fs->SetCurrentDir(L"Data/Models/キャス狐");
-		//auto model = Cache->GetResource<PMXModel>(L"キャス狐1.02.pmx", false);
-		
-		SModel->SetModel(model);
+		fs->SetCurrentDir(dir);
+		fs->SetCurrentDir(L"Data/Models/キャス狐");
+		model = Cache->GetResource<PMXModel>(L"キャス狐1.02.pmx", false);
+		SModel2->SetModel(model);
+
 		fs->SetCurrentDir(dir);
 	}
 	catch (PMXModel::Exception &e)
 	{
 		LOGERROR(e.what());
 	}
-	SModel->SetCastShadows(true);
+	SModel1->SetCastShadows(true);
+	SModel2->SetCastShadows(true);
 
-	SubscribeToEvent(Scene, Urho3D::E_SCENEUPDATE, HANDLER(Scenes::Menu, HandleSceneUpdate));
-}
-
-namespace Urho3D {
-	template <class RandomIt, class UniformRandomNumberGenerator>
-	void random_shuffle(RandomIt first, RandomIt last, UniformRandomNumberGenerator&& g)
-	{
-		typedef typename std::uniform_int_distribution<int> distr_t;
-		typedef typename distr_t::param_type param_t;
-
-		distr_t D;
-		int i, n;
-		n = last - first;
-		for (i = n - 1; i > 0; --i) {
-			Urho3D::Swap(first + i, first + D(g, param_t(0, i)));
-		}
-	}
+	//SubscribeToEvent(Scene, Urho3D::E_SCENEUPDATE, HANDLER(Scenes::Menu, HandleSceneUpdate));
 }
 
 void Scenes::Menu::HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData)
@@ -183,7 +166,8 @@ void Scenes::Menu::HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::Varia
 		// Initialize a new random VMD motion
 		Motion = Scene->GetComponent<VMD::MotionController>()->LoadMotion(KnownMotions.Front());
 
-		//Motion->attachModel(Model);
+		if (Motion)
+			Motion->attachModel(Model);
 	}
 	else
 		waitTime -= eventData[P_TIMESTEP].GetFloat();

@@ -1,5 +1,6 @@
 #include "PMXRigidBody.h"
 
+#include <Urho3D/Core/Context.h>
 #include <Urho3D/Physics/RigidBody.h>
 #include <Urho3D/Scene/Node.h>
 
@@ -12,6 +13,11 @@ PMXRigidBody::PMXRigidBody(Urho3D::Context *context)
 
 PMXRigidBody::~PMXRigidBody()
 {
+}
+
+void PMXRigidBody::RegisterObject(Urho3D::Context * context)
+{
+	context->RegisterFactory<PMXRigidBody>();
 }
 
 void PMXRigidBody::FixedPostUpdate(float timeStep)

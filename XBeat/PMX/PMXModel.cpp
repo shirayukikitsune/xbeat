@@ -80,8 +80,8 @@ bool PMXModel::EndLoad()
 
 	unsigned int lastIndex = 0;
 	for (size_t materialIndex = 0; materialIndex < materialList.Size(); ++materialIndex) {
-		SharedPtr<IndexBuffer> iBuffer(new IndexBuffer(context_));
-		SharedPtr<VertexBuffer> vBuffer(new VertexBuffer(context_));
+		IndexBuffer* iBuffer = new IndexBuffer(context_);
+		VertexBuffer* vBuffer = new VertexBuffer(context_);
 		PODVector<unsigned int> boneMappings;
 		HashMap<unsigned int, unsigned int> mapping;
 
@@ -93,12 +93,11 @@ bool PMXModel::EndLoad()
 		vBuffer->SetShadowed(true);
 		vBuffer->SetSize((unsigned int)modelMat.indexCount, MASK_POSITION | MASK_NORMAL | MASK_TEXCOORD1 | MASK_BLENDWEIGHTS | MASK_BLENDINDICES, true);
 
-		unsigned int *ibData = new unsigned int[modelMat.indexCount];
-		unsigned int *pData = ibData;
-		std::memset(ibData, 0, sizeof(unsigned int) * modelMat.indexCount);
-		unsigned char *data = new unsigned char[vBuffer->GetVertexSize() * modelMat.indexCount];
+		unsigned int* ibData = (unsigned int*)iBuffer->Lock(0, modelMat.indexCount, true);
+		unsigned char* data = (unsigned char*)vBuffer->Lock(0, modelMat.indexCount, true);
 		std::memset(data, 0, vBuffer->GetVertexSize() * modelMat.indexCount);
-		float* pd = (float*)data;
+
+		float* pd = (float*)&data[0];
 
 		unsigned int freeBone = 0;
 
@@ -118,7 +117,7 @@ bool PMXModel::EndLoad()
 		Vector3 center = Vector3::ZERO;
 		for (size_t index = 0; index < modelMat.indexCount; ++index)
 		{
-			*pData++ = index;
+			ibData[index] = index;
 			auto &vertex = vertexList[indexList[index + lastIndex]];
 
 			positions.Push(vertex.position);
@@ -154,11 +153,9 @@ bool PMXModel::EndLoad()
 			}
 			pd += 5;
 		}
-		iBuffer->SetData(ibData);
-		vBuffer->SetData(data);
 
-		delete[] ibData;
-		delete[] data;
+		vBuffer->Unlock();
+		iBuffer->Unlock();
 
 		lastIndex += modelMat.indexCount;
 
@@ -171,8 +168,8 @@ bool PMXModel::EndLoad()
 		SetGeometryCenter(materialIndex, center);
 
 		allBoneMappings.Push(boneMappings);
-		iBuffers.Push(iBuffer);
-		vBuffers.Push(vBuffer);
+		iBuffers.Push(SharedPtr<IndexBuffer>(iBuffer));
+		vBuffers.Push(SharedPtr<VertexBuffer>(vBuffer));
 	}
 
 	// Find root bone from root frame
@@ -212,40 +209,7 @@ bool PMXModel::EndLoad()
 			if (bone.Parent != -1) {
 				parent = &boneList[bone.Parent];
 				newBone.initialPosition_ = Vector3(bone.InitialPosition) - Vector3(boneList[bone.Parent].InitialPosition); 
-
-				auto getDirection = [this](PMX::Bone &bone) {
-					Vector3 direction = Vector3::ZERO;
-
-					if (bone.Flags & PMX::BoneFlags::Attached) {
-						if (bone.Size.AttachTo != -1) {
-							PMX::Bone &attached = this->boneList[bone.Size.AttachTo];
-							direction = (Vector3(attached.InitialPosition) - Vector3(bone.InitialPosition)).Normalized();
-						}
-					}
-					else direction = Vector3(bone.Size.Length).Normalized();
-
-					return direction;
-				};
-
-				Vector3 boneDirection = getDirection(bone), parentDirection = getDirection(*parent);
-
-#if 0
-				Quaternion worldRotation;
-				worldRotation.FromLookRotation(boneDirection);
-				newBone.initialRotation_.FromRotationTo(parentDirection, boneDirection);
-#else
 				newBone.offsetMatrix_.SetTranslation(-Vector3(bone.InitialPosition));
-				auto axis = boneDirection.CrossProduct(parentDirection);
-				if (axis.LengthSquared() > 0.0000001f) {
-					axis.Normalize();
-					float angle = boneDirection.DotProduct(parentDirection);
-					if (fabsf(angle) > 0.000001f) {
-						angle = acosf(angle);
-						newBone.initialRotation_.FromAngleAxis(angle, axis);
-						//newBone.offsetMatrix_ = Matrix3x4(Vector3(bone.InitialPosition), Quaternion(angle, axis), 1.0f).Inverse();
-					}
-				}
-#endif
 			}
 			else {
 				newBone.initialPosition_ = Vector3(bone.InitialPosition);

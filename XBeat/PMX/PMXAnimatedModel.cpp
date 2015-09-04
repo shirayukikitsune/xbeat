@@ -48,13 +48,7 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		return;
 
 	auto name = model->GetName();
-	model->SetName(name + ".mdl");
-
-	{
-		File f(context_, model->GetName(), FILE_WRITE);
-		model->Save(f);
-		f.Close();
-	}
+	model->SetName(name);
 
 	AnimatedModel::SetModel(model, true);
 
@@ -256,30 +250,24 @@ void PMXAnimatedModel::SetModel(PMXModel *model)
 		if (base != nullptr) {
 			if (base->GetComponents() != 3) {
 				if (ModelMat.diffuse[3] == 1.0f)
-					material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/DiffAOAlphaMask.xml"));
+					material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/DiffAlphaMask.xml"));
 				else
-					material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/DiffAOAlpha.xml"));
+					material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/DiffAlpha.xml"));
 			}
-			else material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/DiffAO.xml"));
+			else material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/Diff.xml"));
 		}
 		else {
 			if (ModelMat.diffuse[3] != 1.0f) {
-				material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/NoTextureAOAlpha.xml"));
+				material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/NoTextureAlpha.xml"));
 			}
-			else material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/NoTextureAO.xml"));
+			else material->SetTechnique(0, resourceCache->GetResource<Urho3D::Technique>("Techniques/NoTexture.xml"));
 		}
 		material->SetShaderParameter("MatDiffColor", Vector4(ModelMat.diffuse));
 		material->SetShaderParameter("MatEnvMapColor", Vector3(ModelMat.ambient));
 		material->SetShaderParameter("MatSpecColor", Vector4(ModelMat.specular[0], ModelMat.specular[1], ModelMat.specular[2], ModelMat.specularCoefficient));
-		material->SetName(model->GetDescription().name.japanese + "_mat" + String(materialIndex) + ".xml");
+		material->SetName(model->GetDescription().name.japanese + "_mat" + String(materialIndex));
 		if (ModelMat.flags & (unsigned char)PMX::MaterialFlags::DoubleSide)
 			material->SetCullMode(CULL_NONE);
 		this->SetMaterial(materialIndex, material);
-	}
-
-	{
-		File f(context_, name + "-prefab.xml", FILE_WRITE);
-		this->GetNode()->SaveXML(f);
-		f.Close();
 	}
 }
