@@ -8,7 +8,7 @@
 
 class XBeat : public Urho3D::Application
 {
-	OBJECT(XBeat);
+	URHO3D_OBJECT(XBeat, Urho3D::Application);
 
 public:
 	XBeat(Urho3D::Context *Context);

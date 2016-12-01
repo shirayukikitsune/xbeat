@@ -8,7 +8,7 @@
 class PMXIKNode
 	: public Urho3D::Component
 {
-	OBJECT(PMXIKNode);
+	URHO3D_OBJECT(PMXIKNode, Urho3D::Component);
 
 public:
 	PMXIKNode(Urho3D::Context *context);

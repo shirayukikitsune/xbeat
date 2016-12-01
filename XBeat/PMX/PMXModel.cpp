@@ -120,7 +120,7 @@ bool PMXModel::EndLoad()
 			ibData[index] = index;
 			auto &vertex = vertexList[indexList[index + lastIndex]];
 
-			positions.Push(vertex.position);
+			positions.Push(Vector3(vertex.position));
 			center += positions.Back() / (float)modelMat.indexCount;
 			*pd++ = vertex.position[0];
 			*pd++ = vertex.position[1];
@@ -198,30 +198,52 @@ bool PMXModel::EndLoad()
 	bones.Reserve(boneList.Size());
 
 	for (unsigned int boneIndex = 0; boneIndex != boneList.Size(); ++boneIndex) {
-		PMX::Bone* parent = nullptr;
+        PMX::Bone* parent = nullptr, *grandParent = nullptr;
 		PMX::Bone& bone = boneList[boneIndex];
 		Urho3D::Bone newBone;
 
 		newBone.initialPosition_ = Vector3::ZERO;
-		newBone.initialRotation_ = Quaternion::IDENTITY;
+        newBone.initialRotation_ = Quaternion::IDENTITY;
 
 		if (bone.index != root.index) {
 			if (bone.Parent != -1) {
 				parent = &boneList[bone.Parent];
+                grandParent = parent->Parent != -1 ? &boneList[parent->Parent] : &root;
+                Vector3 parentDir = ((parent->Flags & PMX::BoneFlags::Attached) == PMX::BoneFlags::Attached) ? (Vector3(boneList[parent->Size.AttachTo].InitialPosition) - Vector3(parent->InitialPosition)) : Vector3(parent->Size.Length);
+                Vector3 dir = ((bone.Flags & PMX::BoneFlags::Attached) == PMX::BoneFlags::Attached) ? (Vector3(boneList[bone.Size.AttachTo].InitialPosition) - Vector3(bone.InitialPosition)) : Vector3(bone.Size.Length);
+                parentDir.Normalize();
+                if (parentDir.LengthSquared() <= 0.000001f)
+                    parentDir = Vector3::UP;
+                dir.Normalize();
 				newBone.initialPosition_ = Vector3(bone.InitialPosition) - Vector3(boneList[bone.Parent].InitialPosition); 
-				newBone.offsetMatrix_.SetTranslation(-Vector3(bone.InitialPosition));
-			}
+                newBone.initialRotation_.FromLookRotation(dir);
+                newBone.initialRotation_.Normalize();
+            }
 			else {
 				newBone.initialPosition_ = Vector3(bone.InitialPosition);
 			}
 		}
 
-		newBone.initialScale_ = Vector3::ONE;
+        newBone.initialScale_ = Vector3::ONE;
 		newBone.name_ = bone.Name.japanese;
 		newBone.nameHash_ = newBone.name_;
 		newBone.parentIndex_ = bone.Parent == -1 ? root.index : bone.Parent;
 		bones.Push(newBone);
 	}
+
+    for (unsigned i = 0; i < bones.Size(); ++i) {
+        Vector3 t = Vector3::ZERO;
+        Quaternion q = Quaternion::IDENTITY;
+
+        for (unsigned j = i; j != root.index; j = bones[j].parentIndex_) {
+            t += bones[j].initialPosition_;
+            q = bones[j].initialRotation_ * q.Inverse();
+        }
+
+        bones[i].offsetMatrix_.SetTranslation(t);
+        bones[i].offsetMatrix_.SetRotation(q.RotationMatrix());
+        bones[i].offsetMatrix_ = bones[i].offsetMatrix_.Inverse();
+    }
 
 	skeleton.SetRootBoneIndex(root.index);
 	this->SetSkeleton(skeleton);

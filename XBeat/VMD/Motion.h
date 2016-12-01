@@ -28,7 +28,7 @@ namespace VMD {
 	/// \remarks A single character may have different motions (for example, one motion is related to walking and another related to wave hands) in effect at the same time.
 	class Motion : public Urho3D::Resource
 	{
-		OBJECT(VMD::Motion);
+		URHO3D_OBJECT(VMD::Motion, Urho3D::Resource);
 
 	public:
 		Motion(Urho3D::Context *context);

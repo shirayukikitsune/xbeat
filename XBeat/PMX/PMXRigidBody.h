@@ -7,7 +7,7 @@
 
 class PMXRigidBody : public Urho3D::LogicComponent
 {
-	OBJECT(PMXRigidBody);
+	URHO3D_OBJECT(PMXRigidBody, Urho3D::LogicComponent);
 
 public:
 	PMXRigidBody(Urho3D::Context *context);

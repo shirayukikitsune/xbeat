@@ -19,14 +19,19 @@
 #include "../VMD/MotionController.h"
 
 #include <Urho3D/Core/Context.h>
+#include <Urho3D/Core/CoreEvents.h>
 #include <Urho3D/Graphics/Camera.h>
 #include <Urho3D/Graphics/DebugRenderer.h>
 #include <Urho3D/Graphics/Graphics.h>
 #include <Urho3D/Graphics/Light.h>
 #include <Urho3D/Graphics/Material.h>
 #include <Urho3D/Graphics/Octree.h>
+#include <Urho3D/Graphics/RenderPath.h>
 #include <Urho3D/Graphics/Renderer.h>
 #include <Urho3D/Graphics/Skybox.h>
+#include <Urho3D/Graphics/Zone.h>
+#include <Urho3D/Input/Input.h>
+#include <Urho3D/IO/File.h>
 #include <Urho3D/IO/FileSystem.h>
 #include <Urho3D/IO/Log.h>
 #include <Urho3D/Resource/XMLFile.h>
@@ -64,11 +69,12 @@ void Scenes::Menu::initialize()
 	auto dr = Scene->CreateComponent<Urho3D::DebugRenderer>();
 
 	// Create a list of motions to be used as idle animations
-	fs->ScanDir(KnownMotions, "./Data/Motions/Idle/", ".vmd", Urho3D::SCAN_FILES, false);
+	//fs->ScanDir(KnownMotions, "./Data/Motions/Idle/", ".vmd", Urho3D::SCAN_FILES, false);
 
 	CameraNode = Scene->CreateChild("Camera");
 	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -50.0f));
 	auto Camera = CameraNode->CreateComponent<Urho3D::Camera>();
+    Camera->SetFarClip(300.0f);
 
 	using namespace Urho3D;
 
@@ -84,6 +90,15 @@ void Scenes::Menu::initialize()
 	rigidBody->SetKinematic(true);
 	rigidBody->SetUseGravity(false);
 
+    // Create a Zone component for ambient lighting & fog control
+    Node* zoneNode = Scene->CreateChild("Zone");
+    Zone* zone = zoneNode->CreateComponent<Zone>();
+    zone->SetBoundingBox(BoundingBox(-1000.0f, 1000.0f));
+    zone->SetAmbientColor(Color(0.15f, 0.15f, 0.15f));
+    zone->SetFogColor(Color(0.5f, 0.5f, 0.7f));
+    zone->SetFogStart(100.0f);
+    zone->SetFogEnd(300.0f);
+
 	// Create a directional light to the world. Enable cascaded shadows on it
 	Urho3D::Node* lightNode = Scene->CreateChild("DirectionalLight");
 	lightNode->SetDirection(Urho3D::Vector3(0.6f, -1.0f, 1.0f));
@@ -93,68 +108,101 @@ void Scenes::Menu::initialize()
 	light->SetShadowBias(Urho3D::BiasParameters(0.00025f, 0.5f));
 	// Set cascade splits at 10, 50 and 200 world units, fade shadows out at 80% of maximum shadow distance
 	light->SetShadowCascade(Urho3D::CascadeParameters(10.0f, 50.0f, 200.0f, 0.0f, 0.8f));
-	light->SetSpecularIntensity(0.5f);
-	light->SetColor(Urho3D::Color(1.2f, 1.2f, 1.2f));
 
-	Urho3D::Node* skyNode = Scene->CreateChild("Sky");
-	skyNode->SetScale(500.0f); // The scale actually does not matter
+	/*Urho3D::Node* skyNode = Scene->CreateChild("Sky");
 	Urho3D::Skybox* skybox = skyNode->CreateComponent<Urho3D::Skybox>();
 	skybox->SetModel(Cache->GetResource<Urho3D::Model>("Models/Box.mdl"));
-	skybox->SetMaterial(Cache->GetResource<Urho3D::Material>("Materials/Skybox.xml"));
+	skybox->SetMaterial(Cache->GetResource<Urho3D::Material>("Materials/Skybox.xml"));*/
 
 	Viewport* viewport = new Viewport(context_, Scene, Camera);
-	Renderer->SetViewport(0, viewport);
-
-	auto file = Cache->GetFile("RenderPaths/PrepassHDR.xml", false);
-	char *data = new char[file->GetSize()];
-	file->Read(data, file->GetSize());
-	XMLFile* xmlfile = new XMLFile(context_);
-	xmlfile->FromString(data);
-	Renderer->SetDefaultRenderPath(xmlfile);
-	delete[] data;
+    viewport->SetRenderPath(Cache->GetResource<XMLFile>("RenderPaths/ForwardHWDepth.xml", false));
+    Renderer->SetViewport(0, viewport);
 
 	Node* Model1Node = Scene->CreateChild("Model1");
 	Model1Node->SetPosition(Vector3(-8, 0, 0));
-	PMXAnimatedModel* SModel1 = Model1Node->CreateComponent<PMXAnimatedModel>();
+    AnimatedModel* SModel1 = Model1Node->CreateComponent<AnimatedModel>();
 
 	Node* Model2Node = Scene->CreateChild("Model2");
 	Model2Node->SetPosition(Vector3(8, 0, 0));
-	PMXAnimatedModel* SModel2 = Model2Node->CreateComponent<PMXAnimatedModel>();
+    AnimatedModel* SModel2 = Model2Node->CreateComponent<AnimatedModel>();
 	try {
-		auto dir = fs->GetCurrentDir();
-		
-		fs->SetCurrentDir("Data/Models/Maika v1.1");
-		auto model = Cache->GetResource<PMXModel>("MAIKAv1.1.pmx", false);
-		SModel1->SetModel(model);
-		
-		fs->SetCurrentDir(dir);
-		fs->SetCurrentDir(L"Data/Models/キャス狐");
-		model = Cache->GetResource<PMXModel>(L"キャス狐1.02.pmx", false);
-		SModel2->SetModel(model);
+        auto model = Cache->GetResource<PMXModel>("Data/Models/Maika v1.1/MAIKAv1.1.pmx");
+        PMXAnimatedModel::SetModel(model, SModel1, "Data/Models/Maika v1.1/");
+        SModel1->SetOccludee(false);
 
-		fs->SetCurrentDir(dir);
+        model = Cache->GetResource<PMXModel>("Data/Models/racingmiku2014_v200_pmx/racingmiku2014_a.pmx");
+        PMXAnimatedModel::SetModel(model, SModel2, "Data/Models/racingmiku2014_v200_pmx/");
+        SModel2->SetOccludee(false);
 	}
 	catch (PMXModel::Exception &e)
 	{
-		LOGERROR(e.what());
+        URHO3D_LOGERROR(e.what());
 	}
 	SModel1->SetCastShadows(true);
 	SModel2->SetCastShadows(true);
 
-	//SubscribeToEvent(Scene, Urho3D::E_SCENEUPDATE, HANDLER(Scenes::Menu, HandleSceneUpdate));
+    File f(context_, "menuscene.json", FILE_WRITE);
+    Scene->SaveJSON(f);
+    f.Close();
+
+	SubscribeToEvent(Scene, Urho3D::E_SCENEUPDATE, URHO3D_HANDLER(Scenes::Menu, HandleSceneUpdate));
+    SubscribeToEvent(Urho3D::E_POSTRENDERUPDATE, URHO3D_HANDLER(Scenes::Menu, HandlePostRenderUpdate));
+}
+
+void Scenes::Menu::HandlePostRenderUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData)
+{
+    // If draw debug mode is enabled, draw viewport debug geometry, which will show eg. drawable bounding boxes and skeleton
+    // bones. Note that debug geometry has to be separately requested each frame. Disable depth test so that we can see the
+    // bones properly
+    if (debugRender)
+        GetSubsystem<Urho3D::Renderer>()->DrawDebugGeometry(false);
 }
 
 void Scenes::Menu::HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData)
 {
+    using namespace Urho3D;
 	using namespace Urho3D::SceneUpdate;
-	// Check if a new motion should be loaded
+
+    float timeStep = eventData[P_TIMESTEP].GetFloat();
+    
+    Input* input = GetSubsystem<Input>();
+
+    // Movement speed as world units per second
+    const float MOVE_SPEED = 20.0f;
+    // Mouse sensitivity as degrees per pixel
+    const float MOUSE_SENSITIVITY = 0.1f;
+
+    // Use this frame's mouse motion to adjust camera node yaw and pitch. Clamp the pitch between -90 and 90 degrees
+    IntVector2 mouseMove = input->GetMouseMove();
+    yaw += MOUSE_SENSITIVITY * mouseMove.x_;
+    pitch += MOUSE_SENSITIVITY * mouseMove.y_;
+    pitch = Clamp(pitch, -90.0f, 90.0f);
+
+    // Construct new orientation for the camera scene node from yaw and pitch. Roll is fixed to zero
+    CameraNode->SetRotation(Quaternion(pitch, yaw, 0.0f));
+
+    // Read WASD keys and move the camera scene node to the corresponding direction if they are pressed
+    if (input->GetKeyDown(KEY_W))
+        CameraNode->Translate(Vector3::FORWARD * MOVE_SPEED * timeStep);
+    if (input->GetKeyDown(KEY_S))
+        CameraNode->Translate(Vector3::BACK * MOVE_SPEED * timeStep);
+    if (input->GetKeyDown(KEY_A))
+        CameraNode->Translate(Vector3::LEFT * MOVE_SPEED * timeStep);
+    if (input->GetKeyDown(KEY_D))
+        CameraNode->Translate(Vector3::RIGHT * MOVE_SPEED * timeStep);
+
+    // Toggle debug geometry with space
+    if (input->GetKeyPress(KEY_SPACE))
+        debugRender = !debugRender;
+
+    // Check if a new motion should be loaded
 	if (KnownMotions.Empty())
 		return;
 
 	if (!Motion || (Motion->isFinished() && waitTime <= 0.0f)) {
 		// Set the model to its initial state
-		auto Model = Scene->GetChild("Model");
-		Model->GetComponent<PMXAnimatedModel>()->GetSkeleton().Reset();
+		auto Model = Scene->GetChild("Model1");
+		Model->GetComponent<AnimatedModel>()->GetSkeleton().Reset();
 
 		// Add a waiting time 
 		if (Motion != nullptr)
@@ -164,11 +212,11 @@ void Scenes::Menu::HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::Varia
 		Urho3D::random_shuffle(KnownMotions.Begin(), KnownMotions.End(), RandomGenerator);
 
 		// Initialize a new random VMD motion
-		Motion = Scene->GetComponent<VMD::MotionController>()->LoadMotion(KnownMotions.Front());
+		Motion = Scene->GetComponent<VMD::MotionController>()->LoadMotion("./Data/Motions/Idle/" + KnownMotions.Front());
 
 		if (Motion)
 			Motion->attachModel(Model);
 	}
 	else
-		waitTime -= eventData[P_TIMESTEP].GetFloat();
+		waitTime -= timeStep;
 }

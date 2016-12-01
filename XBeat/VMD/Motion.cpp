@@ -20,6 +20,7 @@
 #include <algorithm>
 
 #include <Urho3D/Core/Context.h>
+#include <Urho3D/Graphics/AnimatedModel.h>
 #include <Urho3D/Graphics/Camera.h>
 #include <Urho3D/Physics/RigidBody.h>
 
@@ -70,13 +71,13 @@ bool VMD::Motion::advanceFrame(float Frames)
 
 void VMD::Motion::attachCamera(Urho3D::Node* CameraNode)
 {
-	if (CameraNode->GetComponent<Urho3D::Camera>() != nullptr)
+	if (CameraNode->HasComponent<Urho3D::Camera>())
 		AttachedCameras.Push(CameraNode);
 }
 
 void VMD::Motion::attachModel(Urho3D::Node* ModelNode)
 {
-	if (ModelNode->GetComponent<PMXAnimatedModel>() != nullptr)
+	if (ModelNode->HasComponent<Urho3D::AnimatedModel>())
 		AttachedModels.Push(ModelNode);
 }
 
@@ -231,7 +232,7 @@ void VMD::Motion::setBoneParameters(Urho3D::String BoneName, Urho3D::Vector3 &Po
 {
 	for (auto it = AttachedModels.Begin(); it != AttachedModels.End(); ++it) {
 		auto modelNode = *it;
-		auto bone = modelNode->GetComponent<PMXAnimatedModel>()->GetSkeleton().GetBone(BoneName);
+		auto bone = modelNode->GetComponent<Urho3D::AnimatedModel>()->GetSkeleton().GetBone(BoneName);
 		if (bone) {
 			auto boneNode = bone->node_;
 			if ((!boneNode->HasComponent<Urho3D::RigidBody>() || boneNode->HasComponent<PMXRigidBody>() || boneNode->GetComponent<Urho3D::RigidBody>()->IsKinematic())

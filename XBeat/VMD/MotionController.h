@@ -29,7 +29,7 @@ namespace VMD {
 	class MotionController
 		: public Urho3D::LogicComponent
 	{
-		OBJECT(VMD::MotionController);
+		URHO3D_OBJECT(VMD::MotionController, Urho3D::LogicComponent);
 
 	public:
 		MotionController(Urho3D::Context *context);

@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8AC3E65B-8262-4382-9E79-4B5BB78B7875}</ProjectGuid>
     <RootNamespace>XBeat</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -73,8 +73,8 @@
     <LibraryPath>C:\dev\boost_1_57_0\stage\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>E:\dev\boost_1_59_0_b1;C:\Users\Bruno\Documents\GitHub\Urho3D\Build\include;C:\Users\Bruno\Documents\GitHub\Urho3D\Build\include\Urho3D\ThirdParty;$(IncludePath)</IncludePath>
-    <LibraryPath>E:\dev\boost_1_59_0_b1\stage64\lib;C:\Users\Bruno\Documents\GitHub\Urho3D\Build\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>F:\libs\Urho3D-Build\include;F:\libs\Urho3D-Build\include\Urho3D\ThirdParty;$(IncludePath)</IncludePath>
+    <LibraryPath>F:\libs\Urho3D-Build\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\dev\boost_1_57_0\boost;$(IncludePath)</IncludePath>
@@ -100,7 +100,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\sakagushi\Documents\GitHub\xbeat\Library_FX11\Bin\Desktop_2012\Win32\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -112,7 +111,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;URHO3D_SSE;URHO3D_MINIDUMPS;URHO3D_FILEWATCHER;URHO3D_PROFILING;URHO3D_LOGGING;URHO3D_D3D11;URHO3D_ANGELSCRIPT;URHO3D_LUAJIT;URHO3D_LUA;TOLUA_RELEASE;URHO3D_NAVIGATION;URHO3D_NETWORK;URHO3D_PHYSICS;URHO3D_STATIC_DEFINE;URHO3D_CPP11;URHO3D_URHO2D;_SCL_SECURE_NO_WARNINGS;DEBUG;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_SCL_SECURE_NO_WARNINGS;DEBUG;NOMINMAX;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
       <OpenMPSupport>false</OpenMPSupport>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -121,8 +120,6 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
       <AdditionalDependencies>Winmm.lib;Imm32.lib;Urho3D_d.lib;Version.lib;dxguid.lib;d3d11.lib;d3dcompiler.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>

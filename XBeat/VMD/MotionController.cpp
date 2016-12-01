@@ -40,7 +40,7 @@ void MotionController::RegisterObject(Urho3D::Context* context)
 	using namespace Urho3D;
 	context->RegisterFactory<MotionController>();
 
-	ATTRIBUTE("FPS", float, FramesPerSecond, 30.0f, AM_DEFAULT);
+    URHO3D_ATTRIBUTE("FPS", float, FramesPerSecond, 30.0f, AM_DEFAULT);
 }
 
 void MotionController::Update(float timeStep)

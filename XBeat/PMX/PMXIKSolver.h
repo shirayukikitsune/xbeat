@@ -4,12 +4,14 @@
 #include <Urho3D/Container/Vector.h>
 #include <Urho3D/Scene/LogicComponent.h>
 
+#include <vector>
+
 class PMXIKNode;
 
 class PMXIKSolver
 	: public Urho3D::LogicComponent
 {
-	OBJECT(PMXIKSolver);
+	URHO3D_OBJECT(PMXIKSolver, Urho3D::LogicComponent);
 
 public:
 	PMXIKSolver(Urho3D::Context *context);
@@ -28,18 +30,19 @@ public:
 
 	float GetThreshold() const { return threshold; }
 	float GetAngleLimit() const { return angleLimit; }
-	float GetChainLength() const { return chainLength; }
 	int GetLoopCount() const { return loopCount; }
 	Urho3D::Node* GetEndNode() const { return endNode; }
 
 private:
+    void SolveForward(const Urho3D::Vector3 &destination);
+    void SolveBackward(const Urho3D::Vector3 &destination);
 	void PerformInnerIteration(const Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* link);
 
 	float threshold;
 	float angleLimit;
-	float chainLength;
 	int loopCount;
 	Urho3D::Node *endNode;
-	Urho3D::Vector<PMXIKNode*> nodes;
+	std::vector<PMXIKNode*> nodes;
+    std::vector<Urho3D::Matrix3x4> cachedNodeTransforms;
 };
 

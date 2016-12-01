@@ -25,7 +25,7 @@
 
 using namespace Urho3D;
 
-DEFINE_APPLICATION_MAIN(XBeat);
+URHO3D_DEFINE_APPLICATION_MAIN(XBeat);
 
 XBeat::XBeat(Context* Context)
 	: Application(Context)
@@ -52,7 +52,6 @@ void XBeat::Start()
 
 	SubscribeToEvents();
 
-	PMXAnimatedModel::RegisterObject(context_);
 	PMXIKNode::RegisterObject(context_);
 	PMXIKSolver::RegisterObject(context_);
 	PMXModel::RegisterObject(context_);
@@ -81,9 +80,9 @@ void XBeat::SetWindowParameters()
 void XBeat::SubscribeToEvents()
 {
 	// Subscribe key down event
-	SubscribeToEvent(E_KEYDOWN, HANDLER(XBeat, HandleKeyDown));
+	SubscribeToEvent(E_KEYDOWN, URHO3D_HANDLER(XBeat, HandleKeyDown));
 
-	SubscribeToEvent(E_CONSOLECOMMAND, HANDLER(XBeat, HandleConsole));
+	SubscribeToEvent(E_CONSOLECOMMAND, URHO3D_HANDLER(XBeat, HandleConsole));
 }
 
 void XBeat::CreateConsoleAndDebugHud()
@@ -110,7 +109,7 @@ void XBeat::HandleKeyDown(StringHash eventType, VariantMap& eventData)
 	int key = eventData[P_KEY].GetInt();
 
 	// Close console (if open) or exit when ESC is pressed
-	if (key == KEY_ESC)
+	if (key == KEY_ESCAPE)
 	{
 		Console* console = GetSubsystem<Console>();
 		if (console->IsVisible())
@@ -191,9 +190,9 @@ void XBeat::HandleKeyDown(StringHash eventType, VariantMap& eventData)
 		{
 			int quality = renderer->GetShadowQuality();
 			++quality;
-			if (quality > SHADOWQUALITY_HIGH_24BIT)
-				quality = SHADOWQUALITY_LOW_16BIT;
-			renderer->SetShadowQuality(quality);
+			if (quality > SHADOWQUALITY_BLUR_VSM)
+				quality = SHADOWQUALITY_SIMPLE_16BIT;
+			renderer->SetShadowQuality((ShadowQuality)quality);
 		}
 
 		// Occlusion culling
@@ -236,7 +235,7 @@ void XBeat::HandleInput(const String& input)
 		return;
 	}
 
-	if (formatted.Compare("exit") == 0 || formatted.Compare("quit") == 0) {
+	if (formatted.Compare("exit") == 0 || formatted.Compare("quit") == 0 || formatted.Compare("qqq") == 0) {
 		engine_->Exit();
 	}
 	else {

@@ -26,9 +26,9 @@
 
 class PMXModel : public Urho3D::Model
 {
-	OBJECT(PMXModel);
+	URHO3D_OBJECT(PMXModel, Urho3D::Model);
 
-	friend class PMXAnimatedModel;
+	friend struct PMXAnimatedModel;
 
 	struct FileHeader {
 		/// Stores the file identifier

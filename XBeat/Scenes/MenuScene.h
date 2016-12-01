@@ -34,7 +34,7 @@ namespace Scenes {
 	class Menu
 		: public Urho3D::Object
 	{
-		OBJECT(Scenes::Menu);
+		URHO3D_OBJECT(Scenes::Menu, Urho3D::Object);
 
 	public:
 		Menu(Urho3D::Context *Context);
@@ -47,6 +47,7 @@ namespace Scenes {
 	private:
 		Urho3D::SharedPtr<Urho3D::Scene> Scene;
 		Urho3D::SharedPtr<Urho3D::Node> CameraNode;
+        float yaw, pitch;
 
 		Urho3D::SharedPtr<VMD::Motion> Motion;
 
@@ -56,7 +57,10 @@ namespace Scenes {
 
 		float waitTime;
 
+        bool debugRender;
+
 		void HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData);
+        void HandlePostRenderUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData);
 	};
 
 }

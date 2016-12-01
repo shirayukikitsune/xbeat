@@ -12,7 +12,6 @@ PMXIKSolver::PMXIKSolver(Urho3D::Context *context)
 	: Urho3D::LogicComponent(context)
 {
 	threshold = 0.01f;
-	chainLength = 0.0f;
 	angleLimit = M_PI;
 	loopCount = 20;
 
@@ -27,82 +26,66 @@ void PMXIKSolver::RegisterObject(Urho3D::Context *context)
 {
 	context->RegisterFactory<PMXIKSolver>();
 
-	ATTRIBUTE("Threshold", float, threshold, 0.000001f, AM_DEFAULT);
-	ATTRIBUTE("Angle Limit", float, angleLimit, M_PI, AM_DEFAULT);
-	ATTRIBUTE("Loop Count", int, loopCount, 20, AM_DEFAULT);
+    URHO3D_ATTRIBUTE("Threshold", float, threshold, 0.000001f, AM_DEFAULT);
+    URHO3D_ATTRIBUTE("Angle Limit", float, angleLimit, M_PI, AM_DEFAULT);
+    URHO3D_ATTRIBUTE("Loop Count", int, loopCount, 20, AM_DEFAULT);
 }
 
 void PMXIKSolver::AddNode(PMXIKNode *node)
 {
-	nodes.Push(node);
-
-	chainLength += node->GetBoneLength();
+	nodes.push_back(node);
+    cachedNodeTransforms.resize(nodes.size());
 }
 
 void PMXIKSolver::FixedUpdate(float timeStep)
 {
 	// Perform IK here
-	Vector<Vector3> jointPositions;
-	PODVector<float> boneLengths;
-	for (int idx = nodes.Size() - 1; idx >= 0; --idx) {
-		boneLengths.Push(nodes[idx]->GetBoneLength());
-		jointPositions.Push(nodes[idx]->GetNode()->GetWorldPosition());
+	for (int idx = nodes.size() - 1; idx >= 0; --idx) {
+		cachedNodeTransforms[idx] = nodes[idx]->GetNode()->GetWorldTransform();
 	}
 
 	Vector3 targetPosition = node_->GetWorldPosition();
-	Vector3 rootPosition = jointPositions[0];
 
-	// Check if target position is reachable
-	if ((rootPosition - targetPosition).LengthSquared() > chainLength * chainLength) {
-		for (int i = 0; i < jointPositions.Size() - 1; ++i) {
-			float distance = (targetPosition - jointPositions[i]).Length();
-			float ratio = boneLengths[i] / distance;
-			jointPositions[i + 1] = jointPositions[i].Lerp(targetPosition, ratio);
-		}
-	}
-	else {
-		for (int i = 0; i < loopCount; ++i) {
-			// Break out if the end node is close to its target
-			if ((jointPositions.Back() - targetPosition).LengthSquared() < threshold)
-				break;
+    SolveForward(targetPosition);
 
-			// Stage 1: Forward reaching
-			// Here we start at the root of the chain and iterate towards the end
-			jointPositions.Back() = targetPosition;
-			for (int n = jointPositions.Size() - 2; n >= 0; --n) {
-				float distance = (jointPositions[n + 1] - jointPositions[n]).Length();
-				float ratio = boneLengths[n] / distance;
-				jointPositions[n] = jointPositions[n + 1].Lerp(jointPositions[n], ratio);
-				auto node = nodes[nodes.Size() - 1 - n];
-				PerformInnerIteration(node->GetNode()->GetParent()->GetPosition(), jointPositions[n], jointPositions[n + 1], node);
-			}
+    SolveBackward(nodes[cachedNodeTransforms.size() - 1]->GetNode()->GetWorldPosition());
 
-			// Stage 2: Backward reaching
-			// Inverse of the first stage
-			jointPositions.Front() = rootPosition;
-			for (int n = 0; n < jointPositions.Size() - 1; ++n) {
-				float distance = (jointPositions[n + 1] - jointPositions[n]).Length();
-				float ratio = boneLengths[n] / distance;
-				jointPositions[n + 1] = jointPositions[n].Lerp(jointPositions[n + 1], ratio);
-				auto node = nodes[nodes.Size() - 1 - n];
-				PerformInnerIteration(node->GetNode()->GetParent()->GetPosition(), jointPositions[n], jointPositions[n + 1], node);
-			}
-		}
-	}
-
-	jointPositions.Push(targetPosition);
-	Quaternion oldRotation = endNode->GetWorldRotation();
+    endNode->SetWorldPosition(cachedNodeTransforms[0].Translation());
 
 	// Apply the new positions
-	for (int idx = 0; idx < jointPositions.Size() - 1; ++idx) {
-		Vector3 desiredDirection = (jointPositions[idx + 1] - jointPositions[idx]).Normalized();
+	for (unsigned idx = 1; idx < cachedNodeTransforms.size(); ++idx) {
+		Vector3 desiredDirection = (cachedNodeTransforms[idx - 1].Translation() - cachedNodeTransforms[idx].Translation()).Normalized();
 
-		auto node = nodes[nodes.Size() - idx - 1];
-		node->GetNode()->SetWorldPosition(jointPositions[idx]);
+		auto node = nodes[idx];
+		node->GetNode()->SetWorldPosition(cachedNodeTransforms[idx].Translation());
 		node->GetNode()->SetWorldDirection(desiredDirection);
 	}
+}
 
-	endNode->SetWorldRotation(oldRotation);
+void PMXIKSolver::SolveForward(const Vector3 & destination)
+{
+    cachedNodeTransforms[0].SetTranslation(destination);
+
+    Vector3 pos;
+
+    for (unsigned i = 1; i < cachedNodeTransforms.size(); ++i) {
+        pos = cachedNodeTransforms[i - 1].Translation() + (cachedNodeTransforms[i].Translation() - cachedNodeTransforms[i - 1].Translation()).Normalized() * nodes[i]->GetBoneLength();
+        cachedNodeTransforms[i].SetTranslation(pos);
+
+        // TODO: limits
+    }
+}
+
+void PMXIKSolver::SolveBackward(const Urho3D::Vector3 & destination)
+{
+    cachedNodeTransforms[cachedNodeTransforms.size() - 1].SetTranslation(destination);
+    
+    Vector3 pos;
+
+    for (int i = cachedNodeTransforms.size() - 2; i >= 0; --i) {
+        pos = cachedNodeTransforms[i + 1].Translation() + (cachedNodeTransforms[i].Translation() - cachedNodeTransforms[i + 1].Translation()).Normalized() * nodes[i + 1]->GetBoneLength();
+        cachedNodeTransforms[i].SetTranslation(pos);
+    }
 }
 
 void PMXIKSolver::PerformInnerIteration(const Urho3D::Vector3 &parentPosition, Urho3D::Vector3 &linkPosition, Urho3D::Vector3 &targetPosition, PMXIKNode* node)
@@ -127,10 +110,10 @@ void PMXIKSolver::PerformInnerIteration(const Urho3D::Vector3 &parentPosition, U
 
 	Vector3 localPosition = targetPosition - localOrigin;
 	float theta = acosf(localPosition.Normalized().DotProduct(localXDirection));
-	int quadrant = (int)(theta / M_HALF_PI);
+	float quadrant = truncf(theta / M_HALF_PI);
 	float q1, q2;
 
-	switch (quadrant)
+	switch ((int)quadrant)
 	{
 	default:
 		q1 = distanceToOrigin * tanf(node->GetUpperLimit().x_);
