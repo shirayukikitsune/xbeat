@@ -182,8 +182,13 @@ Library_zlib/
 XBeat/Data/ModelCache.dat
 XBeat/Data/Motions
 XBeat/Data/Musics
+XBeat/Data/Stages
 XBeat/Doc
 /XBeat/OldData
 /XBeat/CoreData/Shaders/HLSL/Cache
 /XBeat/CoreData/Shaders/GLSL/Cache
 .vs/config/applicationhost.config
+*.db
+*.json
+*.dll
+*.mdl
