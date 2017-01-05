@@ -59,7 +59,8 @@ namespace Scenes {
 
         bool debugRender;
 
-		void HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData);
+        void HandleConsole(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData);
+        void HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData);
         void HandlePostRenderUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData);
 	};
 

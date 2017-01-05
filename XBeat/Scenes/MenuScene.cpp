@@ -20,6 +20,7 @@
 
 #include <Urho3D/Core/Context.h>
 #include <Urho3D/Core/CoreEvents.h>
+#include <Urho3D/Engine/EngineEvents.h>
 #include <Urho3D/Graphics/Camera.h>
 #include <Urho3D/Graphics/DebugRenderer.h>
 #include <Urho3D/Graphics/Graphics.h>
@@ -69,7 +70,7 @@ void Scenes::Menu::initialize()
 	auto dr = Scene->CreateComponent<Urho3D::DebugRenderer>();
 
 	// Create a list of motions to be used as idle animations
-	//fs->ScanDir(KnownMotions, "./Data/Motions/Idle/", ".vmd", Urho3D::SCAN_FILES, false);
+	fs->ScanDir(KnownMotions, "./Data/Motions/Idle/", ".vmd", Urho3D::SCAN_FILES, false);
 
 	CameraNode = Scene->CreateChild("Camera");
 	CameraNode->SetPosition(Urho3D::Vector3(0, 10.0f, -50.0f));
@@ -122,31 +123,28 @@ void Scenes::Menu::initialize()
 	Model1Node->SetPosition(Vector3(-8, 0, 0));
     AnimatedModel* SModel1 = Model1Node->CreateComponent<AnimatedModel>();
 
-	Node* Model2Node = Scene->CreateChild("Model2");
+	/*Node* Model2Node = Scene->CreateChild("Model2");
 	Model2Node->SetPosition(Vector3(8, 0, 0));
-    AnimatedModel* SModel2 = Model2Node->CreateComponent<AnimatedModel>();
+    AnimatedModel* SModel2 = Model2Node->CreateComponent<AnimatedModel>();*/
 	try {
         auto model = Cache->GetResource<PMXModel>("Data/Models/Maika v1.1/MAIKAv1.1.pmx");
         PMXAnimatedModel::SetModel(model, SModel1, "Data/Models/Maika v1.1/");
         SModel1->SetOccludee(false);
 
-        model = Cache->GetResource<PMXModel>("Data/Models/racingmiku2014_v200_pmx/racingmiku2014_a.pmx");
-        PMXAnimatedModel::SetModel(model, SModel2, "Data/Models/racingmiku2014_v200_pmx/");
-        SModel2->SetOccludee(false);
+        /*model = Cache->GetResource<PMXModel>("Data/Models/new/MikuV4X_Digitrevx/MikuV4X.pmx");
+        PMXAnimatedModel::SetModel(model, SModel2, "Data/Models/new/MikuV4X_Digitrevx/");
+        SModel2->SetOccludee(false);*/
 	}
 	catch (PMXModel::Exception &e)
 	{
         URHO3D_LOGERROR(e.what());
 	}
 	SModel1->SetCastShadows(true);
-	SModel2->SetCastShadows(true);
-
-    File f(context_, "menuscene.json", FILE_WRITE);
-    Scene->SaveJSON(f);
-    f.Close();
+	//SModel2->SetCastShadows(true);
 
 	SubscribeToEvent(Scene, Urho3D::E_SCENEUPDATE, URHO3D_HANDLER(Scenes::Menu, HandleSceneUpdate));
     SubscribeToEvent(Urho3D::E_POSTRENDERUPDATE, URHO3D_HANDLER(Scenes::Menu, HandlePostRenderUpdate));
+    SubscribeToEvent(Urho3D::E_CONSOLECOMMAND, URHO3D_HANDLER(Scenes::Menu, HandleConsole));
 }
 
 void Scenes::Menu::HandlePostRenderUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData)
@@ -156,6 +154,40 @@ void Scenes::Menu::HandlePostRenderUpdate(Urho3D::StringHash eventType, Urho3D::
     // bones properly
     if (debugRender)
         GetSubsystem<Urho3D::Renderer>()->DrawDebugGeometry(false);
+}
+
+void Scenes::Menu::HandleConsole(Urho3D::StringHash eventType, Urho3D::VariantMap & eventData)
+{
+    using namespace Urho3D;
+    using namespace Urho3D::ConsoleCommand;
+
+    auto & cmd = eventData[P_COMMAND].GetString();
+
+    if (cmd.SubstringUTF8(0, 8).Compare("mdl_load") == 0) {
+        ResourceCache* Cache = context_->GetSubsystem<ResourceCache>();
+
+        auto & mdlFile = cmd.SubstringUTF8(9).Replaced("\\", "/");
+        auto node = Scene->CreateChild();
+        AnimatedModel* amodel = node->CreateComponent<AnimatedModel>();
+
+        try {
+            auto model = Cache->GetResource<PMXModel>(mdlFile);
+            PMXAnimatedModel::SetModel(model, amodel, mdlFile.SubstringUTF8(0, mdlFile.FindLast('/') + 1));
+            amodel->SetOccludee(false);
+            amodel->SetCastShadows(true);
+        }
+        catch (PMXModel::Exception &e)
+        {
+            URHO3D_LOGERROR(e.what());
+        }
+    }
+    else if (cmd.SubstringUTF8(0, 8).Compare("scn_save") == 0) {
+        auto & filename = cmd.SubstringUTF8(9);
+
+        File f(context_, filename, FILE_WRITE);
+        Scene->SaveJSON(f);
+        f.Close();
+    }
 }
 
 void Scenes::Menu::HandleSceneUpdate(Urho3D::StringHash eventType, Urho3D::VariantMap& eventData)

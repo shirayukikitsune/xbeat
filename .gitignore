@@ -192,3 +192,4 @@ XBeat/Doc
 *.json
 *.dll
 *.mdl
+*.opendb

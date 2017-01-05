@@ -58,7 +58,7 @@ void PMXIKSolver::FixedUpdate(float timeStep)
 
 		auto node = nodes[idx];
 		node->GetNode()->SetWorldPosition(cachedNodeTransforms[idx].Translation());
-		node->GetNode()->SetWorldDirection(desiredDirection);
+		//node->GetNode()->SetWorldDirection(desiredDirection);
 	}
 }
 
